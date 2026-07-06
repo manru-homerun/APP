@@ -1,0 +1,58 @@
+/*
+ * Copyright 2022 The Android Open Source Project
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
+import com.android.build.api.dsl.ApplicationExtension
+import com.android.build.api.dsl.LibraryExtension
+import com.android.build.api.dsl.Lint
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.kotlin.dsl.apply
+import org.gradle.kotlin.dsl.configure
+import kotlin.collections.plusAssign
+
+class AndroidLintConventionPlugin : Plugin<Project> {
+    override fun apply(target: Project) {
+        with(target) {
+            when {
+                pluginManager.hasPlugin("com.android.application") ->
+                    configure<ApplicationExtension> { lint(Lint::configure) }
+
+                pluginManager.hasPlugin("com.android.library") ->
+                    configure<LibraryExtension> { lint(Lint::configure) }
+
+                else -> {
+                    apply(plugin = "com.android.lint")
+                    configure<Lint>(Lint::configure)
+                }
+            }
+        }
+    }
+}
+
+private fun Lint.configure() {
+    val isCi = System.getenv("CI") == "true"
+
+    xmlReport = true
+    sarifReport = true
+
+    // 로컬 IDE는 가볍게 유지하고, CI에서는 실제 lint 오류를 병합 게이트로 사용합니다.
+    checkDependencies = false
+    checkReleaseBuilds = false
+    abortOnError = isCi
+
+    // 버전 업데이트 제안을 보고 싶다면 이 라인을 지우세요.
+    // disable += "GradleDependency"
+}

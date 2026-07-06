@@ -1,0 +1,31 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+# [추가] 줄 끝의 불필요한 공백 제거 (Ktlint 필수 통과 항목)
+trim_trailing_whitespace = true
+max_line_length = 120
+
+[*.{kt,kts}]
+# Kotlin 특정 설정
+kotlin_imports_layout = ascii
+# 와일드카드 import 금지
+ij_kotlin_allow_trailing_comma = true
+ij_kotlin_allow_trailing_comma_on_call_site = true
+
+# ktlint 전용: 안드로이드 스튜디오 스타일 강제
+ktlint_code_style = android_studio
+ktlint_standard_no-wildcard-imports = enabled
+# 파일명과 클래스명이 달라도 허용 (Top-level 함수, 확장 함수 파일용)
+ktlint_standard_filename = disabled
+# Composable 함수는 대문자 허용
+ktlint_function_naming_ignore_when_annotated_with = Composable
+
+# [추가] 안드로이드 XML 파일 설정 (레이아웃 등)
+[*.xml]
+indent_style = space
+indent_size = 4

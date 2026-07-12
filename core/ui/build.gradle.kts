@@ -3,6 +3,9 @@ plugins {
     alias(libs.plugins.yadanbeopseok.android.library.compose)
 }
 
+android {
+    namespace = "com.manruhomerun.yadanbeopseok.ui"
+}
 
 dependencies {
     api(projects.core.designsystem)

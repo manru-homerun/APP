@@ -4,6 +4,10 @@ plugins {
     alias(libs.plugins.yadanbeopseok.hilt)
 }
 
+android {
+    namespace = "com.manruhomerun.yadanbeopseok.database"
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

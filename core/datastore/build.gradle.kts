@@ -8,6 +8,7 @@ android {
     defaultConfig {
         consumerProguardFiles("consumer-proguard-rules.pro")
     }
+    namespace = "com.manruhomerun.yadanbeopseok.datastore"
 }
 
 // Setup protobuf configuration, generating lite Java and Kotlin classes

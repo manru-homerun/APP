@@ -10,7 +10,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.manruhomerun.yadanbeopseok."
+        applicationId = "com.manruhomerun.yadanbeopseok"
         versionCode = 1
         versionName = "1.0"
 

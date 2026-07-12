@@ -3,6 +3,9 @@ plugins {
     alias(libs.plugins.yadanbeopseok.hilt)
 }
 
+android {
+    namespace = "com.manruhomerun.yadanbeopseok.sync"
+}
 
 dependencies {
     implementation(libs.androidx.test.ext)

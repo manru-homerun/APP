@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.kguard.yadanbeopseok.designsystem"
+    namespace = "com.manruhomerun.yadanbeopseok.designsystem"
     testOptions.unitTests.isIncludeAndroidResources = true
 }
 

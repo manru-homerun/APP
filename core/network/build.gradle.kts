@@ -9,6 +9,7 @@ plugins {
 }
 
 android {
+    namespace = "com.manruhomerun.yadanbeopseok.network"
     testOptions.unitTests.isIncludeAndroidResources = true
     buildFeatures { // BuildConfig라는 특별한 Java/Kotlin 클래스를 자동으로 생성하도록 설정하는 옵션
         buildConfig = true

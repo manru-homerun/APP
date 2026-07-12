@@ -5,6 +5,9 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.compose)
 }
+android {
+    namespace = "com.manruhomerun.yadanbeopseok.navigation"
+}
 
 dependencies {
     api(libs.androidx.navigation3.runtime)

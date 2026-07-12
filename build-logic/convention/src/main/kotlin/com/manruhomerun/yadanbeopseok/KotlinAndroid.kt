@@ -23,10 +23,10 @@ internal fun Project.configureKotlinAndroid(
 ) {
     commonExtension.apply {
         // 버전 설정
-        compileSdk = 36
+        compileSdk = 37
 
         defaultConfig.apply {
-            minSdk = 31
+            minSdk = 29
         }
 
         // 호환성 설정, 이전 기기에서도 사용 가능

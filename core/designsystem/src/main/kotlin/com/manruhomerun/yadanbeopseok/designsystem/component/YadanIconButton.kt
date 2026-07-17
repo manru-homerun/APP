@@ -13,11 +13,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,7 +33,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanDivider
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanFavorite
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOnPrimary
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryDark
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextMuted
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
@@ -187,6 +192,76 @@ fun YadanIconButton(
             contentAlignment = Alignment.Center,
         ) {
             icon()
+        }
+    }
+}
+
+/**
+ * 선택 상태를 가지는 야단법석 아이콘 버튼입니다.
+ *
+ * 찜, 북마크처럼 선택 여부에 따라 아이콘과 색상이 달라지는
+ * 아이콘 버튼에 사용합니다.
+ *
+ * 기존 [YadanIconButtonSize]와 크기 계산을 재사용하며,
+ * 선택 상태와 접근성 처리는 Material3 [IconToggleButton]에 맡깁니다.
+ *
+ * @param checked 현재 선택 여부입니다.
+ * @param onCheckedChange 선택 상태가 변경될 때 호출됩니다.
+ * @param modifier 버튼 배치에 사용할 Modifier입니다.
+ * @param size 버튼 컨테이너와 아이콘 크기입니다.
+ * @param enabled 버튼 활성화 여부입니다.
+ * @param uncheckedContentColor 선택되지 않았을 때의 아이콘 색상입니다.
+ * @param checkedContentColor 선택되었을 때의 아이콘 색상입니다.
+ * @param icon 현재 선택 상태를 전달받아 표시할 아이콘입니다.
+ */
+@Composable
+fun YadanIconToggleButton(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    size: YadanIconButtonSize = YadanIconButtonSize.MEDIUM,
+    enabled: Boolean = true,
+    uncheckedContentColor: Color = YadanTextMuted,
+    checkedContentColor: Color = YadanPrimary,
+    icon: @Composable (checked: Boolean) -> Unit,
+) {
+    val dimensions = iconButtonDimensions(size)
+    val buttonAlpha =
+        if (enabled) {
+            ENABLED_ALPHA
+        } else {
+            DISABLED_ALPHA
+        }
+
+    IconToggleButton(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        modifier =
+            modifier
+                .alpha(buttonAlpha)
+                .size(dimensions.containerSize),
+        enabled = enabled,
+        shape = CircleShape,
+        colors =
+            IconButtonDefaults.iconToggleButtonColors(
+                containerColor = Color.Transparent,
+                contentColor = uncheckedContentColor,
+                disabledContainerColor = Color.Transparent,
+                disabledContentColor =
+                    if (checked) {
+                        checkedContentColor
+                    } else {
+                        uncheckedContentColor
+                    },
+                checkedContainerColor = Color.Transparent,
+                checkedContentColor = checkedContentColor,
+            ),
+    ) {
+        Box(
+            modifier = Modifier.size(dimensions.iconSize),
+            contentAlignment = Alignment.Center,
+        ) {
+            icon(checked)
         }
     }
 }
@@ -361,5 +436,44 @@ private fun IconButtonPreviewItem(
             style = MaterialTheme.typography.labelSmall,
             color = YadanTextMuted,
         )
+    }
+}
+
+@Preview(
+    name = "Yadan icon toggle button",
+    showBackground = true,
+    backgroundColor = 0xFFFAFAFA,
+)
+@Composable
+private fun YadanIconToggleButtonPreview() {
+    YadanbeopseokTheme {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(YadanBackground)
+                    .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            listOf(false, true).forEach { checked ->
+                YadanIconToggleButton(
+                    checked = checked,
+                    onCheckedChange = {},
+                    checkedContentColor = YadanFavorite,
+                ) { selected ->
+                    Icon(
+                        imageVector =
+                            if (selected) {
+                                Icons.Default.Favorite
+                            } else {
+                                Icons.Outlined.FavoriteBorder
+                            },
+                        contentDescription =
+                            if (selected) "찜 해제" else "찜하기",
+                    )
+                }
+            }
+        }
     }
 }

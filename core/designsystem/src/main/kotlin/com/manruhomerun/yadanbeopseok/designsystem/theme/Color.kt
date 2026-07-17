@@ -46,6 +46,11 @@ val YadanCareBackground = Color(0xFFE7F3EC)
 val YadanCareContent = Color(0xFF1F7A48)
 
 /**
+ * 찜한 장소나 일정의 선택 상태를 표시할 때 사용하는 색상입니다.
+ */
+val YadanFavorite = Color(0xFFE23B3B)
+
+/**
  * 카카오 로그인 버튼에 사용하는 공식 서비스 색상입니다.
  */
 val KakaoBackground = Color(0xFFFEE500)

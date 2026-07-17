@@ -99,6 +99,7 @@ fun YadanStatusChip(
     leadingIcon: (@Composable () -> Unit)? = null,
 ) {
     val visuals = statusChipVisuals(style)
+    val isLive = style == YadanStatusChipStyle.LIVE
 
     val horizontalPadding =
         when (size) {
@@ -108,9 +109,26 @@ fun YadanStatusChip(
 
     val verticalPadding =
         when (size) {
-            YadanStatusChipSize.DEFAULT -> DEFAULT_VERTICAL_PADDING
-            YadanStatusChipSize.SMALL -> SMALL_VERTICAL_PADDING
+            YadanStatusChipSize.DEFAULT ->
+                if (isLive) LIVE_DEFAULT_VERTICAL_PADDING else DEFAULT_VERTICAL_PADDING
+
+            YadanStatusChipSize.SMALL ->
+                if (isLive) LIVE_SMALL_VERTICAL_PADDING else SMALL_VERTICAL_PADDING
         }
+
+    /*
+     * pulse 영역이 점 양옆으로 확장되므로 시작 패딩을 줄여
+     * 기존 점의 중심 위치와 칩 너비를 최대한 유지합니다.
+     */
+    val contentStartPadding =
+        if (isLive) {
+            horizontalPadding - LIVE_INDICATOR_MAX_EXPANSION
+        } else {
+            horizontalPadding
+        }
+
+    val contentSpacing =
+        if (isLive) LIVE_CONTENT_SPACING else CONTENT_SPACING
 
     val textStyle =
         when (size) {
@@ -138,10 +156,12 @@ fun YadanStatusChip(
         Row(
             modifier =
                 Modifier.padding(
-                    horizontal = horizontalPadding,
-                    vertical = verticalPadding,
+                    start = contentStartPadding,
+                    top = verticalPadding,
+                    end = horizontalPadding,
+                    bottom = verticalPadding,
                 ),
-            horizontalArrangement = Arrangement.spacedBy(CONTENT_SPACING),
+            horizontalArrangement = Arrangement.spacedBy(contentSpacing),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             when {
@@ -230,7 +250,7 @@ private fun YadanLiveIndicator() {
     Box(
         modifier =
             Modifier
-                .size(LIVE_INDICATOR_SIZE)
+                .size(LIVE_INDICATOR_CONTAINER_SIZE)
                 .drawBehind {
                     val dotRadius = LIVE_INDICATOR_SIZE.toPx() / 2f
                     val ringRadius =
@@ -321,14 +341,22 @@ private val SMALL_VERTICAL_PADDING = 3.dp
 private val CONTENT_SPACING = 5.dp
 private val LEADING_ICON_SIZE = 13.dp
 
+private val LIVE_DEFAULT_VERTICAL_PADDING = 3.dp
+private val LIVE_SMALL_VERTICAL_PADDING = 1.dp
+private val LIVE_CONTENT_SPACING = 1.dp
+
 private val LIVE_INDICATOR_SIZE = 6.dp
 private val LIVE_INDICATOR_MAX_EXPANSION = 6.dp
+private val LIVE_INDICATOR_CONTAINER_SIZE =
+    LIVE_INDICATOR_SIZE + LIVE_INDICATOR_MAX_EXPANSION * 2f
 
 private val STATUS_BORDER_WIDTH = 1.5.dp
 
 private const val LIVE_PULSE_START_ALPHA = 0.55f
 private const val LIVE_PULSE_DURATION_MILLIS = 1_600
 private const val LIVE_PULSE_EXPAND_MILLIS = 1_120
+
+
 
 @Preview(
     name = "Yadan status chips",

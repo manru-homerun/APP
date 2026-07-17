@@ -27,6 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
@@ -62,6 +64,7 @@ enum class YadanTextFieldSize {
  *
  * 가입 단계의 큰 닉네임 입력창과 프로필 수정 입력창에 대응합니다.
  * 라벨, 글자 수, 검증 문구는 화면마다 구성이 다르므로 외부에서 배치합니다.
+ * 화면에 표시하는 검증 문구와 동일한 값을 [errorMessage]로 전달합니다.
  *
  * @param value 현재 입력된 값입니다.
  * @param onValueChange 입력값이 변경될 때 호출됩니다.
@@ -71,6 +74,7 @@ enum class YadanTextFieldSize {
  * @param enabled 입력 가능 여부입니다.
  * @param readOnly 읽기 전용 여부입니다.
  * @param isError 오류 상태 여부입니다.
+ * @param errorMessage 오류 상태일 때 접근성 서비스가 안내할 문구입니다.
  * @param showClearButton 입력 내용 지우기 버튼 표시 여부입니다.
  * @param clearContentDescription 지우기 버튼의 접근성 설명입니다.
  * @param keyboardOptions 키보드 종류와 IME 버튼 설정입니다.
@@ -86,6 +90,7 @@ fun YadanTextField(
     enabled: Boolean = true,
     readOnly: Boolean = false,
     isError: Boolean = false,
+    errorMessage: String = "입력값을 확인해주세요",
     showClearButton: Boolean = true,
     clearContentDescription: String = "입력 내용 지우기",
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
@@ -196,6 +201,15 @@ fun YadanTextField(
         modifier =
             modifier
                 .fillMaxWidth()
+                .then(
+                    if (isError) {
+                        Modifier.semantics {
+                            error(errorMessage)
+                        }
+                    } else {
+                        Modifier
+                    },
+                )
                 .alpha(
                     if (enabled) {
                         ENABLED_ALPHA
@@ -352,6 +366,8 @@ private fun YadanTextFieldPreview() {
                     profileNickname = it
                 },
                 placeholder = "닉네임을 입력해주세요",
+                isError = true,
+                errorMessage = "이미 사용 중인 닉네임입니다",
             )
 
             Text(

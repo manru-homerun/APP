@@ -29,7 +29,7 @@ val YadanSurface = Color(0xFFFFFFFF)
  */
 val YadanTextPrimary = Color(0xFF1C2024)
 val YadanTextSecondary = Color(0xFF3F454B)
-val YadanTextMuted = Color(0xFF8A9099)
+val YadanTextMuted = Color(0xFF6B7280)
 
 /**
  * 테두리와 구분선에 사용하는 색상입니다.

@@ -16,6 +16,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
@@ -62,7 +65,19 @@ fun YadanPageIndicator(
         )
 
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                /*
+                 * 페이지 점은 시각적 표시만 담당하므로
+                 * 전체 표시기를 하나의 접근성 요소로 제공합니다.
+                 */
+                .semantics(
+                    mergeDescendants = true,
+                ) {
+                    contentDescription = "페이지"
+                    stateDescription = "${selectedPage + 1} / $pageCount"
+                },
         horizontalArrangement =
             Arrangement.spacedBy(
                 space = INDICATOR_SPACING,

@@ -1,21 +1,253 @@
-language: "ko-KR"
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+# ---------------------------------------------------------------- #
+# 기본 설정
+# ---------------------------------------------------------------- #
+
+language: ko-KR
 early_access: false
+
+# 공식 스키마상 최대 250자
+tone_instructions: >
+  당신은 1인 Kotlin Android 프로젝트의 시니어 리뷰어입니다. 공모전 일정과 유지보수성을 함께 고려해
+  치명적 버그, 보안, 생명주기, 동시성, 데이터 정합성, 사용자 경험을 우선 검토하세요.
+  사소한 스타일 지적은 줄이고, 문제 원인과 실행 가능한 수정안을 한국어로 간결하게 제시하세요.
+
+# ---------------------------------------------------------------- #
+# 코드 리뷰
+# ---------------------------------------------------------------- #
+
 reviews:
-  profile: "chill"
-  request_changes_workflow: true
+  # 혼자 개발하므로 사람 리뷰어를 대신해 비교적 넓게 검토
+  # 단, path_instructions에서 사소한 스타일 지적은 제한
+  profile: assertive
+
+  # CodeRabbit의 자동 Approve는 사용하지 않음
+  request_changes_workflow: false
+
+  # PR 요약
   high_level_summary: true
-  changed_files_summary: false
-  # 코드의 실행 흐름을 보여주는 시퀀스 다이어그램을 생성할지 여부입니다.
-  # PR이 너무 길어지는 것을 방지하기 위해 비활성화했습니다.
+  high_level_summary_in_walkthrough: true
+  high_level_summary_instructions: >
+    변경 목적, 사용자에게 미치는 영향, 관광 데이터 또는 API 변경점,
+    주요 위험과 테스트 여부를 간결하게 정리하세요.
+
+  changed_files_summary: true
   sequence_diagrams: false
-  # PR에 연결된 이슈(Issue)를 분석하여 리뷰 컨텍스트에 활용할지 여부입니다.
+  estimate_code_review_effort: false
+
+  # 이슈 기반으로 PR 구현 적합성 확인
   assess_linked_issues: true
-  review_status: true
-  collapse_walkthrough: false
-  # 리뷰 요약에 위트 있는 시(poem)를 포함할지 여부입니다
+
+  # 1인 저장소에서 불필요한 추천 기능 비활성화
+  related_issues: false
+  related_prs: false
+  suggested_labels: false
+  auto_apply_labels: false
+  suggested_reviewers: false
+  auto_assign_reviewers: false
+
   poem: true
+  review_status: true
+  review_details: false
+  commit_status: true
+
+  # ---------------------------------------------------------------- #
+  # 리뷰 제외 파일
+  # ---------------------------------------------------------------- #
+
+  path_filters:
+    - "!**/build/**"
+    - "!**/.gradle/**"
+    - "!**/.idea/**"
+    - "!**/generated/**"
+    - "!**/*.apk"
+    - "!**/*.aab"
+
+  # ---------------------------------------------------------------- #
+  # Android 및 Kotlin 리뷰 기준
+  # ---------------------------------------------------------------- #
+
+  path_instructions:
+    - path: "**/*.kt"
+      instructions: |
+        Kotlin 및 Android 코드에서 실제 장애나 품질 저하로 이어질 가능성이 높은 문제를 우선 리뷰하세요.
+
+        1. Kotlin null-safety, 불필요한 `!!`, 불변성, sealed class/interface,
+           data class 및 예외 처리의 적절성을 확인하세요.
+
+        2. Coroutine의 structured concurrency, Scope와 Android lifecycle 연결,
+           Dispatcher 선택, 취소 전파, 예외 처리와 race condition을 확인하세요.
+
+        3. Flow와 StateFlow의 중복 수집, 잘못된 공유 정책, 이벤트 재전달,
+           backpressure 및 상태 유실 가능성을 확인하세요.
+
+        4. Activity, Fragment, ViewModel, Context 참조에서 메모리 누수와
+           생명주기 오류가 발생할 수 있는지 확인하세요.
+
+        5. Jetpack Compose 사용 시 상태 끌어올리기, 단방향 데이터 흐름,
+           불필요한 recomposition, remember와 rememberSaveable 선택,
+           LaunchedEffect 및 DisposableEffect의 key를 확인하세요.
+
+        6. LazyColumn과 LazyRow의 안정적인 key, 화면 회전과 프로세스 재생성,
+           접근성과 사용자 상태 복원 문제를 확인하세요.
+
+        7. UI, domain, data 계층의 책임과 의존 방향, Repository의 단일 진실 공급원,
+           DTO, 도메인 모델, UI 모델 간 변환 경계가 일관적인지 확인하세요.
+
+        8. 네트워크 실패, timeout, 빈 결과, 오프라인, 중복 요청, pagination,
+           캐시 만료와 재시도 정책을 확인하세요.
+
+        9. 관광 데이터의 누락, 중복 장소, 잘못된 좌표, 날짜, 콘텐츠 ID,
+           지역 코드 및 카테고리 코드 처리 문제를 확인하세요.
+
+        10. API 키, 사용자 정보, 위치 정보와 디버그 로그가 코드나 로그에
+            노출되는지 확인하세요.
+
+        11. 사소한 포맷이나 개인 취향 차이는 지적하지 마세요.
+            수정이 필요한 경우 문제 원인과 최소 수정안을 함께 제시하세요.
+
+    - path: "**/src/main/AndroidManifest.xml"
+      instructions: |
+        다음 항목을 중점적으로 검토하세요.
+
+        - 최소 권한 원칙
+        - android:exported 설정
+        - 외부에 노출된 Activity, Service, Receiver, Provider
+        - 딥링크 입력값 검증
+        - cleartext 통신 허용 여부
+        - 백업 허용 설정
+        - 네트워크 보안 설정
+        - 민감정보 또는 API 키 노출
+        - 불필요한 위치 권한 요청
+
+    - path: "**/src/main/res/**"
+      instructions: |
+        하드코딩 문자열, 다국어 리소스, contentDescription, 터치 영역,
+        화면 크기별 대응, 다크 모드, 중복 리소스와 잘못된 리소스 참조를 확인하세요.
+        생성된 리소스에 대한 사소한 스타일 지적은 생략하세요.
+
+    - path: "**/src/main/assets/**"
+      instructions: |
+        관광 데이터 파일에 대해 다음 항목을 검토하세요.
+
+        - JSON, CSV, GeoJSON 스키마 일관성
+        - UTF-8 인코딩
+        - 중복 장소 ID
+        - null 또는 빈 필드
+        - 위도와 경도 범위
+        - 날짜와 시간 형식
+        - 지역 코드와 관광 타입 코드
+        - 파일 크기가 앱 시작 시간과 메모리에 미치는 영향
+
+        대용량 데이터 전체를 나열하지 말고 실제 오류 가능성이 있는 변경만 지적하세요.
+
+    - path: "**/src/test/**"
+      instructions: |
+        핵심 비즈니스 로직에 대해 정상, 실패, 빈 데이터, 경계값 테스트가 있는지 확인하세요.
+
+        Coroutine과 Flow 테스트는 TestDispatcher, runTest 및 가상 시간을 사용해
+        결정적으로 실행되는지 확인하세요.
+
+        구현 세부사항보다 사용자 관점의 동작과 상태 변화를 검증하는지 확인하세요.
+
+    - path: "**/src/androidTest/**"
+      instructions: |
+        화면 상태 전환, 권한 거부, 네트워크 실패, 프로세스 재생성,
+        화면 회전, 접근성 등 실제 Android 환경에서 검증해야 하는 핵심 시나리오에 집중하세요.
+
+        모든 UI를 테스트하도록 요구하지 말고 대회 시연과 핵심 사용자 흐름에
+        영향을 주는 테스트만 제안하세요.
+
+    - path: "**/*.gradle.kts"
+      instructions: |
+        다음 항목을 검토하세요.
+
+        - 의존성 충돌과 중복 플러그인
+        - Android Gradle Plugin, Kotlin, Compose Compiler 호환성
+        - compileSdk, targetSdk, minSdk 설정
+        - debug와 release 빌드 설정 분리
+        - R8 및 ProGuard 설정
+        - signingConfig 노출
+        - BuildConfig와 환경변수를 통한 키 관리
+        - 재현 가능한 빌드 여부
+
+    - path: "gradle/libs.versions.toml"
+      instructions: |
+        라이브러리 버전 호환성, 중복 alias, 동적 버전 사용,
+        검증되지 않은 대규모 버전 상승과 사용하지 않는 의존성을 확인하세요.
+
+  # ---------------------------------------------------------------- #
+  # 자동 리뷰
+  # ---------------------------------------------------------------- #
+
   auto_review:
+    # PR 생성 시 자동 리뷰
     enabled: true
+
+    # PR에 새 커밋이 push되면 변경분 재리뷰
+    auto_incremental_review: true
+
+    # 개발 중 잦은 push로 리뷰가 과도하게 발생하는 것을 방지
+    auto_pause_after_reviewed_commits: 3
+
+    # Draft PR은 리뷰하지 않음
     drafts: false
+
+    ignore_title_keywords:
+      - "WIP"
+      - "[skip review]"
+
+  # ---------------------------------------------------------------- #
+  # 정적 분석과 보안 도구
+  # ---------------------------------------------------------------- #
+
+  tools:
+    # Kotlin 정적 분석
+    detekt:
+      enabled: true
+
+    # 관광공사 API 키, Firebase 설정 등 비밀정보 탐지
+    gitleaks:
+      enabled: true
+
+    trufflehog:
+      enabled: true
+
+    # GitHub Actions가 있는 경우 워크플로 문법과 보안 확인
+    actionlint:
+      enabled: true
+
+    zizmor:
+      enabled: true
+
+# ---------------------------------------------------------------- #
+# PR 채팅
+# ---------------------------------------------------------------- #
+
 chat:
   auto_reply: true
+  art: false
+
+# ---------------------------------------------------------------- #
+# 저장소 지식 기반
+# ---------------------------------------------------------------- #
+
+knowledge_base:
+  web_search:
+    enabled: true
+
+  # AGENTS.md, CLAUDE.md, copilot-instructions.md 등의 규칙을 자동 적용
+  code_guidelines:
+    enabled: true
+
+  # 다른 저장소에 영향을 주지 않고 현재 프로젝트에서만 학습
+  learnings:
+    scope: local
+    approval_delay: 0
+
+  issues:
+    scope: local
+
+  pull_requests:
+    scope: local

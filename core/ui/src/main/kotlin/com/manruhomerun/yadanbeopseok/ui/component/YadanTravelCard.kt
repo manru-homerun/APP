@@ -424,17 +424,6 @@ private fun Travel.dateText(): String? {
 private fun LocalDate.toShortDateText(): String =
     "${month.number}.$day(${dayOfWeek.toKoreanShortName()})"
 
-private fun DayOfWeek.toKoreanShortName(): String =
-    when (this) {
-        DayOfWeek.MONDAY -> "월"
-        DayOfWeek.TUESDAY -> "화"
-        DayOfWeek.WEDNESDAY -> "수"
-        DayOfWeek.THURSDAY -> "목"
-        DayOfWeek.FRIDAY -> "금"
-        DayOfWeek.SATURDAY -> "토"
-        DayOfWeek.SUNDAY -> "일"
-    }
-
 private data class TravelStatusVisuals(
     val text: String,
     val style: YadanStatusChipStyle,

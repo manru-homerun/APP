@@ -320,7 +320,7 @@ private fun LocalDateTime.toSelectionDateTimeText(): String =
 /**
  * 요일을 한글 한 글자로 반환합니다.
  */
-private fun DayOfWeek.toKoreanShortName(): String =
+internal fun DayOfWeek.toKoreanShortName(): String =
     when (this) {
         DayOfWeek.MONDAY -> "월"
         DayOfWeek.TUESDAY -> "화"

@@ -38,6 +38,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOutline
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPillShape
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryInk
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryTintStrong
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanSurface
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextMuted
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextSecondary
@@ -47,8 +48,11 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
  * 상태 칩의 시각적 유형입니다.
  */
 enum class YadanStatusChipStyle {
-    /** D-day와 같이 하늘색으로 강조하는 상태입니다. */
+    /** D-day와 같이 하늘색으로 강하게 강조하는 상태입니다. */
     PRIMARY,
+
+    /** 옅은 하늘색 배경으로 보조 상태를 강조합니다. */
+    TINTED,
 
     /** 진행 중인 상태이며 흰색 pulse 점을 함께 표시합니다. */
     LIVE,
@@ -87,6 +91,7 @@ enum class YadanStatusChipSize {
  * @param modifier 칩의 배치에 사용할 Modifier입니다.
  * @param style 상태 칩의 색상과 표시 유형입니다.
  * @param size 상태 칩의 시각적 크기입니다.
+ * @param onDark 어두운 배경 위에 표시하는지 결정합니다.
  * @param leadingIcon 문구 앞에 표시할 아이콘입니다.
  * LIVE 스타일에서는 pulse 점을 사용하므로 이 아이콘을 표시하지 않습니다.
  */
@@ -96,9 +101,14 @@ fun YadanStatusChip(
     modifier: Modifier = Modifier,
     style: YadanStatusChipStyle = YadanStatusChipStyle.PRIMARY,
     size: YadanStatusChipSize = YadanStatusChipSize.DEFAULT,
+    onDark: Boolean = false,
     leadingIcon: (@Composable () -> Unit)? = null,
 ) {
-    val visuals = statusChipVisuals(style)
+    val visuals =
+        statusChipVisuals(
+            style = style,
+            onDark = onDark,
+        )
     val isLive = style == YadanStatusChipStyle.LIVE
 
     val horizontalPadding =
@@ -110,10 +120,18 @@ fun YadanStatusChip(
     val verticalPadding =
         when (size) {
             YadanStatusChipSize.DEFAULT ->
-                if (isLive) LIVE_DEFAULT_VERTICAL_PADDING else DEFAULT_VERTICAL_PADDING
+                if (isLive) {
+                    LIVE_DEFAULT_VERTICAL_PADDING
+                } else {
+                    DEFAULT_VERTICAL_PADDING
+                }
 
             YadanStatusChipSize.SMALL ->
-                if (isLive) LIVE_SMALL_VERTICAL_PADDING else SMALL_VERTICAL_PADDING
+                if (isLive) {
+                    LIVE_SMALL_VERTICAL_PADDING
+                } else {
+                    SMALL_VERTICAL_PADDING
+                }
         }
 
     /*
@@ -128,13 +146,16 @@ fun YadanStatusChip(
         }
 
     val contentSpacing =
-        if (isLive) LIVE_CONTENT_SPACING else CONTENT_SPACING
+        if (isLive) {
+            LIVE_CONTENT_SPACING
+        } else {
+            CONTENT_SPACING
+        }
 
     val textStyle =
         when (size) {
             YadanStatusChipSize.DEFAULT ->
                 MaterialTheme.typography.labelSmall.copy(
-                    // HTML의 font-weight: 800에 대응합니다.
                     fontWeight = FontWeight.ExtraBold,
                 )
 
@@ -165,14 +186,14 @@ fun YadanStatusChip(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             when {
-                style == YadanStatusChipStyle.LIVE -> {
+                isLive -> {
                     YadanLiveIndicator()
                 }
 
                 leadingIcon != null -> {
                     /*
-                     * 방장 아이콘은 문구보다 밝은 Primary 색상을
-                     * 사용하므로 아이콘 색상을 별도로 제공합니다.
+                     * 상태와 배경에 맞는 아이콘 색상을
+                     * LocalContentColor로 전달합니다.
                      */
                     CompositionLocalProvider(
                         LocalContentColor provides visuals.iconColor,
@@ -198,7 +219,7 @@ fun YadanStatusChip(
 }
 
 /**
- * HTML `.ld`와 `pulse` 애니메이션에 대응하는 LIVE 표시입니다.
+ * HTML `.ld`와 pulse 애니메이션에 대응하는 LIVE 표시입니다.
  */
 @Composable
 private fun YadanLiveIndicator() {
@@ -207,10 +228,6 @@ private fun YadanLiveIndicator() {
             label = "Yadan live indicator",
         )
 
-    /*
-     * HTML의 70% 지점까지 ring이 6px만큼 확장된 뒤,
-     * 남은 시간에는 투명한 상태로 원래 크기로 돌아갑니다.
-     */
     val ringExpansion by
     infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -275,9 +292,22 @@ private fun YadanLiveIndicator() {
 }
 
 /**
- * 상태 유형에 맞는 색상과 테두리를 반환합니다.
+ * 상태와 배경 유형에 맞는 색상과 테두리를 반환합니다.
  */
 private fun statusChipVisuals(
+    style: YadanStatusChipStyle,
+    onDark: Boolean,
+): YadanStatusChipVisuals =
+    if (onDark) {
+        onDarkStatusChipVisuals(style)
+    } else {
+        defaultStatusChipVisuals(style)
+    }
+
+/**
+ * 밝은 화면과 흰색 카드에서 사용하는 기본 색상입니다.
+ */
+private fun defaultStatusChipVisuals(
     style: YadanStatusChipStyle,
 ): YadanStatusChipVisuals =
     when (style) {
@@ -288,6 +318,13 @@ private fun statusChipVisuals(
                 containerColor = YadanPrimary,
                 contentColor = YadanOnPrimary,
                 iconColor = YadanOnPrimary,
+            )
+
+        YadanStatusChipStyle.TINTED ->
+            YadanStatusChipVisuals(
+                containerColor = YadanPrimaryTintStrong,
+                contentColor = YadanPrimaryInk,
+                iconColor = YadanPrimaryInk,
             )
 
         YadanStatusChipStyle.HOST ->
@@ -323,6 +360,56 @@ private fun statusChipVisuals(
     }
 
 /**
+ * HTML 히어로 카드처럼 어두운 배경 위에서 사용하는 색상입니다.
+ */
+private fun onDarkStatusChipVisuals(
+    style: YadanStatusChipStyle,
+): YadanStatusChipVisuals =
+    when (style) {
+        YadanStatusChipStyle.PRIMARY,
+        YadanStatusChipStyle.LIVE,
+            ->
+            YadanStatusChipVisuals(
+                containerColor = Color.Black.copy(alpha = 0.18f),
+                contentColor = YadanOnPrimary,
+                iconColor = YadanOnPrimary,
+                border =
+                    BorderStroke(
+                        width = ON_DARK_STATUS_BORDER_WIDTH,
+                        color = YadanOnPrimary.copy(alpha = 0.28f),
+                    ),
+            )
+
+        YadanStatusChipStyle.TINTED,
+        YadanStatusChipStyle.GUEST,
+            ->
+            YadanStatusChipVisuals(
+                containerColor = YadanOnPrimary.copy(alpha = 0.16f),
+                contentColor = YadanOnPrimary,
+                iconColor = YadanOnPrimary,
+                border =
+                    BorderStroke(
+                        width = ON_DARK_STATUS_BORDER_WIDTH,
+                        color = YadanOnPrimary.copy(alpha = 0.30f),
+                    ),
+            )
+
+        YadanStatusChipStyle.HOST ->
+            YadanStatusChipVisuals(
+                containerColor = YadanOnPrimary.copy(alpha = 0.92f),
+                contentColor = YadanPrimaryInk,
+                iconColor = YadanPrimary,
+            )
+
+        YadanStatusChipStyle.MUTED ->
+            YadanStatusChipVisuals(
+                containerColor = Color.Black.copy(alpha = 0.12f),
+                contentColor = YadanOnPrimary.copy(alpha = 0.72f),
+                iconColor = YadanOnPrimary.copy(alpha = 0.72f),
+            )
+    }
+
+/**
  * 상태 칩을 그리는 데 필요한 색상과 테두리입니다.
  */
 private data class YadanStatusChipVisuals(
@@ -351,12 +438,11 @@ private val LIVE_INDICATOR_CONTAINER_SIZE =
     LIVE_INDICATOR_SIZE + LIVE_INDICATOR_MAX_EXPANSION * 2f
 
 private val STATUS_BORDER_WIDTH = 1.5.dp
+private val ON_DARK_STATUS_BORDER_WIDTH = 1.dp
 
 private const val LIVE_PULSE_START_ALPHA = 0.55f
 private const val LIVE_PULSE_DURATION_MILLIS = 1_600
 private const val LIVE_PULSE_EXPAND_MILLIS = 1_120
-
-
 
 @Preview(
     name = "Yadan status chips",
@@ -425,6 +511,67 @@ private fun YadanStatusChipPreview() {
             }
 
             Text(
+                text = "어두운 배경",
+                style = MaterialTheme.typography.labelMedium,
+                color = YadanTextMuted,
+            )
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
+                color = YadanPrimary,
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    ) {
+                        YadanStatusChip(
+                            text = "여행 중 · DAY 1/2",
+                            style = YadanStatusChipStyle.LIVE,
+                            onDark = true,
+                        )
+
+                        YadanStatusChip(
+                            text = "D-3 · 부산 원정",
+                            style = YadanStatusChipStyle.PRIMARY,
+                            onDark = true,
+                        )
+                    }
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    ) {
+                        YadanStatusChip(
+                            text = "방장",
+                            style = YadanStatusChipStyle.HOST,
+                            onDark = true,
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                )
+                            },
+                        )
+
+                        YadanStatusChip(
+                            text = "동행자",
+                            style = YadanStatusChipStyle.GUEST,
+                            onDark = true,
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                )
+                            },
+                        )
+                    }
+                }
+            }
+
+            Text(
                 text = "작은 크기",
                 style = MaterialTheme.typography.labelMedium,
                 color = YadanTextMuted,
@@ -449,6 +596,12 @@ private fun YadanStatusChipPreview() {
                             contentDescription = null,
                         )
                     },
+                )
+
+                YadanStatusChip(
+                    text = "홈",
+                    style = YadanStatusChipStyle.TINTED,
+                    size = YadanStatusChipSize.SMALL,
                 )
             }
         }

@@ -31,6 +31,8 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.KboTeam
 import com.manruhomerun.yadanbeopseok.model.LoginProvider
 import com.manruhomerun.yadanbeopseok.model.UserProfile
+import com.manruhomerun.yadanbeopseok.ui.displayNickname
+import com.manruhomerun.yadanbeopseok.ui.normalizedNickname
 import com.manruhomerun.yadanbeopseok.ui.theme.teamColor
 
 /**
@@ -65,12 +67,8 @@ fun YadanUserAvatar(
     modifier: Modifier = Modifier,
     size: YadanUserAvatarSize = YadanUserAvatarSize.LIST,
 ) {
-    val nickname =
-        user.nickname
-            ?.trim()
-            ?.takeIf { name -> name.isNotEmpty() }
-
-    val displayName = nickname ?: "사용자"
+    val nickname = user.normalizedNickname()
+    val displayName = user.displayNickname()
     val initial = nickname?.take(1) ?: "?"
 
     val backgroundColor =

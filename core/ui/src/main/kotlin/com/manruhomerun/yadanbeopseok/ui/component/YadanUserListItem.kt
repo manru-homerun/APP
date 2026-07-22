@@ -41,6 +41,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.KboTeam
 import com.manruhomerun.yadanbeopseok.model.LoginProvider
 import com.manruhomerun.yadanbeopseok.model.UserProfile
+import com.manruhomerun.yadanbeopseok.ui.displayNickname
 
 /**
  * 사용자 목록 항목의 시각적 유형입니다.
@@ -195,11 +196,7 @@ private fun YadanUserListItemContent(
     modifier: Modifier = Modifier,
     horizontalSpacing: androidx.compose.ui.unit.Dp,
 ) {
-    val nickname =
-        user.nickname
-            ?.trim()
-            ?.takeIf { name -> name.isNotEmpty() }
-            ?: "사용자"
+    val nickname = user.displayNickname()
 
     Row(
         modifier = modifier,

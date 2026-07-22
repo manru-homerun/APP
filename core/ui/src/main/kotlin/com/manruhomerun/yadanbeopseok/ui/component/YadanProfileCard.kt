@@ -30,6 +30,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.KboTeam
 import com.manruhomerun.yadanbeopseok.model.LoginProvider
 import com.manruhomerun.yadanbeopseok.model.UserProfile
+import com.manruhomerun.yadanbeopseok.ui.displayNickname
 
 /**
  * 마이페이지 상단에 사용자 정보를 표시하는 프로필 카드입니다.
@@ -51,11 +52,7 @@ fun YadanProfileCard(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    val displayName =
-        user.nickname
-            ?.trim()
-            ?.takeIf { nickname -> nickname.isNotEmpty() }
-            ?: "사용자"
+    val nickname = user.displayNickname()
 
     YadanCard(
         onClick = onClick,
@@ -102,7 +99,7 @@ fun YadanProfileCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = displayName,
+                        text = nickname,
                         modifier = Modifier.weight(1f, fill = false),
                         style =
                             YadanTypography.titleSmall.copy(

@@ -35,11 +35,6 @@ data class TravelDay(
     val places: List<TravelPlace>,
 )
 
-/**
- * 여행 코스에 포함된 특정 여행지입니다.
- *
- * ERD의 travel_travel_spot_mapping에 해당하는 앱 내부 모델입니다.
- */
 data class TravelPlace(
     val id: String,
     val spot: TravelSpot,
@@ -47,8 +42,13 @@ data class TravelPlace(
     val order: Int,
     val certifications: List<TravelCertification> = emptyList(),
 ) {
-    val isCertified: Boolean
-        get() = certifications.isNotEmpty()
+    /**
+     * 특정 사용자가 이 장소를 방문 인증했는지 확인합니다.
+     */
+    fun isCertifiedBy(userId: String): Boolean =
+        certifications.any { certification ->
+            certification.userId == userId
+        }
 }
 
 /**

@@ -10,36 +10,36 @@ import androidx.compose.ui.unit.sp
 import com.manruhomerun.yadanbeopseok.designsystem.R
 
 /**
- * 야단법석 앱에서 사용하는 Pretendard 글꼴입니다.
+ * 야단법석 앱에서 사용하는 Wanted Sans 글꼴입니다.
  *
  * 화면에서 사용하는 굵기별 폰트 리소스를 하나의 FontFamily로 묶습니다.
  */
-val PretendardFontFamily =
+val YadanFontFamily =
     FontFamily(
         Font(
-            resId = R.font.pretendard_regular,
+            resId = R.font.wanted_sans_regular,
             weight = FontWeight.Normal,
         ),
         Font(
-            resId = R.font.pretendard_medium,
+            resId = R.font.wanted_sans_medium,
             weight = FontWeight.Medium,
         ),
         Font(
-            resId = R.font.pretendard_semibold,
+            resId = R.font.wanted_sans_semibold,
             weight = FontWeight.SemiBold,
         ),
         Font(
-            resId = R.font.pretendard_bold,
+            resId = R.font.wanted_sans_bold,
             weight = FontWeight.Bold,
         ),
         Font(
-            resId = R.font.pretendard_extrabold,
+            resId = R.font.wanted_sans_extrabold,
             weight = FontWeight.ExtraBold,
         ),
     )
 
 /**
- * 모든 텍스트 스타일에 공통으로 Pretendard와 자간 0을 적용합니다.
+ * 모든 텍스트 스타일에 공통으로 Wanted Sans와 자간 0을 적용합니다.
  */
 private fun yadanTextStyle(
     fontWeight: FontWeight,
@@ -47,7 +47,7 @@ private fun yadanTextStyle(
     lineHeight: TextUnit,
 ): TextStyle =
     TextStyle(
-        fontFamily = PretendardFontFamily,
+        fontFamily = YadanFontFamily,
         fontWeight = fontWeight,
         fontSize = fontSize,
         lineHeight = lineHeight,

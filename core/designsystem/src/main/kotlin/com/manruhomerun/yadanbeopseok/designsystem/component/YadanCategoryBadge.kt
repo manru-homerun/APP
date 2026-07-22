@@ -23,6 +23,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanDivider
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOnPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryInk
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryTint
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryTintStrong
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanShapes
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
@@ -36,6 +37,9 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 enum class YadanCategoryBadgeStyle {
     /** 음식, 문화, 자연, 숙박 등 일반 장소 카테고리입니다. */
     DEFAULT,
+
+    /** 추천·검색·찜 카드에서 사용하는 연한 하늘색 여행지 태그입니다. */
+    TINTED,
 
     /** 야구 경기 및 야구장 방문을 나타내는 직관 카테고리입니다. */
     GAME,
@@ -57,7 +61,7 @@ enum class YadanCategoryBadgeStyle {
  * 장소의 종류와 특성을 표시하는 작은 배지입니다.
  *
  * HTML의 `.cat`, `.cat.game`, `.cat.fest`, `.cat.sel`,
- * `.cat.access`, `.cat.care`에 대응합니다.
+ * `.cat.access`, `.cat.care`, `.sc-meta`, `.minitag`에 대응합니다.
  *
  * 장소 정보를 표시하는 용도이므로 자체 클릭 동작은 제공하지 않습니다.
  * 축제 이모지와 같은 장식은 [text]에 포함해서 전달합니다.
@@ -76,6 +80,9 @@ fun YadanCategoryBadge(
         when (style) {
             YadanCategoryBadgeStyle.DEFAULT ->
                 YadanDivider to YadanTextSecondary
+
+            YadanCategoryBadgeStyle.TINTED ->
+                YadanPrimaryTint to YadanPrimaryInk
 
             YadanCategoryBadgeStyle.GAME ->
                 YadanTextPrimary to YadanOnPrimary
@@ -150,6 +157,11 @@ private fun YadanCategoryBadgePreview() {
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 YadanCategoryBadge(text = "문화")
+
+                YadanCategoryBadge(
+                    text = "문화 태그",
+                    style = YadanCategoryBadgeStyle.TINTED,
+                )
 
                 YadanCategoryBadge(
                     text = "직관",

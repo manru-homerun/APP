@@ -2,6 +2,8 @@ package com.manruhomerun.yadanbeopseok.network.di
 
 import com.manruhomerun.yadanbeopseok.network.BuildConfig
 import com.manruhomerun.yadanbeopseok.network.auth.api.AuthApi
+import com.manruhomerun.yadanbeopseok.network.auth.interceptor.AuthInterceptor
+import com.manruhomerun.yadanbeopseok.network.auth.interceptor.TokenAuthenticator
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -51,18 +53,22 @@ object NetworkModule {
         }
 
     /**
-     * Retrofit에서 사용할 기본 OkHttpClient를 제공합니다.
+     * Retrofit에서 사용할 OkHttpClient를 제공합니다.
      *
-     * AuthInterceptor와 TokenAuthenticator는
-     * 토큰 저장소 구현 후 이 클라이언트에 추가합니다.
+     * [AuthInterceptor]는 일반 요청에 Access Token을 추가하고,
+     * [TokenAuthenticator]는 401 응답 시 토큰 재발급과 요청 재시도를 처리합니다.
      */
     @Provides
     @Singleton
     fun provideOkHttpClient(
         loggingInterceptor: HttpLoggingInterceptor,
+        authInterceptor: AuthInterceptor,
+        tokenAuthenticator: TokenAuthenticator,
     ): OkHttpClient =
         OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
+            .addInterceptor(authInterceptor)
+            .authenticator(tokenAuthenticator)
             .build()
 
     /**

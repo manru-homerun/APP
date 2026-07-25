@@ -37,6 +37,8 @@ dependencies {
     api(libs.protobuf.kotlin.lite)
 
     implementation(projects.core.common)
+    implementation(libs.androidx.dataStore.preferences)
 
+    testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
 }

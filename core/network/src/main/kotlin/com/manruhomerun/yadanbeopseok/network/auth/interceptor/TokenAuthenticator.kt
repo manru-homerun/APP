@@ -5,7 +5,9 @@ import com.manruhomerun.yadanbeopseok.network.auth.token.AuthorizationHeaderProv
 import com.manruhomerun.yadanbeopseok.network.auth.token.TokenRefreshHandler
 import dagger.Lazy
 import java.io.IOException
+import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.runBlocking
 import okhttp3.Authenticator
 import okhttp3.Request
@@ -16,7 +18,8 @@ import okhttp3.Route
  * 인증된 요청에서 401 응답을 받으면 서비스 토큰을 재발급하고
  * 실패했던 요청을 새로운 Access Token으로 다시 실행합니다.
  */
-class TokenAuthenticator @Inject constructor(
+@Singleton
+internal class TokenAuthenticator @Inject constructor(
     private val tokenRefreshHandler: Lazy<TokenRefreshHandler>,
     private val authorizationHeaderProvider: AuthorizationHeaderProvider,
 ) : Authenticator {
@@ -138,5 +141,4 @@ private fun Response.unauthorizedResponseCount(): Int {
     return count
 }
 
-private const val HTTP_UNAUTHORIZED = 401
 private const val MAX_UNAUTHORIZED_RESPONSE_COUNT = 2

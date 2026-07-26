@@ -13,6 +13,7 @@ import com.manruhomerun.yadanbeopseok.network.auth.dto.LoginRequestDto
 import com.manruhomerun.yadanbeopseok.network.auth.dto.TokenRefreshRequestDto
 import com.manruhomerun.yadanbeopseok.network.common.dto.ApiResponseDto
 import com.manruhomerun.yadanbeopseok.network.common.error.ApiCallExecutor
+import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
 import java.time.Instant
 import javax.inject.Inject
 
@@ -155,9 +156,6 @@ internal class AuthRepositoryImpl @Inject constructor(
     private fun currentEpochSeconds(): Long =
         Instant.now().epochSecond
 
-    private companion object {
-        const val HTTP_UNAUTHORIZED = 401
-    }
 }
 
 /**

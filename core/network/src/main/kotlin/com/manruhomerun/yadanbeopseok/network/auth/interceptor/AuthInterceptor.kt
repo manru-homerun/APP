@@ -13,7 +13,7 @@ import okhttp3.Response
  * 토큰의 저장 방식은 알지 않고 [AuthorizationHeaderProvider]를 통해
  * 현재 사용할 인증 헤더만 전달받습니다.
  */
-class AuthInterceptor @Inject constructor(
+internal class AuthInterceptor @Inject constructor(
     private val authorizationHeaderProvider: AuthorizationHeaderProvider,
 ) : Interceptor {
     /**

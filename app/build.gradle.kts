@@ -5,7 +5,36 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.yadanbeopseok.android.application)
     alias(libs.plugins.yadanbeopseok.android.application.compose)
+    alias(libs.plugins.yadanbeopseok.hilt)
 }
+
+val localKakaoNativeAppKey =
+    providers
+        .fileContents(
+            isolated.rootProject.projectDirectory.file("local.properties"),
+        ).asText
+        .map { text ->
+            val properties = Properties()
+            properties.load(StringReader(text))
+            properties.getProperty("KAKAO_NATIVE_APP_KEY")
+                ?: error(
+                    "KAKAO_NATIVE_APP_KEY is missing in local.properties.",
+                )
+        }
+
+val kakaoNativeAppKey =
+    providers
+        .gradleProperty("KAKAO_NATIVE_APP_KEY")
+        .orElse(providers.environmentVariable("KAKAO_NATIVE_APP_KEY"))
+        .orElse(localKakaoNativeAppKey)
+        .orElse(
+            providers.provider<String> {
+                error(
+                    "KAKAO_NATIVE_APP_KEY must be set via a Gradle property, " +
+                        "environment variable, or local.properties.",
+                )
+            },
+        )
 
 android {
     namespace = "com.manruhomerun.yadanbeopseok"
@@ -17,6 +46,9 @@ android {
         applicationId = "com.manruhomerun.yadanbeopseok"
         versionCode = 1
         versionName = "1.0"
+
+        manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] =
+            kakaoNativeAppKey.get()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -37,9 +69,13 @@ android {
 }
 
 dependencies {
+
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+
+    implementation(projects.core.designsystem)
 
     implementation(libs.kakao.sdk.user)
 
@@ -62,17 +98,6 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
 
-val kakaoNativeAppKey =
-    providers
-        .fileContents(
-            isolated.rootProject.projectDirectory.file("local.properties"),
-        ).asText
-        .map { text ->
-            val properties = Properties()
-            properties.load(StringReader(text))
-            properties.getProperty("KAKAO_NATIVE_APP_KEY")
-                ?: error("KAKAO_NATIVE_APP_KEY is missing in local.properties.")
-        }
 
 androidComponents {
     onVariants {

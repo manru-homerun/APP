@@ -23,15 +23,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
-import com.manruhomerun.yadanbeopseok.ui.theme.BaseAndroidTheme
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            BaseAndroidTheme {
-                BaseAndroidApp()
+            YadanbeopseokTheme {
+                YadanbeopseokApp()
             }
         }
     }
@@ -39,7 +39,7 @@ class MainActivity : ComponentActivity() {
 
 @PreviewScreenSizes
 @Composable
-fun BaseAndroidApp() {
+fun YadanbeopseokApp() {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
 
     NavigationSuiteScaffold(
@@ -88,7 +88,7 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
-    BaseAndroidTheme {
+    YadanbeopseokTheme {
         Greeting("Android")
     }
 }

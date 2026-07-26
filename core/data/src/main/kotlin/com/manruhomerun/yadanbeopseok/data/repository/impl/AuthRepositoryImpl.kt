@@ -65,19 +65,15 @@ internal class AuthRepositoryImpl @Inject constructor(
     /**
      * DataStore에 저장된 refresh token으로 서비스 토큰을 재발급합니다.
      *
-     * refresh token이 없거나 이미 만료된 경우 인증 정보를 삭제하고
+     * refresh token이 없으면 [SessionExpiredException]을 발생시킵니다.
+     * refresh token이 이미 만료된 경우에는 인증 정보를 삭제한 후
      * [SessionExpiredException]을 발생시킵니다.
      *
      * 재발급에 성공하면 access token과 refresh token을 모두 교체합니다.
      */
     override suspend fun refreshAccessToken() {
-        
-        val storedTokens = authTokenDataSource.getAuthTokens()
+        val storedTokens = authTokenDataSource.getAuthTokens() ?: throw SessionExpiredException()
 
-        if (storedTokens == null) {
-            authTokenDataSource.clearAuthTokens()
-            throw SessionExpiredException()
-        }
         if (
             storedTokens.refreshTokenExpiresAtEpochSeconds <=
             currentEpochSeconds()

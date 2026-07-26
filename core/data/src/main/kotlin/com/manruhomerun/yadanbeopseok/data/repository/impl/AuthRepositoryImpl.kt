@@ -71,10 +71,13 @@ internal class AuthRepositoryImpl @Inject constructor(
      * 재발급에 성공하면 access token과 refresh token을 모두 교체합니다.
      */
     override suspend fun refreshAccessToken() {
-        val storedTokens =
-            authTokenDataSource.getAuthTokens()
-                ?: throw SessionExpiredException()
+        
+        val storedTokens = authTokenDataSource.getAuthTokens()
 
+        if (storedTokens == null) {
+            authTokenDataSource.clearAuthTokens()
+            throw SessionExpiredException()
+        }
         if (
             storedTokens.refreshTokenExpiresAtEpochSeconds <=
             currentEpochSeconds()

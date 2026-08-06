@@ -1,9 +1,9 @@
 [versions]
 androidDesugarJdkLibs = "2.1.5"
 # AGP와 도구들은 같이 업그래이드 되어야 함
-androidGradlePlugin = "9.2.1"
-androidTools = "32.2.1"
-kotlin = "2.4.0"
+androidGradlePlugin = "9.3.1"
+androidTools = "32.3.1"
+kotlin = "2.4.10"
 ksp = "2.3.4"
 coreKtx = "1.19.0"
 junit = "4.13.2"
@@ -31,7 +31,7 @@ androidxNavigation3 = "1.1.4"
 androidxLifecycle = "2.11.0"
 androidxLifecycleViewModelNavigation3 = "2.11.0"
 # hilt
-hilt = "2.60"
+hilt = "2.60.1"
 hiltExt = "1.4.0"
 # room
 room = "2.8.4"
@@ -139,6 +139,7 @@ hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.r
 hilt-core = { group = "com.google.dagger", name = "hilt-core", version.ref = "hilt" }
 hilt-ext-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hiltExt" }
 hilt-ext-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltExt" }
+androidx-hilt-lifecycle-viewModelCompose = { group = "androidx.hilt", name = "hilt-lifecycle-viewmodel-compose", version.ref = "hiltExt" }
 
 # workmanager
 androidx-work-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "androidxWork" }
@@ -228,6 +229,7 @@ yadanbeopseok-android-application = { id = "yadanbeopseok.android.application" }
 yadanbeopseok-android-application-compose = { id = "yadanbeopseok.android.application.compose" }
 yadanbeopseok-android-library = { id = "yadanbeopseok.android.library" }
 yadanbeopseok-android-library-compose = { id = "yadanbeopseok.android.library.compose" }
+yadanbeopseok-android-feature = { id = "yadanbeopseok.android.feature" }
 yadanbeopseok-jvm-library = { id = "yadanbeopseok.jvm.library" }
 yadanbeopseok-hilt = { id = "yadanbeopseok.hilt" }
 yadanbeopseok-android-room = { id = "yadanbeopseok.android.room" }

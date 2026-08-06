@@ -4,8 +4,12 @@ package com.manruhomerun.yadanbeopseok.datastore
  * Preferences DataStore에 저장하는 야단법석 서비스 인증 정보입니다.
  *
  * 카카오 액세스 토큰이 아니라 야단법석 백엔드가 로그인 또는
- * 토큰 재발급 응답으로 발급한 서비스 전용 토큰을 나타냅니다.
+ * 토큰 재발급 응답으로 발급한 서비스 전용 인증 정보를 나타냅니다.
  *
+ * 사용자 ID를 토큰과 함께 저장하여 로그인한 사용자를 식별하고,
+ * 로그아웃이나 세션 만료 시 모든 인증 정보를 함께 제거합니다.
+ *
+ * @property userId 현재 로그인한 야단법석 사용자의 ID
  * @property accessToken 야단법석 API 인증에 사용할 access token
  * @property refreshToken access token 재발급에 사용할 refresh token
  * @property tokenType Authorization 헤더에 사용할 토큰 타입
@@ -13,6 +17,7 @@ package com.manruhomerun.yadanbeopseok.datastore
  * @property refreshTokenExpiresAtEpochSeconds refresh token 만료 시각(Unix epoch 초)
  */
 data class AuthTokens(
+    val userId: String,
     val accessToken: String,
     val refreshToken: String,
     val tokenType: String,

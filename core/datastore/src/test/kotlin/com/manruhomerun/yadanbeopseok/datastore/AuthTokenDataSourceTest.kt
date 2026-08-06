@@ -25,6 +25,7 @@ class AuthTokenDataSourceTest {
         val fixture = createFixture(backgroundScope)
 
         assertNull(fixture.dataSource.getAuthTokens())
+        assertNull(fixture.dataSource.getCurrentUserId())
     }
 
     @Test
@@ -36,6 +37,18 @@ class AuthTokenDataSourceTest {
         assertEquals(
             expected = INITIAL_AUTH_TOKENS,
             actual = fixture.dataSource.getAuthTokens(),
+        )
+    }
+
+    @Test
+    fun `인증 정보를 저장하면 현재 사용자 ID가 조회된다`() = runTest {
+        val fixture = createFixture(backgroundScope)
+
+        fixture.dataSource.saveAuthTokens(INITIAL_AUTH_TOKENS)
+
+        assertEquals(
+            expected = INITIAL_AUTH_TOKENS.userId,
+            actual = fixture.dataSource.getCurrentUserId(),
         )
     }
 
@@ -53,13 +66,15 @@ class AuthTokenDataSourceTest {
     }
 
     @Test
-    fun `인증 정보를 삭제하면 null을 반환한다`() = runTest {
+    fun `인증 정보를 삭제하면 사용자 ID와 토큰을 모두 삭제한다`() = runTest {
         val fixture = createFixture(backgroundScope)
+        val userIdKey = stringPreferencesKey("auth_user_id")
         fixture.dataSource.saveAuthTokens(INITIAL_AUTH_TOKENS)
 
         fixture.dataSource.clearAuthTokens()
 
         assertNull(fixture.dataSource.getAuthTokens())
+        assertNull(fixture.dataStore.data.first()[userIdKey])
     }
 
     @Test
@@ -72,6 +87,7 @@ class AuthTokenDataSourceTest {
         }
 
         assertNull(fixture.dataSource.getAuthTokens())
+        assertNull(fixture.dataSource.getCurrentUserId())
     }
 
     @Test
@@ -122,6 +138,7 @@ class AuthTokenDataSourceTest {
     private companion object {
         val INITIAL_AUTH_TOKENS =
             AuthTokens(
+                userId = "1",
                 accessToken = "access-token-1",
                 refreshToken = "refresh-token-1",
                 tokenType = "Bearer",
@@ -131,6 +148,7 @@ class AuthTokenDataSourceTest {
 
         val REFRESHED_AUTH_TOKENS =
             AuthTokens(
+                userId = "1",
                 accessToken = "access-token-2",
                 refreshToken = "refresh-token-2",
                 tokenType = "Bearer",

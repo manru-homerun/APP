@@ -57,6 +57,10 @@ gradlePlugin {
             id = libs.plugins.yadanbeopseok.android.library.compose.get().pluginId
             implementationClass = "AndroidLibraryComposeConventionPlugin"
         }
+        register("androidFeature") {
+            id = libs.plugins.yadanbeopseok.android.feature.get().pluginId
+            implementationClass = "AndroidFeatureImplConventionPlugin"
+        }
         register("jvmLibrary") {
             id = libs.plugins.yadanbeopseok.jvm.library.get().pluginId
             implementationClass = "JvmLibraryConventionPlugin"

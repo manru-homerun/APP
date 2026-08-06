@@ -1,7 +1,9 @@
 package com.manruhomerun.yadanbeopseok.data.di
 
 import com.manruhomerun.yadanbeopseok.data.repository.AuthRepository
+import com.manruhomerun.yadanbeopseok.data.repository.OnboardingRepository
 import com.manruhomerun.yadanbeopseok.data.repository.impl.AuthRepositoryImpl
+import com.manruhomerun.yadanbeopseok.data.repository.impl.OnboardingRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -22,5 +24,17 @@ internal abstract class RepositoryModule {
      */
     @Binds
     @Singleton
-    abstract fun bindAuthRepository(authRepositoryImpl: AuthRepositoryImpl): AuthRepository
+    abstract fun bindAuthRepository(
+        authRepositoryImpl: AuthRepositoryImpl,
+    ): AuthRepository
+
+    /**
+     * [OnboardingRepository] 요청에
+     * [OnboardingRepositoryImpl]을 제공합니다.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindOnboardingRepository(
+        onboardingRepositoryImpl: OnboardingRepositoryImpl,
+    ): OnboardingRepository
 }

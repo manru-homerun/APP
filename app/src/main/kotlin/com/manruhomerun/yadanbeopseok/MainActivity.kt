@@ -5,30 +5,26 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBox
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
+import com.manruhomerun.yadanbeopseok.navigation.rememberYadanNavigationState
+import com.manruhomerun.yadanbeopseok.navigation.route.LoginNavKey
+import dagger.hilt.android.AndroidEntryPoint
 
+/**
+ * 야단법석 앱의 단일 Activity입니다.
+ *
+ * 화면 구성은 Compose와 Nav3에 위임하고,
+ * Activity는 앱 테마와 최상위 앱 UI만 실행합니다.
+ */
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         enableEdgeToEdge()
+
         setContent {
             YadanbeopseokTheme {
                 YadanbeopseokApp()
@@ -37,58 +33,18 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@PreviewScreenSizes
+/**
+ * 앱의 시작 NavKey와 최상위 NavHost를 구성합니다.
+ */
 @Composable
-fun YadanbeopseokApp() {
-    var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
+private fun YadanbeopseokApp() {
+    val navigationState =
+        rememberYadanNavigationState(
+            initialKey = LoginNavKey,
+        )
 
-    NavigationSuiteScaffold(
-        navigationSuiteItems = {
-            AppDestinations.entries.forEach {
-                item(
-                    icon = {
-                        Icon(
-                            it.icon,
-                            contentDescription = it.label,
-                        )
-                    },
-                    label = { Text(it.label) },
-                    selected = it == currentDestination,
-                    onClick = { currentDestination = it },
-                )
-            }
-        },
-    ) {
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            Greeting(
-                name = "Android",
-                modifier = Modifier.padding(innerPadding),
-            )
-        }
-    }
-}
-
-enum class AppDestinations(
-    val label: String,
-    val icon: ImageVector,
-) {
-    HOME("Home", Icons.Default.Home),
-    FAVORITES("Favorites", Icons.Default.Favorite),
-    PROFILE("Profile", Icons.Default.AccountBox),
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier,
+    YadanNavHost(
+        navigationState = navigationState,
+        modifier = Modifier.fillMaxSize(),
     )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    YadanbeopseokTheme {
-        Greeting("Android")
-    }
 }

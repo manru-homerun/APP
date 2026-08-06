@@ -218,7 +218,7 @@ private fun YadanPreferredTravelRegionItemPreview() {
                         }
 
                         /*
-                         * 마지막 행도 위쪽 행과 같은 5열 너비를 유지합니다.
+                         * 마지막 행도 위쪽 행과 같은 4열 너비를 유지합니다.
                          */
                         repeat(REGION_COLUMN_COUNT - regions.size) {
                             Spacer(modifier = Modifier.weight(1f))
@@ -229,5 +229,5 @@ private fun YadanPreferredTravelRegionItemPreview() {
     }
 }
 
-private const val REGION_COLUMN_COUNT = 5
+private const val REGION_COLUMN_COUNT = 4
 private val REGION_GRID_SPACING = 7.dp

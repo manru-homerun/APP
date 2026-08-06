@@ -1,5 +1,6 @@
 package com.manruhomerun.yadanbeopseok.model
 
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 
 /**
@@ -16,7 +17,7 @@ data class UserProfile(
     val profileImageUrl: String? = null,
     val favoriteTeam: KboTeam? = null,
     val gender: Gender? = null,
-    val ageRange: String? = null,
+    val birthDate: LocalDate? = null,
     val onboardingCompleted: Boolean = false,
     val isDeleted: Boolean = false,
     val createdAt: LocalDateTime? = null,
@@ -28,9 +29,6 @@ data class UserProfile(
  *
  * 서버에서 발급한 access token과 refresh token은 Repository 구현체가
  * 로컬 저장소에 저장하므로 앱 내부 모델에는 포함하지 않습니다.
- *
- * 화면에서는 신규 회원 여부와 온보딩 완료 여부를 기준으로
- * 다음 화면을 결정합니다.
  */
 data class LoginResult(
     val userId: String,
@@ -38,23 +36,32 @@ data class LoginResult(
     val onboardingCompleted: Boolean,
 )
 
+/**
+ * 사용자가 로그인한 외부 인증 제공자입니다.
+ */
 enum class LoginProvider {
     KAKAO,
     UNKNOWN,
 }
 
-enum class Gender {
-    MALE,
-    FEMALE,
-    UNKNOWN,
+/**
+ * 사용자가 온보딩에서 선택하는 성별입니다.
+ */
+enum class Gender(
+    val displayName: String,
+) {
+    MALE(
+        displayName = "남자",
+    ),
+    FEMALE(
+        displayName = "여자",
+    ),
 }
 
 /**
  * 앱 내부에서 사용하는 여행 취향 모델입니다.
  *
  * 사용자의 거주 지역, 여행 스타일과 복수의 선호 여행 지역을 관리합니다.
- * 거주 지역과 선호 여행 지역은 같은 시도 체계를 사용하지만
- * 선택 가능한 지역 목록은 각각 다릅니다.
  */
 data class TravelPreference(
     val userId: String,
@@ -90,6 +97,8 @@ value class TravelStyleScore(
     val value: Int,
 ) {
     init {
-        require(value in 1..7) { "TravelStyleScore must be between 1 and 7." }
+        require(value in 1..7) {
+            "TravelStyleScore must be between 1 and 7."
+        }
     }
 }

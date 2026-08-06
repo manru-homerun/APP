@@ -1,7 +1,6 @@
 package com.manruhomerun.yadanbeopseok.data.repository.impl
 
 import com.manruhomerun.yadanbeopseok.common.error.ApiException
-import com.manruhomerun.yadanbeopseok.common.error.InvalidResponseException
 import com.manruhomerun.yadanbeopseok.common.error.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.mapper.toAuthTokens
 import com.manruhomerun.yadanbeopseok.data.mapper.toLoginResult
@@ -10,9 +9,11 @@ import com.manruhomerun.yadanbeopseok.datastore.AuthTokenDataSource
 import com.manruhomerun.yadanbeopseok.model.LoginResult
 import com.manruhomerun.yadanbeopseok.network.auth.api.AuthApi
 import com.manruhomerun.yadanbeopseok.network.auth.dto.LoginRequestDto
+import com.manruhomerun.yadanbeopseok.network.auth.dto.LogoutRequestDto
 import com.manruhomerun.yadanbeopseok.network.auth.dto.TokenRefreshRequestDto
-import com.manruhomerun.yadanbeopseok.network.common.dto.ApiResponseDto
 import com.manruhomerun.yadanbeopseok.network.common.error.ApiCallExecutor
+import com.manruhomerun.yadanbeopseok.network.common.extension.requireData
+import com.manruhomerun.yadanbeopseok.network.common.extension.requireSuccess
 import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
 import java.time.Instant
 import javax.inject.Inject
@@ -44,7 +45,7 @@ internal class AuthRepositoryImpl @Inject constructor(
                     request =
                         LoginRequestDto(
                             providerAccessToken = kakaoAccessToken,
-                            deviceType = "ANDROID",
+                            deviceType = ANDROID_DEVICE_TYPE,
                             fcmToken = fcmToken?.takeIf { it.isNotBlank() },
                         ),
                 )
@@ -63,6 +64,13 @@ internal class AuthRepositoryImpl @Inject constructor(
     }
 
     /**
+     * DataStore에 저장된 현재 야단법석 사용자 ID를 조회합니다.
+     *
+     * 네트워크 요청 없이 로컬 인증 정보에서 사용자 ID를 반환합니다.
+     */
+    override suspend fun getCurrentUserId(): String? = authTokenDataSource.getCurrentUserId()
+
+    /**
      * DataStore에 저장된 refresh token으로 서비스 토큰을 재발급합니다.
      *
      * refresh token이 없으면 [SessionExpiredException]을 발생시킵니다.
@@ -74,10 +82,7 @@ internal class AuthRepositoryImpl @Inject constructor(
     override suspend fun refreshAccessToken() {
         val storedTokens = authTokenDataSource.getAuthTokens() ?: throw SessionExpiredException()
 
-        if (
-            storedTokens.refreshTokenExpiresAtEpochSeconds <=
-            currentEpochSeconds()
-        ) {
+        if (storedTokens.refreshTokenExpiresAtEpochSeconds <= currentEpochSeconds()) {
             authTokenDataSource.clearAuthTokens()
             throw SessionExpiredException()
         }
@@ -101,17 +106,43 @@ internal class AuthRepositoryImpl @Inject constructor(
         authTokenDataSource.saveAuthTokens(
             authTokens =
                 refreshResponse.toAuthTokens(
+                    userId = storedTokens.userId,
                     currentEpochSeconds = currentEpochSeconds(),
                 ),
         )
     }
 
     /**
-     * 야단법석 서비스 인증 정보를 DataStore에서 삭제합니다.
+     * 백엔드에 로그아웃을 요청하고 야단법석 인증 정보를 삭제합니다.
      *
-     * 백엔드 로그아웃 API가 없으므로 현재 로그아웃은 로컬 토큰 삭제로 처리합니다.
+     * 서버에서 현재 기기의 FCM 토큰 비활성화를 처리할 수 있도록
+     * 카카오 액세스 토큰과 기기 정보를 함께 전달합니다.
+     *
+     * 서버 로그아웃이 완료된 경우에만 로컬 인증 정보를 삭제합니다.
      */
-    override suspend fun logout() {
+    override suspend fun logout(
+        kakaoAccessToken: String,
+        deviceId: String?,
+        fcmToken: String?,
+    ) {
+        val response =
+            try {
+                apiCallExecutor.execute {
+                    authApi.logout(
+                        request =
+                            LogoutRequestDto(
+                                providerAccessToken = kakaoAccessToken,
+                                deviceType = ANDROID_DEVICE_TYPE,
+                                deviceId = deviceId?.takeIf { it.isNotBlank() },
+                                fcmToken = fcmToken?.takeIf { it.isNotBlank() },
+                            ),
+                    )
+                }
+            } catch (exception: ApiException) {
+                handleAuthenticatedApiException(exception)
+            }
+
+        response.requireSuccess()
         authTokenDataSource.clearAuthTokens()
     }
 
@@ -154,31 +185,6 @@ internal class AuthRepositoryImpl @Inject constructor(
      */
     private fun currentEpochSeconds(): Long =
         Instant.now().epochSecond
-
 }
 
-/**
- * 데이터가 필요한 성공 응답에서 필수 data를 꺼냅니다.
- *
- * HTTP 성공 응답이지만 success가 false이거나 data가 없으면
- * 백엔드 응답 규격에 맞지 않는 것으로 처리합니다.
- */
-private fun <T> ApiResponseDto<T>.requireData(): T {
-    if (!success) {
-        throw InvalidResponseException(message = message)
-    }
-
-    return data
-        ?: throw InvalidResponseException(
-            message = "Response data is missing.",
-        )
-}
-
-/**
- * 응답 데이터가 필요하지 않은 API의 성공 여부를 확인합니다.
- */
-private fun ApiResponseDto<*>.requireSuccess() {
-    if (!success) {
-        throw InvalidResponseException(message = message)
-    }
-}
+private const val ANDROID_DEVICE_TYPE = "ANDROID"

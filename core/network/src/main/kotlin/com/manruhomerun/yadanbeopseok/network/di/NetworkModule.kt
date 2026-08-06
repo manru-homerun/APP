@@ -4,6 +4,7 @@ import com.manruhomerun.yadanbeopseok.network.BuildConfig
 import com.manruhomerun.yadanbeopseok.network.auth.api.AuthApi
 import com.manruhomerun.yadanbeopseok.network.auth.interceptor.AuthInterceptor
 import com.manruhomerun.yadanbeopseok.network.auth.interceptor.TokenAuthenticator
+import com.manruhomerun.yadanbeopseok.network.user.api.UserApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -96,4 +97,13 @@ internal object NetworkModule {
     fun provideAuthApi(
         retrofit: Retrofit,
     ): AuthApi = retrofit.create(AuthApi::class.java)
+
+    /**
+     * 사용자 및 온보딩 관련 백엔드 API 구현체를 제공합니다.
+     */
+    @Provides
+    @Singleton
+    fun provideUserApi(
+        retrofit: Retrofit,
+    ): UserApi = retrofit.create(UserApi::class.java)
 }

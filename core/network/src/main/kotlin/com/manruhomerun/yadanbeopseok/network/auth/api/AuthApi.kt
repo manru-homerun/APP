@@ -2,6 +2,7 @@ package com.manruhomerun.yadanbeopseok.network.auth.api
 
 import com.manruhomerun.yadanbeopseok.network.auth.dto.LoginRequestDto
 import com.manruhomerun.yadanbeopseok.network.auth.dto.LoginResponseDto
+import com.manruhomerun.yadanbeopseok.network.auth.dto.LogoutRequestDto
 import com.manruhomerun.yadanbeopseok.network.auth.dto.TokenRefreshRequestDto
 import com.manruhomerun.yadanbeopseok.network.auth.dto.TokenRefreshResponseDto
 import com.manruhomerun.yadanbeopseok.network.auth.dto.WithdrawalResponseDto
@@ -24,7 +25,7 @@ interface AuthApi {
     @POST("auth/login")
     suspend fun login(
         @Body request: LoginRequestDto,
-        @Query("provider") provider: String = "KAKAO",
+        @Query("provider") provider: String = KAKAO_PROVIDER,
     ): ApiResponseDto<LoginResponseDto>
 
     /**
@@ -39,10 +40,24 @@ interface AuthApi {
     ): ApiResponseDto<TokenRefreshResponseDto>
 
     /**
+     * 현재 로그인한 사용자의 로그아웃을 요청합니다.
+     *
+     * 야단법석 access token은 AuthInterceptor가 Authorization 헤더에 추가합니다.
+     * 현재 API 문서에 따라 응답 data는 로그인 응답 구조를 재사용합니다.
+     */
+    @POST("auth/logout")
+    suspend fun logout(
+        @Body request: LogoutRequestDto,
+        @Query("provider") provider: String = KAKAO_PROVIDER,
+    ): ApiResponseDto<LoginResponseDto>
+
+    /**
      * 현재 로그인한 사용자의 회원 탈퇴를 요청합니다.
      *
-     * Authorization 헤더는 추후 AuthInterceptor에서 추가합니다.
+     * 야단법석 access token은 AuthInterceptor가 Authorization 헤더에 추가합니다.
      */
     @DELETE("auth/withdrawal")
     suspend fun withdraw(): ApiResponseDto<WithdrawalResponseDto>
 }
+
+private const val KAKAO_PROVIDER = "KAKAO"

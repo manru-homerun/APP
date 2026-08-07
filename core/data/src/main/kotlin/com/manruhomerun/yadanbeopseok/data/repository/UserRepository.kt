@@ -4,6 +4,9 @@ import com.manruhomerun.yadanbeopseok.model.KboTeam
 import com.manruhomerun.yadanbeopseok.model.TravelPreference
 import com.manruhomerun.yadanbeopseok.model.UserProfile
 
+/**
+ * 로그인한 사용자의 프로필과 여행 취향을 관리하는 Repository 계약입니다.
+ */
 interface UserRepository {
     /**
      * 현재 로그인한 사용자의 프로필을 조회합니다.
@@ -30,13 +33,4 @@ interface UserRepository {
     suspend fun updateMyTravelPreference(
         preference: TravelPreference,
     ): TravelPreference
-
-    /**
-     * 회원가입 직후 온보딩에서 입력한 닉네임, 응원 구단, 여행 취향을 저장합니다.
-     */
-    suspend fun saveOnboarding(
-        nickname: String,
-        favoriteTeam: KboTeam,
-        travelPreference: TravelPreference,
-    ): UserProfile
 }

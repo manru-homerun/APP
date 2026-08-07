@@ -8,21 +8,66 @@ import kotlinx.datetime.LocalDateTime
  * 서버의 baseball_team 테이블을 그대로 옮긴 모델이 아니라,
  * 화면, 경기 일정, 여행 생성 로직에서 안정적으로 쓰기 위한 도메인 enum입니다.
  * 팀 컬러는 공식 출처 확인 후 designsystem에서 별도로 관리합니다.
+ *
+ * @property serverId 서버 baseball_team 테이블에서 사용하는 구단 ID
+ * @property displayName 화면에 표시하는 짧은 구단명
+ * @property fullName 화면에 표시하는 전체 구단명
  */
 enum class KboTeam(
+    val serverId: Long,
     val displayName: String,
     val fullName: String,
 ) {
-    LOTTE("롯데", "롯데 자이언츠"),
-    KIA("KIA", "KIA 타이거즈"),
-    SAMSUNG("삼성", "삼성 라이온즈"),
-    LG("LG", "LG 트윈스"),
-    DOOSAN("두산", "두산 베어스"),
-    KIWOOM("키움", "키움 히어로즈"),
-    SSG("SSG", "SSG 랜더스"),
-    NC("NC", "NC 다이노스"),
-    HANWHA("한화", "한화 이글스"),
-    KT("KT", "KT 위즈"),
+    LOTTE(
+        serverId = 9L,
+        displayName = "롯데",
+        fullName = "롯데 자이언츠",
+    ),
+    KIA(
+        serverId = 1L,
+        displayName = "KIA",
+        fullName = "KIA 타이거즈",
+    ),
+    SAMSUNG(
+        serverId = 7L,
+        displayName = "삼성",
+        fullName = "삼성 라이온즈",
+    ),
+    LG(
+        serverId = 2L,
+        displayName = "LG",
+        fullName = "LG 트윈스",
+    ),
+    DOOSAN(
+        serverId = 3L,
+        displayName = "두산",
+        fullName = "두산 베어스",
+    ),
+    KIWOOM(
+        serverId = 6L,
+        displayName = "키움",
+        fullName = "키움 히어로즈",
+    ),
+    SSG(
+        serverId = 8L,
+        displayName = "SSG",
+        fullName = "SSG 랜더스",
+    ),
+    NC(
+        serverId = 10L,
+        displayName = "NC",
+        fullName = "NC 다이노스",
+    ),
+    HANWHA(
+        serverId = 4L,
+        displayName = "한화",
+        fullName = "한화 이글스",
+    ),
+    KT(
+        serverId = 5L,
+        displayName = "KT",
+        fullName = "KT 위즈",
+    ),
 }
 
 /**

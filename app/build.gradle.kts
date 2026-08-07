@@ -74,8 +74,8 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtimeCompose)
 
-    implementation(projects.core.designsystem)
 
     implementation(libs.kakao.sdk.user)
 
@@ -93,6 +93,14 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+
+    implementation(projects.core.navigation)
+    implementation(projects.feature.auth)
+    implementation(projects.core.data)
+    implementation(projects.core.designsystem)
+
+    implementation(libs.androidx.navigation3.ui)
+    implementation(libs.androidx.lifecycle.viewModel.navigation3)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)

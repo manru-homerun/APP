@@ -66,15 +66,22 @@ class AuthTokenDataSourceTest {
     }
 
     @Test
-    fun `인증 정보를 삭제하면 사용자 ID와 토큰을 모두 삭제한다`() = runTest {
+    fun `인증 정보를 삭제하면 인증 관련 값을 모두 삭제한다`() = runTest {
         val fixture = createFixture(backgroundScope)
         val userIdKey = stringPreferencesKey("auth_user_id")
+        val onboardingCompletedKey =
+            booleanPreferencesKey("auth_onboarding_completed")
+
         fixture.dataSource.saveAuthTokens(INITIAL_AUTH_TOKENS)
 
         fixture.dataSource.clearAuthTokens()
 
+        val preferences = fixture.dataStore.data.first()
+
         assertNull(fixture.dataSource.getAuthTokens())
-        assertNull(fixture.dataStore.data.first()[userIdKey])
+        assertNull(fixture.dataSource.getCurrentUserId())
+        assertNull(preferences[userIdKey])
+        assertNull(preferences[onboardingCompletedKey])
     }
 
     @Test
@@ -110,6 +117,38 @@ class AuthTokenDataSourceTest {
         )
     }
 
+    @Test
+    fun `인증 정보가 있으면 온보딩 완료 상태를 갱신한다`() = runTest {
+        val fixture = createFixture(backgroundScope)
+        fixture.dataSource.saveAuthTokens(INITIAL_AUTH_TOKENS)
+
+        val updated = fixture.dataSource.markOnboardingCompleted()
+
+        assertEquals(
+            expected = true,
+            actual = updated,
+        )
+        assertEquals(
+            expected = true,
+            actual = fixture.dataSource
+                .getAuthTokens()
+                ?.onboardingCompleted,
+        )
+    }
+
+    @Test
+    fun `인증 정보가 없으면 온보딩 완료 상태를 갱신하지 않는다`() = runTest {
+        val fixture = createFixture(backgroundScope)
+
+        val updated = fixture.dataSource.markOnboardingCompleted()
+
+        assertEquals(
+            expected = false,
+            actual = updated,
+        )
+        assertNull(fixture.dataSource.getAuthTokens())
+    }
+
     private fun createFixture(
         scope: CoroutineScope,
     ): TestFixture {
@@ -139,6 +178,7 @@ class AuthTokenDataSourceTest {
         val INITIAL_AUTH_TOKENS =
             AuthTokens(
                 userId = "1",
+                onboardingCompleted = false,
                 accessToken = "access-token-1",
                 refreshToken = "refresh-token-1",
                 tokenType = "Bearer",
@@ -149,6 +189,7 @@ class AuthTokenDataSourceTest {
         val REFRESHED_AUTH_TOKENS =
             AuthTokens(
                 userId = "1",
+                onboardingCompleted = false,
                 accessToken = "access-token-2",
                 refreshToken = "refresh-token-2",
                 tokenType = "Bearer",

@@ -8,6 +8,9 @@ android {
 }
 
 dependencies {
+
+    implementation(libs.androidx.activity.compose)
+
     implementation(projects.core.data)
     implementation(projects.core.navigation)
     implementation(projects.core.ui)
@@ -20,4 +23,5 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

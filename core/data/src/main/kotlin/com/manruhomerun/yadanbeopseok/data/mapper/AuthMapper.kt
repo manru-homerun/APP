@@ -8,7 +8,7 @@ import com.manruhomerun.yadanbeopseok.network.auth.dto.TokenRefreshResponseDto
 /**
  * 로그인 응답을 DataStore에 저장할 인증 정보로 변환합니다.
  *
- * 로그인 응답의 사용자 ID를 인증 토큰과 함께 저장합니다.
+ * 로그인 응답의 사용자 ID와 온보딩 완료 상태를 인증 토큰과 함께 저장합니다.
  * 서버가 반환하는 expiresIn은 남은 유효 시간(초)이므로,
  * 응답을 받은 현재 시각을 더해 절대 만료 시각으로 변환합니다.
  *
@@ -19,6 +19,7 @@ internal fun LoginResponseDto.toAuthTokens(
 ): AuthTokens =
     createAuthTokens(
         userId = userId.toString(),
+        onboardingCompleted = onboardingCompleted,
         accessToken = accessToken,
         refreshToken = refreshToken,
         tokenType = tokenType,
@@ -30,19 +31,22 @@ internal fun LoginResponseDto.toAuthTokens(
 /**
  * 토큰 재발급 응답을 DataStore에 저장할 인증 정보로 변환합니다.
  *
- * 재발급 응답에는 사용자 ID가 없으므로 기존 인증 정보에 저장된
- * 사용자 ID를 전달받아 유지합니다. access token과 refresh token,
- * 두 토큰의 만료 시각은 모두 새로운 값으로 교체합니다.
+ * 재발급 응답에는 사용자 ID와 온보딩 상태가 없으므로
+ * 기존 인증 정보에 저장된 값을 전달받아 유지합니다.
+ * access token과 refresh token, 두 토큰의 만료 시각은 새로운 값으로 교체합니다.
  *
  * @param userId 기존 인증 정보에 저장된 야단법석 사용자 ID
+ * @param onboardingCompleted 기존 인증 정보에 저장된 온보딩 완료 여부
  * @param currentEpochSeconds 응답을 받은 현재 Unix epoch 시간(초)
  */
 internal fun TokenRefreshResponseDto.toAuthTokens(
     userId: String,
+    onboardingCompleted: Boolean,
     currentEpochSeconds: Long,
 ): AuthTokens =
     createAuthTokens(
         userId = userId,
+        onboardingCompleted = onboardingCompleted,
         accessToken = accessToken,
         refreshToken = refreshToken,
         tokenType = tokenType,
@@ -69,6 +73,7 @@ internal fun LoginResponseDto.toLoginResult(): LoginResult =
  */
 private fun createAuthTokens(
     userId: String,
+    onboardingCompleted: Boolean,
     accessToken: String,
     refreshToken: String,
     tokenType: String,
@@ -78,6 +83,7 @@ private fun createAuthTokens(
 ): AuthTokens =
     AuthTokens(
         userId = userId,
+        onboardingCompleted = onboardingCompleted,
         accessToken = accessToken,
         refreshToken = refreshToken,
         tokenType = tokenType,

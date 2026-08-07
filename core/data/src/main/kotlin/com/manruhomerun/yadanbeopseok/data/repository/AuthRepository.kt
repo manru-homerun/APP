@@ -2,6 +2,26 @@ package com.manruhomerun.yadanbeopseok.data.repository
 
 import com.manruhomerun.yadanbeopseok.model.LoginResult
 
+/**
+ * 저장된 인증 정보를 확인한 결과입니다.
+ */
+enum class AuthSessionState {
+    /**
+     * 유효한 인증 정보가 없어 로그인이 필요합니다.
+     */
+    LOGGED_OUT,
+
+    /**
+     * 로그인은 유지되지만 온보딩을 완료해야 합니다.
+     */
+    ONBOARDING_REQUIRED,
+
+    /**
+     * 로그인과 온보딩이 모두 완료된 상태입니다.
+     */
+    AUTHENTICATED,
+}
+
 interface AuthRepository {
     /**
      * 카카오 액세스 토큰으로 야단법석 서비스에 로그인합니다.
@@ -13,6 +33,14 @@ interface AuthRepository {
         kakaoAccessToken: String,
         fcmToken: String?,
     ): LoginResult
+
+    /**
+     * 저장된 인증 정보와 토큰 만료 상태를 검사하여 세션을 복원합니다.
+     *
+     * access token이 만료되고 refresh token이 유효하면 토큰을 재발급합니다.
+     * 네트워크 오류처럼 재시도할 수 있는 문제는 호출자에게 전달합니다.
+     */
+    suspend fun restoreSession(): AuthSessionState
 
     /**
      * 현재 로컬 인증 정보에 저장된 야단법석 사용자 ID를 조회합니다.

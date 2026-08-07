@@ -263,9 +263,7 @@ private fun Exception.toOnboardingErrorMessage(): String =
             "로그인 정보가 만료되었습니다. 다시 로그인해주세요."
 
         is ApiException ->
-            message
-                ?.takeIf { it.isNotBlank() }
-                ?: "온보딩 저장에 실패했습니다. 잠시 후 다시 시도해주세요."
+            "온보딩 저장에 실패했습니다. 잠시 후 다시 시도해주세요."
 
         is InvalidResponseException ->
             "온보딩 응답을 확인할 수 없습니다. 잠시 후 다시 시도해주세요."

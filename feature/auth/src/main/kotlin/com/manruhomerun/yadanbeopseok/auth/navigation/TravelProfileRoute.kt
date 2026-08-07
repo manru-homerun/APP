@@ -1,5 +1,6 @@
 package com.manruhomerun.yadanbeopseok.auth.navigation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,6 +38,16 @@ fun TravelProfileRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    /*
+     * 저장 요청 중에는 시스템 뒤로 가기 버튼과 제스처를 소비하여
+     * 온보딩 완료 화면이 백스택에서 제거되지 않도록 합니다.
+     */
+    BackHandler(
+        enabled = uiState.isSubmitting,
+    ) {
+        // 저장이 끝날 때까지 현재 화면을 유지합니다.
+    }
 
     /**
      * 서버에서 온보딩 완료가 확인된 경우에만

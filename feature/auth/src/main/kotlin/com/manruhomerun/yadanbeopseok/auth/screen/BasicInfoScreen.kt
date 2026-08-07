@@ -31,12 +31,14 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -68,12 +70,14 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.Gender
+import kotlin.time.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 import kotlinx.datetime.number
+import kotlinx.datetime.todayIn
 
 /**
  * 신규 회원이 닉네임, 성별 및 생년월일을 입력하는 화면입니다.
@@ -571,6 +575,8 @@ private fun ValidationMessage(
 
 /**
  * 사용자가 생년월일을 선택하는 Material 날짜 선택 창입니다.
+ *
+ * 생년월일로 사용할 수 없는 오늘 이후 날짜는 선택할 수 없습니다.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -579,10 +585,28 @@ private fun BirthDatePickerDialog(
     onDismiss: () -> Unit,
     onDateConfirm: (LocalDate) -> Unit,
 ) {
+    val latestSelectableDateMillis =
+        remember {
+            Clock.System
+                .todayIn(TimeZone.currentSystemDefault())
+                .toUtcEpochMilliseconds()
+        }
+
+    val birthDateSelectableDates =
+        remember(latestSelectableDateMillis) {
+            object : SelectableDates {
+                override fun isSelectableDate(
+                    utcTimeMillis: Long,
+                ): Boolean =
+                    utcTimeMillis <= latestSelectableDateMillis
+            }
+        }
+
     val datePickerState =
         rememberDatePickerState(
             initialSelectedDateMillis =
                 initialDate?.toUtcEpochMilliseconds(),
+            selectableDates = birthDateSelectableDates,
         )
 
     DatePickerDialog(

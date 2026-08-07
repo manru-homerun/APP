@@ -209,9 +209,7 @@ private fun Exception.toLoginErrorMessage(): String =
             "서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해주세요."
 
         is ApiException ->
-            message
-                ?.takeIf { errorMessage -> errorMessage.isNotBlank() }
-                ?: "로그인에 실패했습니다. 잠시 후 다시 시도해주세요."
+            "로그인에 실패했습니다. 잠시 후 다시 시도해주세요."
 
         is InvalidResponseException ->
             "로그인 응답을 확인할 수 없습니다. 잠시 후 다시 시도해주세요."

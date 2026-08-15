@@ -7,11 +7,12 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.manruhomerun.yadanbeopseok.auth.navigation.authEntryProvider
+import com.manruhomerun.yadanbeopseok.home.navigation.homeEntryProvider
 import com.manruhomerun.yadanbeopseok.navigation.YadanNavigationState
 import com.manruhomerun.yadanbeopseok.navigation.rememberSharedViewModelStoreNavEntryDecorator
 
 /**
- * 앱의 Nav3 백스택과 각 Feature의 화면 entry를 연결합니다.
+ * 앱의 Nav3 백스택과 각 Feature의 화면 Entry를 연결합니다.
  *
  * 새로운 Feature가 추가되면 해당 Feature의 EntryProvider를
  * [entryProvider] 내부에 추가합니다.
@@ -41,6 +42,10 @@ fun YadanNavHost(
         entryProvider =
             entryProvider {
                 authEntryProvider(
+                    navigator = navigationState,
+                )
+
+                homeEntryProvider(
                     navigator = navigationState,
                 )
             },

@@ -50,7 +50,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.component.YadanIconButtonSize
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanIconToggleButton
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanDivider
-import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanFavorite
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanDibs
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOnPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryInk
@@ -69,15 +69,15 @@ import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
  */
 enum class YadanTravelSpotAction {
     /** 홈 추천 및 찜 목록에서 사용하는 하트 버튼입니다. */
-    FAVORITE,
+    DIBS,
 
-    /** 코스에 여행지를 담을 때 사용합니다. */
+    /** 코스에 관광지를 담을 때 사용합니다. */
     ADD,
 
-    /** 이미 코스에 담긴 여행지를 나타냅니다. */
+    /** 이미 코스에 담긴 관광지를 나타냅니다. */
     ADDED,
 
-    /** 코스에서 여행지를 제거할 때 사용합니다. */
+    /** 코스에서 관광지를 제거할 때 사용합니다. */
     REMOVE,
 }
 
@@ -86,7 +86,7 @@ enum class YadanTravelSpotAction {
  *
  * HTML의 `.spotcard`와 `.spick` 구조를 하나의 컴포넌트로 구성합니다.
  *
- * [YadanTravelSpotAction.FAVORITE]에서는 60dp 이미지를 사용하고,
+ * [YadanTravelSpotAction.DIBS]에서는 60dp 이미지를 사용하고,
  * 나머지 작업 유형에서는 HTML의 선택 카드에 맞춰 50dp 이미지를 사용합니다.
  *
  * @param spot 카드에 표시할 여행지입니다.
@@ -102,11 +102,11 @@ fun YadanTravelSpotCard(
     onClick: () -> Unit,
     onActionClick: () -> Unit,
     modifier: Modifier = Modifier,
-    action: YadanTravelSpotAction = YadanTravelSpotAction.FAVORITE,
+    action: YadanTravelSpotAction = YadanTravelSpotAction.DIBS,
     enabled: Boolean = true,
 ) {
     val imageSize =
-        if (action == YadanTravelSpotAction.FAVORITE) {
+        if (action == YadanTravelSpotAction.DIBS) {
             60.dp
         } else {
             50.dp
@@ -158,16 +158,16 @@ fun YadanTravelSpotCard(
             Spacer(modifier = Modifier.width(6.dp))
 
             when (action) {
-                YadanTravelSpotAction.FAVORITE -> {
+                YadanTravelSpotAction.DIBS -> {
                     YadanIconToggleButton(
-                        checked = spot.isLiked,
+                        checked = spot.dibs,
                         onCheckedChange = {
                             onActionClick()
                         },
                         size = YadanIconButtonSize.MEDIUM,
                         enabled = enabled,
                         uncheckedContentColor = YadanTextMuted,
-                        checkedContentColor = YadanFavorite,
+                        checkedContentColor = YadanDibs,
                     ) { checked ->
                         Icon(
                             imageVector =
@@ -178,7 +178,7 @@ fun YadanTravelSpotCard(
                                 },
                             contentDescription =
                                 if (checked) {
-                                    "찜 해제"
+                                    "찜 취소"
                                 } else {
                                     "찜하기"
                                 },
@@ -261,11 +261,11 @@ private fun YadanTravelSpotActionButton(
 /**
  * 작업 유형에 맞는 버튼 문구와 색상을 반환합니다.
  *
- * FAVORITE는 YadanIconToggleButton으로 처리하므로 null을 반환합니다.
+ * DIBS는 YadanIconToggleButton으로 처리하므로 null을 반환합니다.
  */
 private fun YadanTravelSpotAction.actionVisuals(): TravelSpotActionVisuals? =
     when (this) {
-        YadanTravelSpotAction.FAVORITE ->
+        YadanTravelSpotAction.DIBS ->
             null
 
         YadanTravelSpotAction.ADD ->
@@ -362,12 +362,10 @@ private fun YadanTravelSpotCardPreview() {
         TravelSpot(
             id = "spot-1",
             name = "감천문화마을",
-            latitude = 35.0975,
-            longitude = 129.0106,
             region = Region.BUSAN,
             category = TravelSpotCategory.CULTURE,
             imageUrl = null,
-            isLiked = true,
+            dibs = true,
         )
 
     YadanbeopseokTheme {
@@ -383,7 +381,7 @@ private fun YadanTravelSpotCardPreview() {
                 spot = baseSpot,
                 onClick = {},
                 onActionClick = {},
-                action = YadanTravelSpotAction.FAVORITE,
+                action = YadanTravelSpotAction.DIBS,
             )
 
             YadanTravelSpotCard(
@@ -392,7 +390,7 @@ private fun YadanTravelSpotCardPreview() {
                         id = "spot-2",
                         name = "해운대 해수욕장",
                         category = TravelSpotCategory.NATURE,
-                        isLiked = false,
+                        dibs = false,
                     ),
                 onClick = {},
                 onActionClick = {},
@@ -405,7 +403,7 @@ private fun YadanTravelSpotCardPreview() {
                         id = "spot-3",
                         name = "전포 카페거리",
                         category = TravelSpotCategory.FOOD,
-                        isLiked = false,
+                        dibs = false,
                     ),
                 onClick = {},
                 onActionClick = {},
@@ -418,7 +416,7 @@ private fun YadanTravelSpotCardPreview() {
                         id = "spot-4",
                         name = "광안리 해변",
                         category = TravelSpotCategory.NATURE,
-                        isLiked = false,
+                        dibs = false,
                     ),
                 onClick = {},
                 onActionClick = {},

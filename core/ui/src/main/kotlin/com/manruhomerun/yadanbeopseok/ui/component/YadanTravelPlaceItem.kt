@@ -904,8 +904,6 @@ private fun previewTravelPlace(
             TravelSpot(
                 id = "spot-$id",
                 name = name,
-                latitude = 35.0,
-                longitude = 129.0,
                 region = Region.BUSAN,
                 category = category,
                 imageUrl = null,

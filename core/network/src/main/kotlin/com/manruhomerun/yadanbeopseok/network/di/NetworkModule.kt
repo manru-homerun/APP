@@ -4,6 +4,7 @@ import com.manruhomerun.yadanbeopseok.network.BuildConfig
 import com.manruhomerun.yadanbeopseok.network.auth.api.AuthApi
 import com.manruhomerun.yadanbeopseok.network.auth.interceptor.AuthInterceptor
 import com.manruhomerun.yadanbeopseok.network.auth.interceptor.TokenAuthenticator
+import com.manruhomerun.yadanbeopseok.network.travel.api.TravelApi
 import com.manruhomerun.yadanbeopseok.network.user.api.UserApi
 import dagger.Module
 import dagger.Provides
@@ -106,4 +107,13 @@ internal object NetworkModule {
     fun provideUserApi(
         retrofit: Retrofit,
     ): UserApi = retrofit.create(UserApi::class.java)
+
+    /**
+     * 여행 목록과 여행지 찜 관련 백엔드 API 구현체를 제공합니다.
+     */
+    @Provides
+    @Singleton
+    fun provideTravelApi(
+        retrofit: Retrofit,
+    ): TravelApi = retrofit.create(TravelApi::class.java)
 }

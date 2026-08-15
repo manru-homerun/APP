@@ -352,8 +352,6 @@ private fun previewCompletedTravel(): Travel {
                     TravelSpot(
                         id = "spot-$index",
                         name = name,
-                        latitude = 35.1 + index * 0.01,
-                        longitude = 129.0 + index * 0.01,
                         region = region,
                         category = TravelSpotCategory.CULTURE,
                     ),

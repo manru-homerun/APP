@@ -1,20 +1,20 @@
 package com.manruhomerun.yadanbeopseok.model
 
 /**
- * 앱 내부에서 사용하는 여행지 모델입니다.
+ * 앱 내부에서 사용하는 관광지 모델입니다.
  *
  * ERD의 travel_spot을 참고합니다.
- * 찜 여부는 like 테이블 자체가 아니라 화면에서 바로 쓰기 좋은 isLiked 값으로 표현합니다.
+ *
+ * @property dibs 현재 사용자가 해당 관광지를 찜했는지 여부
  */
 data class TravelSpot(
     val id: String,
     val name: String,
-    val latitude: Double,
-    val longitude: Double,
-    val region: Region,
+    val address: String? = null,
+    val region: Region? = null,
     val category: TravelSpotCategory,
     val imageUrl: String? = null,
-    val isLiked: Boolean = false,
+    val dibs: Boolean = false,
 )
 
 enum class TravelSpotCategory(

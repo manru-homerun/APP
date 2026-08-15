@@ -67,7 +67,20 @@ enum class KboTeam(
         serverId = 5L,
         displayName = "KT",
         fullName = "KT 위즈",
-    ),
+    );
+
+    companion object {
+        /**
+         * 서버에서 전달받은 구단 ID와 일치하는 KBO 구단을 반환합니다.
+         *
+         * 앱에서 지원하지 않는 구단 ID라면 null을 반환하며,
+         * 호출 계층에서 잘못된 서버 응답으로 처리할 수 있습니다.
+         */
+        fun findByServerId(serverId: Long): KboTeam? =
+            entries.firstOrNull { team ->
+                team.serverId == serverId
+            }
+    }
 }
 
 /**

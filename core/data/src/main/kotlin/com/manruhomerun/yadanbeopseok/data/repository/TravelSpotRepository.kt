@@ -2,62 +2,30 @@ package com.manruhomerun.yadanbeopseok.data.repository
 
 import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
-import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
 
+/**
+ * 홈에서 사용하는 인기 관광지 조회와 찜 상태 변경을 담당합니다.
+ *
+ * 검색, 상세 조회와 맞춤 추천 기능은 해당 기능을 개발할 때 추가합니다.
+ */
 interface TravelSpotRepository {
-    /**
-     * 지역, 검색어, 카테고리를 기준으로 관광지를 검색합니다.
-     */
-    suspend fun searchTravelSpots(
-        region: Region,
-        keyword: String,
-        category: TravelSpotCategory? = null,
-    ): List<TravelSpot>
-
-    /**
-     * 특정 관광지의 상세 정보를 조회합니다.
-     */
-    suspend fun getTravelSpot(
-        spotId: String,
-    ): TravelSpot
-
-    /**
-     * 특정 관광지의 이미지 목록을 조회합니다.
-     */
-    suspend fun getTravelSpotImages(
-        spotId: String,
-    ): List<String>
-
-    /**
-     * 홈 화면에 노출할 지역별 인기 관광지를 조회합니다.
-     */
+    /** 홈 화면에 노출할 지역별 인기 관광지를 조회합니다. */
     suspend fun getPopularTravelSpots(
         region: Region,
     ): List<TravelSpot>
 
     /**
-     * 여행 만들기 화면에서 사용할 사용자 맞춤 추천 관광지를 조회합니다.
+     * 현재 사용자가 찜한 관광지 목록을 조회합니다.
+     *
+     * @param region 특정 지역으로 필터링하며, null이면 전체 찜 목록을 조회합니다.
      */
-    suspend fun getSuggestedTravelSpots(
-        region: Region,
+    suspend fun getTravelSpotDibs(
+        region: Region? = null,
     ): List<TravelSpot>
 
-    /**
-     * 내가 찜한 관광지 목록을 조회합니다.
-     */
-    suspend fun getLikedTravelSpots(): List<TravelSpot>
+    /** 지정한 관광지를 찜합니다. */
+    suspend fun addTravelSpotDibs(spotId: String)
 
-    /**
-     * 특정 관광지를 찜합니다.
-     */
-    suspend fun likeTravelSpot(
-        spotId: String,
-    ): TravelSpot
-
-    /**
-     * 특정 관광지 찜을 취소합니다.
-     */
-    suspend fun unlikeTravelSpot(
-        spotId: String,
-    ): TravelSpot
+    /** 지정한 관광지의 찜을 취소합니다. */
+    suspend fun deleteTravelSpotDibs(spotId: String)
 }

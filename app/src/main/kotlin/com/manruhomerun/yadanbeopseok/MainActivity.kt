@@ -37,6 +37,25 @@ import com.manruhomerun.yadanbeopseok.navigation.route.HomeNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.LoginNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.TermsAgreementNavKey
 import dagger.hilt.android.AndroidEntryPoint
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.SportsBaseball
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Scaffold
+import com.manruhomerun.yadanbeopseok.designsystem.component.YadanBottomNavigation
+import com.manruhomerun.yadanbeopseok.designsystem.component.YadanBottomNavigationCenterAction
+import com.manruhomerun.yadanbeopseok.designsystem.component.YadanBottomNavigationItem
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanSurface
+import com.manruhomerun.yadanbeopseok.navigation.route.GameScheduleNavKey
+import com.manruhomerun.yadanbeopseok.navigation.route.MyPageNavKey
+import com.manruhomerun.yadanbeopseok.navigation.route.TravelRecordNavKey
 
 /**
  * 야단법석 앱의 단일 Activity입니다.
@@ -74,7 +93,8 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * 결정된 초기 화면을 기준으로 Nav3 백스택을 생성합니다.
+ * 결정된 초기 화면을 기준으로 Nav3 백스택과
+ * 최상위 화면의 하단 내비게이션을 구성합니다.
  */
 @Composable
 private fun YadanbeopseokApp(
@@ -84,13 +104,116 @@ private fun YadanbeopseokApp(
         rememberYadanNavigationState(
             initialKey = initialNavKey,
         )
+    val selectedDestination =
+        navigationState.currentTopLevelKey
 
-    YadanNavHost(
-        navigationState = navigationState,
+    Scaffold(
         modifier = Modifier.fillMaxSize(),
-    )
-}
+        containerColor = YadanBackground,
+        contentWindowInsets =
+            WindowInsets(
+                left = 0,
+                top = 0,
+                right = 0,
+                bottom = 0,
+            ),
+        bottomBar = {
+            if (navigationState.shouldShowBottomNavigation) {
+                Column {
+                    YadanBottomNavigation(
+                        centerAction = {
+                            YadanBottomNavigationCenterAction(
+                                onClick = {},
+                                enabled = false,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "새 여행 만들기",
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+                        },
+                        startItems = {
+                            YadanBottomNavigationItem(
+                                selected = selectedDestination == HomeNavKey,
+                                onClick = {
+                                    navigationState.navigateToTopLevel(HomeNavKey,)
+                                },
+                                label = "홈",
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Home,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
 
+                            YadanBottomNavigationItem(
+                                selected = selectedDestination == GameScheduleNavKey,
+                                onClick = {
+                                    navigationState.navigateToTopLevel(GameScheduleNavKey,)
+                                },
+                                label = "경기",
+                                enabled = false,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SportsBaseball,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+                        },
+                        endItems = {
+                            YadanBottomNavigationItem(
+                                selected = selectedDestination == TravelRecordNavKey,
+                                onClick = {
+                                    navigationState.navigateToTopLevel(TravelRecordNavKey,)
+                                },
+                                label = "기록",
+                                enabled = false,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+
+                            YadanBottomNavigationItem(
+                                selected = selectedDestination == MyPageNavKey,
+                                onClick = {
+                                    navigationState.navigateToTopLevel(MyPageNavKey)
+                                },
+                                label = "마이",
+                                enabled = false,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+                        },
+                    )
+
+                    Spacer(
+                        modifier = Modifier
+                                .fillMaxWidth()
+                                .windowInsetsBottomHeight(WindowInsets.navigationBars,)
+                                .background(YadanSurface),
+                    )
+                }
+            }
+        },
+    ) { innerPadding ->
+        YadanNavHost(
+            navigationState = navigationState,
+            modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+        )
+    }
+}
 /**
  * 세션 확인 중이거나 확인에 실패했을 때 표시할 화면입니다.
  */

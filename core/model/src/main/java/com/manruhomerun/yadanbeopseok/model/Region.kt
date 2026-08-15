@@ -10,14 +10,14 @@ enum class Region(
     val displayName: String,
     val legalDongCode: String,
 ) {
-    SEOUL("서울특별시", "1100000000"),
-    SUWON("수원", "4111000000"),
-    INCHEON("인천광역시", "2800000000"),
-    DAEJEON("대전", "3000000000"),
-    DAEGU("대구", "2700000000"),
-    GWANGJU("광주", "1200000000"),
-    BUSAN("부산", "2600000000"),
-    CHANGWON("창원", "4812000000");
+    SEOUL("서울특별시", "11000"),
+    SUWON("수원", "41110"),
+    INCHEON("인천광역시", "28000"),
+    DAEJEON("대전", "30000"),
+    DAEGU("대구", "27000"),
+    GWANGJU("광주", "12000"),
+    BUSAN("부산", "26000"),
+    CHANGWON("창원", "48120");
 
     companion object {
         fun findByLegalDongCode(code: String): Region? =

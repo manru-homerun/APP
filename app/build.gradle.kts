@@ -96,6 +96,7 @@ dependencies {
 
     implementation(projects.core.navigation)
     implementation(projects.feature.auth)
+    implementation(projects.feature.home)
     implementation(projects.core.data)
     implementation(projects.core.designsystem)
 

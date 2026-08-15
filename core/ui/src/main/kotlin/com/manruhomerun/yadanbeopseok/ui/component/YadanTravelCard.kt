@@ -45,31 +45,19 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanSurface
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextMuted
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
-import com.manruhomerun.yadanbeopseok.model.BaseballGame
-import com.manruhomerun.yadanbeopseok.model.BaseballGameType
-import com.manruhomerun.yadanbeopseok.model.BaseballStadium
 import com.manruhomerun.yadanbeopseok.model.KboTeam
-import com.manruhomerun.yadanbeopseok.model.LoginProvider
 import com.manruhomerun.yadanbeopseok.model.Region
-import com.manruhomerun.yadanbeopseok.model.Travel
-import com.manruhomerun.yadanbeopseok.model.TravelCertification
-import com.manruhomerun.yadanbeopseok.model.TravelDay
-import com.manruhomerun.yadanbeopseok.model.TravelParticipant
-import com.manruhomerun.yadanbeopseok.model.TravelPlace
-import com.manruhomerun.yadanbeopseok.model.TravelSpot
-import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
-import com.manruhomerun.yadanbeopseok.model.TravelStatus
-import com.manruhomerun.yadanbeopseok.model.UserProfile
-import kotlinx.datetime.DayOfWeek
+import com.manruhomerun.yadanbeopseok.model.TravelSummary
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.number
 
 /**
  * 홈 화면에서 진행 중이거나 예정된 여행을 보여주는 카드입니다.
  *
- * @param travel 표시할 여행입니다.
- * @param currentUserId 현재 로그인한 사용자의 ID입니다.
+ * 여행 목록 API의 요약 모델만 사용하며, 날짜를 기준으로 여행 중과
+ * 여행 예정 상태를 구분합니다.
+ *
+ * @param travel 표시할 여행 요약 정보입니다.
  * @param currentDate D-day와 현재 여행 일차를 계산할 기준 날짜입니다.
  * @param onClick 일정 보기 버튼을 눌렀을 때 실행할 작업입니다.
  * @param modifier 카드의 크기와 배치를 지정할 Modifier입니다.
@@ -77,25 +65,25 @@ import kotlinx.datetime.number
  */
 @Composable
 fun YadanTravelCard(
-    travel: Travel,
-    currentUserId: String,
+    travel: TravelSummary,
     currentDate: LocalDate,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
     val totalDayCount = travel.totalDayCount()
-    val currentDay = travel.currentDay(currentDate, totalDayCount)
+    val isActive = travel.isActive(currentDate)
+    val currentDay =
+        travel.currentDay(
+            currentDate = currentDate,
+            totalDayCount = totalDayCount,
+        )
     val statusVisuals =
         travel.statusVisuals(
             currentDate = currentDate,
             currentDay = currentDay,
             totalDayCount = totalDayCount,
         )
-    val isLeader =
-        travel.participants.any { participant ->
-            participant.user.id == currentUserId && participant.isLeader
-        }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -115,13 +103,6 @@ fun YadanTravelCard(
                     .fillMaxWidth()
                     .background(YadanPrimaryGradient),
         ) {
-            /*
-             * HTML의 min-height: 236px와
-             * justify-content: space-between에 대응합니다.
-             *
-             * 내용이 적은 예정 여행 카드에서도 버튼 아래쪽에
-             * 남는 공간이 몰리지 않고 요소 사이에 고르게 분배됩니다.
-             */
             Column(
                 modifier =
                     Modifier
@@ -133,11 +114,11 @@ fun YadanTravelCard(
                 YadanTravelCardHeader(
                     statusText = statusVisuals.text,
                     statusStyle = statusVisuals.style,
-                    isLeader = isLeader,
+                    isLeader = travel.isLeader,
                 )
 
                 Text(
-                    text = travel.displayName(),
+                    text = travel.name,
                     style =
                         YadanTypography.titleLarge.copy(
                             fontWeight = FontWeight.ExtraBold,
@@ -147,18 +128,12 @@ fun YadanTravelCard(
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                if (travel.status != TravelStatus.ACTIVE) {
-                    travel.dateText()?.let { dateText ->
-                        YadanTravelDate(
-                            dateText = dateText,
-                        )
-                    }
+                if (!isActive) {
+                    YadanTravelDate(
+                        dateText = travel.dateText(),
+                    )
                 }
 
-                /*
-                 * HTML 히어로 여행 카드의 대진 영역처럼
-                 * 반투명 검정 배경과 옅은 흰색 테두리를 적용합니다.
-                 */
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.medium,
@@ -170,8 +145,8 @@ fun YadanTravelCard(
                         ),
                 ) {
                     YadanGameMatchup(
-                        homeTeam = travel.baseballGame.homeTeam,
-                        awayTeam = travel.baseballGame.awayTeam,
+                        homeTeam = travel.homeTeam,
+                        awayTeam = travel.awayTeam,
                         style = YadanGameMatchupStyle.ON_DARK,
                         showHomeIndicator = false,
                         modifier =
@@ -182,23 +157,10 @@ fun YadanTravelCard(
                     )
                 }
 
-                if (travel.status == TravelStatus.ACTIVE) {
+                if (isActive) {
                     YadanTravelProgress(
-                        certifiedPlaceCount =
-                            travel.days.sumOf { day ->
-                                day.places.count { place ->
-                                    place.spot.category !=
-                                        TravelSpotCategory.ACCOMMODATION &&
-                                        place.isCertifiedBy(currentUserId)
-                                }
-                            },
-                        totalPlaceCount =
-                            travel.days.sumOf { day ->
-                                day.places.count { place ->
-                                    place.spot.category !=
-                                        TravelSpotCategory.ACCOMMODATION
-                                }
-                            },
+                        certifiedPlaceCount = travel.certifiedSpotsCount,
+                        totalPlaceCount = travel.certificationTargetCount,
                         style = YadanTravelProgressStyle.ON_DARK,
                     )
                 }
@@ -212,9 +174,7 @@ fun YadanTravelCard(
     }
 }
 
-/**
- * 여행 상태와 현재 사용자의 참여 역할을 표시합니다.
- */
+/** 여행 상태와 현재 사용자의 참여 역할을 표시합니다. */
 @Composable
 private fun YadanTravelCardHeader(
     statusText: String,
@@ -256,9 +216,7 @@ private fun YadanTravelCardHeader(
     }
 }
 
-/**
- * 여행 시작일과 종료일을 표시합니다.
- */
+/** 여행 시작일과 종료일을 표시합니다. */
 @Composable
 private fun YadanTravelDate(
     dateText: String,
@@ -285,9 +243,7 @@ private fun YadanTravelDate(
     }
 }
 
-/**
- * 여행 상세 일정으로 이동하는 카드 내부 버튼입니다.
- */
+/** 여행 상세 일정으로 이동하는 카드 내부 버튼입니다. */
 @Composable
 private fun YadanTravelScheduleButton(
     onClick: () -> Unit,
@@ -333,93 +289,67 @@ private fun YadanTravelScheduleButton(
     }
 }
 
-private fun Travel.displayName(): String =
-    name
-        ?.takeIf { it.isNotBlank() }
-        ?: "${region.displayName} 원정 여행"
+/** 여행 시작일과 종료일을 기준으로 전체 여행 일수를 계산합니다. */
+private fun TravelSummary.totalDayCount(): Int =
+    (endDate.toEpochDays() - startDate.toEpochDays() + 1L)
+        .coerceAtLeast(1L)
+        .coerceAtMost(Int.MAX_VALUE.toLong())
+        .toInt()
 
-private fun Travel.totalDayCount(): Int {
-    val start = startDate
-    val end = endDate
+/** 기준 날짜가 여행 기간에 포함되는지 확인합니다. */
+private fun TravelSummary.isActive(
+    currentDate: LocalDate,
+): Boolean =
+    currentDate >= startDate &&
+        currentDate <= endDate
 
-    return when {
-        start != null && end != null ->
-            (end.toEpochDays() - start.toEpochDays() + 1L)
-                .coerceAtLeast(1L)
-                .coerceAtMost(Int.MAX_VALUE.toLong())
-                .toInt()
-
-        else ->
-            days
-                .maxOfOrNull { it.day }
-                ?.coerceAtLeast(1)
-                ?: 1
-    }
-}
-
-private fun Travel.currentDay(
+/** 여행 중인 경우 기준 날짜가 몇 일차인지 계산합니다. */
+private fun TravelSummary.currentDay(
     currentDate: LocalDate,
     totalDayCount: Int,
-): Int {
-    val start = startDate ?: return 1
-
-    return (currentDate.toEpochDays() - start.toEpochDays() + 1L)
+): Int =
+    (currentDate.toEpochDays() - startDate.toEpochDays() + 1L)
         .coerceIn(
             minimumValue = 1L,
             maximumValue = totalDayCount.toLong(),
         )
         .toInt()
-}
 
-private fun Travel.statusVisuals(
+/** 기준 날짜를 사용해 여행 중 또는 여행 예정 칩 정보를 생성합니다. */
+private fun TravelSummary.statusVisuals(
     currentDate: LocalDate,
     currentDay: Int,
     totalDayCount: Int,
-): TravelStatusVisuals =
-    when (status) {
-        TravelStatus.ACTIVE ->
-            TravelStatusVisuals(
-                text = "여행 중 · DAY $currentDay/$totalDayCount",
-                style = YadanStatusChipStyle.LIVE,
-            )
+): TravelStatusVisuals {
+    if (isActive(currentDate)) {
+        return TravelStatusVisuals(
+            text = "여행 중 · DAY $currentDay/$totalDayCount",
+            style = YadanStatusChipStyle.LIVE,
+        )
+    }
 
-        TravelStatus.UPCOMING -> {
-            val remainingDays =
-                startDate?.let { start ->
-                    start.toEpochDays() - currentDate.toEpochDays()
-                }
-
-            val dDayText =
-                when {
-                    remainingDays == null -> "여행 예정"
-                    remainingDays > 0L -> "D-$remainingDays"
-                    remainingDays == 0L -> "D-DAY"
-                    else -> "여행 예정"
-                }
-
-            TravelStatusVisuals(
-                text = "$dDayText · ${region.displayName} 원정",
-                style = YadanStatusChipStyle.PRIMARY,
-            )
+    val remainingDays =
+        startDate.toEpochDays() - currentDate.toEpochDays()
+    val dDayText =
+        when {
+            remainingDays > 0L -> "D-$remainingDays"
+            remainingDays == 0L -> "D-DAY"
+            else -> "여행 예정"
         }
 
-        TravelStatus.COMPLETED ->
-            TravelStatusVisuals(
-                text = "여행 완료",
-                style = YadanStatusChipStyle.MUTED,
-            )
-    }
-
-private fun Travel.dateText(): String? {
-    val start = startDate ?: return null
-    val end = endDate
-
-    return if (end == null || start == end) {
-        start.toShortDateText()
-    } else {
-        "${start.toShortDateText()}~${end.toShortDateText()}"
-    }
+    return TravelStatusVisuals(
+        text = "$dDayText · ${region.displayName} 원정",
+        style = YadanStatusChipStyle.PRIMARY,
+    )
 }
+
+/** 여행 시작일과 종료일을 카드에 표시할 문자열로 변환합니다. */
+private fun TravelSummary.dateText(): String =
+    if (startDate == endDate) {
+        startDate.toShortDateText()
+    } else {
+        "${startDate.toShortDateText()}~${endDate.toShortDateText()}"
+    }
 
 private fun LocalDate.toShortDateText(): String =
     "${month.number}.$day(${dayOfWeek.toKoreanShortName()})"
@@ -436,97 +366,21 @@ private data class TravelStatusVisuals(
 )
 @Composable
 private fun YadanTravelCardPreview() {
-    val user =
-        UserProfile(
-            id = "user-1",
-            provider = LoginProvider.KAKAO,
-            providerUserId = "kakao-user-1",
-            nickname = "준호",
-        )
-
-    val game =
-        BaseballGame(
-            id = "game-1",
-            stadium =
-                BaseballStadium(
-                    id = "stadium-1",
-                    name = "사직야구장",
-                    region = Region.BUSAN,
-                    latitude = 35.194,
-                    longitude = 129.061,
-                ),
-            homeTeam = KboTeam.LOTTE,
-            awayTeam = KboTeam.KIA,
-            gameDateTime = LocalDateTime(2026, 5, 23, 17, 0),
-            gameType = BaseballGameType.REGULAR,
-        )
-
-    val certifiedPlace =
-        TravelPlace(
-            id = "place-1",
-            spot =
-                TravelSpot(
-                    id = "spot-1",
-                    name = "감천문화마을",
-                    latitude = 35.097,
-                    longitude = 129.010,
-                    region = Region.BUSAN,
-                    category = TravelSpotCategory.CULTURE,
-                ),
-            day = 1,
-            order = 1,
-            certifications =
-                listOf(
-                    TravelCertification(
-                        id = "certification-1",
-                        userId = user.id,
-                        certificatedAt = LocalDateTime(2026, 5, 22, 11, 0),
-                    ),
-                ),
-        )
-
-    val waitingPlace =
-        TravelPlace(
-            id = "place-2",
-            spot =
-                TravelSpot(
-                    id = "spot-2",
-                    name = "사직야구장",
-                    latitude = 35.194,
-                    longitude = 129.061,
-                    region = Region.BUSAN,
-                    category = TravelSpotCategory.STADIUM,
-                ),
-            day = 1,
-            order = 2,
-        )
-
     val activeTravel =
-        Travel(
+        TravelSummary(
             id = "travel-1",
             name = "부산 원정 · 사직 직관 여행",
-            baseballGame = game,
-            region = Region.BUSAN,
             startDate = LocalDate(2026, 5, 22),
             endDate = LocalDate(2026, 5, 23),
-            participants =
-                listOf(
-                    TravelParticipant(
-                        user = user,
-                        isLeader = true,
-                    ),
-                ),
-            days =
-                listOf(
-                    TravelDay(
-                        day = 1,
-                        places = listOf(
-                            certifiedPlace,
-                            waitingPlace,
-                        ),
-                    ),
-                ),
-            status = TravelStatus.ACTIVE,
+            baseballGameId = "game-1",
+            homeTeam = KboTeam.LOTTE,
+            awayTeam = KboTeam.KIA,
+            region = Region.BUSAN,
+            isLeader = true,
+            spotsCount = 6,
+            certificationTargetCount = 5,
+            certifiedSpotsCount = 1,
+            hasSticker = false,
         )
 
     val upcomingTravel =
@@ -535,14 +389,8 @@ private fun YadanTravelCardPreview() {
             name = "주말 부산 야구 여행",
             startDate = LocalDate(2026, 5, 23),
             endDate = LocalDate(2026, 5, 24),
-            participants =
-                listOf(
-                    TravelParticipant(
-                        user = user,
-                        isLeader = false,
-                    ),
-                ),
-            status = TravelStatus.UPCOMING,
+            isLeader = false,
+            certifiedSpotsCount = 0,
         )
 
     YadanbeopseokTheme {
@@ -562,7 +410,6 @@ private fun YadanTravelCardPreview() {
 
             YadanTravelCard(
                 travel = activeTravel,
-                currentUserId = user.id,
                 currentDate = LocalDate(2026, 5, 22),
                 onClick = {},
             )
@@ -575,7 +422,6 @@ private fun YadanTravelCardPreview() {
 
             YadanTravelCard(
                 travel = upcomingTravel,
-                currentUserId = user.id,
                 currentDate = LocalDate(2026, 5, 20),
                 onClick = {},
             )

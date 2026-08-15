@@ -48,7 +48,6 @@ enum class ProfileRegion(
     ULSAN(
         code = "31",
         displayName = "울산",
-        isAvailableForResidence = false,
     ),
     SEJONG(
         code = "36",
@@ -90,7 +89,6 @@ enum class ProfileRegion(
     JEJU(
         code = "50",
         displayName = "제주",
-        isAvailableForResidence = false,
     ),
     ;
 

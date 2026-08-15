@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanDivider
-import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanFavorite
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanDibs
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOnPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryDark
@@ -460,7 +460,7 @@ private fun YadanIconToggleButtonPreview() {
                 YadanIconToggleButton(
                     checked = checked,
                     onCheckedChange = {},
-                    checkedContentColor = YadanFavorite,
+                    checkedContentColor = YadanDibs,
                 ) { selected ->
                     Icon(
                         imageVector =

@@ -42,10 +42,9 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextMuted
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
-import com.manruhomerun.yadanbeopseok.model.BaseballGame
-import com.manruhomerun.yadanbeopseok.model.BaseballStadium
+import com.manruhomerun.yadanbeopseok.model.BaseballGameSummary
+import com.manruhomerun.yadanbeopseok.model.BaseballStadiumSummary
 import com.manruhomerun.yadanbeopseok.model.KboTeam
-import com.manruhomerun.yadanbeopseok.model.Region
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.number
@@ -56,21 +55,19 @@ import kotlinx.datetime.number
  * A·05 경기 일정 화면의 HTML `.gamex`에 대응합니다.
  * 날짜별 제목은 목록에서 별도로 표시하므로 카드 안에는 경기 시간만 표시합니다.
  *
- * @param game 표시할 야구 경기입니다.
+ * @param game 표시할 경기 요약 정보입니다.
  * @param onPlanClick 여행 짜기 버튼을 눌렀을 때 실행할 작업입니다.
  * @param modifier 카드의 크기와 배치를 지정할 Modifier입니다.
  * @param enabled 여행 짜기 버튼의 활성화 여부입니다.
  */
 @Composable
 fun YadanGameScheduleCard(
-    game: BaseballGame,
+    game: BaseballGameSummary,
     onPlanClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    YadanCard(
-        modifier = modifier.fillMaxWidth(),
-    ) {
+    YadanCard(modifier = modifier.fillMaxWidth()) {
         YadanBaseballGameCardContent(
             game = game,
             dateTimeText = game.gameDateTime.toTimeText(),
@@ -93,7 +90,7 @@ fun YadanGameScheduleCard(
  * 여러 카드를 함께 표시하는 화면에서는 부모 목록에
  * `Modifier.selectableGroup()`을 적용하는 것이 좋습니다.
  *
- * @param game 표시할 야구 경기입니다.
+ * @param game 표시할 경기 요약 정보입니다.
  * @param selected 현재 경기의 선택 여부입니다.
  * @param onClick 카드를 눌렀을 때 실행할 작업입니다.
  * @param modifier 카드의 크기와 배치를 지정할 Modifier입니다.
@@ -101,36 +98,38 @@ fun YadanGameScheduleCard(
  */
 @Composable
 fun YadanGameSelectionCard(
-    game: BaseballGame,
+    game: BaseballGameSummary,
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
+    val cardStyle =
+        if (selected) {
+            YadanCardStyle.SELECTED
+        } else {
+            YadanCardStyle.DEFAULT
+        }
+
+    val cardAlpha =
+        if (enabled) {
+            1f
+        } else {
+            0.42f
+        }
+
     YadanCard(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .alpha(
-                    if (enabled) {
-                        1f
-                    } else {
-                        0.42f
-                    },
-                )
-                .clip(MaterialTheme.shapes.large)
-                .selectable(
-                    selected = selected,
-                    enabled = enabled,
-                    role = Role.RadioButton,
-                    onClick = onClick,
-                ),
-        style =
-            if (selected) {
-                YadanCardStyle.SELECTED
-            } else {
-                YadanCardStyle.DEFAULT
-            },
+        modifier = modifier
+            .fillMaxWidth()
+            .alpha(cardAlpha)
+            .clip(MaterialTheme.shapes.large)
+            .selectable(
+                selected = selected,
+                enabled = enabled,
+                role = Role.RadioButton,
+                onClick = onClick,
+            ),
+        style = cardStyle,
     ) {
         YadanBaseballGameCardContent(
             game = game,
@@ -155,17 +154,16 @@ fun YadanGameSelectionCard(
  */
 @Composable
 private fun YadanBaseballGameCardContent(
-    game: BaseballGame,
+    game: BaseballGameSummary,
     dateTimeText: String,
     topTrailingContent: (@Composable () -> Unit)? = null,
     bottomTrailingContent: (@Composable () -> Unit)? = null,
 ) {
     Column(
-        modifier =
-            Modifier.padding(
-                horizontal = 14.dp,
-                vertical = 13.dp,
-            ),
+        modifier = Modifier.padding(
+            horizontal = 14.dp,
+            vertical = 13.dp,
+        ),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -174,10 +172,9 @@ private fun YadanBaseballGameCardContent(
             Text(
                 text = dateTimeText,
                 modifier = Modifier.weight(1f),
-                style =
-                    YadanTypography.bodySmall.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                    ),
+                style = YadanTypography.bodySmall.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                ),
                 color = YadanTextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -192,11 +189,10 @@ private fun YadanBaseballGameCardContent(
         YadanGameMatchup(
             homeTeam = game.homeTeam,
             awayTeam = game.awayTeam,
-            modifier =
-                Modifier.padding(
-                    top = 12.dp,
-                    bottom = 12.dp,
-                ),
+            modifier = Modifier.padding(
+                top = 12.dp,
+                bottom = 12.dp,
+            ),
         )
 
         HorizontalDivider(
@@ -205,10 +201,9 @@ private fun YadanBaseballGameCardContent(
         )
 
         Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(top = 11.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 11.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             YadanGameVenue(
@@ -246,10 +241,9 @@ private fun YadanGameVenue(
 
         Text(
             text = venueName,
-            style =
-                YadanTypography.labelSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                ),
+            style = YadanTypography.labelSmall.copy(
+                fontWeight = FontWeight.Bold,
+            ),
             color = YadanTextMuted,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -273,26 +267,23 @@ private fun YadanGamePlanButton(
         modifier = Modifier.height(32.dp),
         enabled = enabled,
         shape = androidx.compose.foundation.shape.RoundedCornerShape(9.dp),
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = YadanPrimary,
-                contentColor = YadanOnPrimary,
-                disabledContainerColor = YadanPrimary.copy(alpha = 0.42f),
-                disabledContentColor = YadanOnPrimary.copy(alpha = 0.72f),
-            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = YadanPrimary,
+            contentColor = YadanOnPrimary,
+            disabledContainerColor = YadanPrimary.copy(alpha = 0.42f),
+            disabledContentColor = YadanOnPrimary.copy(alpha = 0.72f),
+        ),
         elevation = null,
-        contentPadding =
-            PaddingValues(
-                horizontal = 10.dp,
-                vertical = 0.dp,
-            ),
+        contentPadding = PaddingValues(
+            horizontal = 10.dp,
+            vertical = 0.dp,
+        ),
     ) {
         Text(
             text = "여행 짜기",
-            style =
-                YadanTypography.labelSmall.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                ),
+            style = YadanTypography.labelSmall.copy(
+                fontWeight = FontWeight.ExtraBold,
+            ),
         )
 
         Spacer(modifier = Modifier.width(3.dp))
@@ -347,31 +338,23 @@ private fun Int.toTwoDigitText(): String =
 )
 @Composable
 private fun YadanBaseballGameCardPreview() {
-    val game =
-        BaseballGame(
-            id = "game-1",
-            stadium =
-                BaseballStadium(
-                    id = "stadium-1",
-                    name = "사직야구장",
-                    region = Region.BUSAN,
-                    latitude = 35.194,
-                    longitude = 129.061,
-                ),
-            homeTeam = KboTeam.LOTTE,
-            awayTeam = KboTeam.KIA,
-            gameDateTime = LocalDateTime(2026, 5, 23, 17, 0),
-            gameType =
-                com.manruhomerun.yadanbeopseok.model.BaseballGameType.REGULAR,
-        )
+    val game = BaseballGameSummary(
+        id = "game-1",
+        stadium = BaseballStadiumSummary(
+            id = "stadium-1",
+            name = "사직야구장",
+        ),
+        homeTeam = KboTeam.LOTTE,
+        awayTeam = KboTeam.KIA,
+        gameDateTime = LocalDateTime(2026, 5, 23, 17, 0),
+    )
 
     YadanbeopseokTheme {
         Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(YadanBackground)
-                    .padding(20.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(YadanBackground)
+                .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
@@ -398,11 +381,10 @@ private fun YadanBaseballGameCardPreview() {
             )
 
             YadanGameSelectionCard(
-                game =
-                    game.copy(
-                        id = "game-2",
-                        gameDateTime = LocalDateTime(2026, 5, 24, 14, 0),
-                    ),
+                game = game.copy(
+                    id = "game-2",
+                    gameDateTime = LocalDateTime(2026, 5, 24, 14, 0),
+                ),
                 selected = false,
                 onClick = {},
             )

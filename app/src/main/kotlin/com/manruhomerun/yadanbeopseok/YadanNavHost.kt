@@ -7,6 +7,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.manruhomerun.yadanbeopseok.auth.navigation.authEntryProvider
+import com.manruhomerun.yadanbeopseok.baseball.navigation.baseballEntryProvider
 import com.manruhomerun.yadanbeopseok.home.navigation.homeEntryProvider
 import com.manruhomerun.yadanbeopseok.navigation.YadanNavigationState
 import com.manruhomerun.yadanbeopseok.navigation.rememberSharedViewModelStoreNavEntryDecorator
@@ -46,6 +47,10 @@ fun YadanNavHost(
                     navigator = navigationState,
                 )
 
+                baseballEntryProvider(
+                    navigator = navigationState,
+                )
+
                 homeEntryProvider(
                     navigator = navigationState,
                 )
@@ -53,6 +58,6 @@ fun YadanNavHost(
                 travelEntryProvider(
                     navigator = navigationState,
                 )
-            },
+            }
     )
 }

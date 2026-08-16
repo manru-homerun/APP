@@ -124,7 +124,6 @@ private fun YadanbeopseokApp(
                         centerAction = {
                             YadanBottomNavigationCenterAction(
                                 onClick = {},
-                                enabled = false,
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Add,
@@ -154,7 +153,6 @@ private fun YadanbeopseokApp(
                                     navigationState.navigateToTopLevel(GameScheduleNavKey,)
                                 },
                                 label = "경기",
-                                enabled = false,
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.SportsBaseball,
@@ -170,7 +168,6 @@ private fun YadanbeopseokApp(
                                     navigationState.navigateToTopLevel(TravelRecordNavKey,)
                                 },
                                 label = "기록",
-                                enabled = false,
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.MenuBook,
@@ -185,7 +182,6 @@ private fun YadanbeopseokApp(
                                     navigationState.navigateToTopLevel(MyPageNavKey)
                                 },
                                 label = "마이",
-                                enabled = false,
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Person,

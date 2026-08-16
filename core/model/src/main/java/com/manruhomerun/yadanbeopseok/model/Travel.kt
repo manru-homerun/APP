@@ -4,39 +4,62 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 
 /**
- * 앱 내부에서 사용하는 여행 상세 모델입니다.
+ * 여행 상세 조회 결과를 앱 내부에서 사용하는 모델입니다.
  *
- * 서버 ERD에서는 travel, travel_user_mapping, travel_travel_spot_mapping,
- * travel_certi 등이 나뉘어 있지만, 앱에서는 한 여행 화면을 구성하기 쉽게
- * 경기, 참여자, 일차별 장소와 테마를 하나로 묶어서 사용합니다.
+ * 서버 응답에 포함되지 않는 값은 임의로 생성하지 않습니다.
+ * [id]는 상세 조회에 사용한 Path Variable의 travelId를 사용합니다.
+ *
+ * @property id 여행 고유 식별자
+ * @property startDate 여행 시작일
+ * @property endDate 여행 종료일
+ * @property baseballGame 여행에 포함된 야구 경기 정보
+ * @property name 여행 이름
+ * @property region 여행 지역
+ * @property friends 함께 여행하는 사용자들의 닉네임
+ * @property isLeader 현재 사용자가 여행의 방장인지 여부
+ * @property themeIds 여행에 적용된 테마 ID 목록
+ * @property certificationTargetCount 방문 인증 대상 관광지 수
+ * @property certifiedSpotsCount 현재 사용자가 인증한 관광지 수
+ * @property days 일차별 여행 일정
+ * @property status 날짜를 기준으로 계산한 여행 상태
  */
 data class Travel(
     val id: String,
+    val startDate: LocalDate,
+    val endDate: LocalDate,
+    val baseballGame: TravelBaseballGame,
     val name: String?,
-    val baseballGame: BaseballGame,
     val region: Region,
-    val startDate: LocalDate?,
-    val endDate: LocalDate?,
-    val participants: List<TravelParticipant>,
-    val days: List<TravelDay>,
-    val themes: List<TravelTheme> = emptyList(),
-    val status: TravelStatus,
-    val createdAt: LocalDateTime? = null,
-    val updatedAt: LocalDateTime? = null,
-)
-
-/**
- * 여행에 참여하는 사용자 정보입니다.
- *
- * [isLeader]를 통해 현재 참여자가 여행의 방장인지 구분합니다.
- */
-data class TravelParticipant(
-    val user: UserProfile,
+    val friends: List<String>,
     val isLeader: Boolean,
+    val themeIds: List<String>,
+    val certificationTargetCount: Int,
+    val certifiedSpotsCount: Int,
+    val days: List<TravelDay>,
+    val status: TravelStatus,
 )
 
 /**
- * 여행의 특정 일차와 해당 날짜에 방문할 장소 목록입니다.
+ * 여행 상세 응답에 포함되는 야구 경기 정보입니다.
+ *
+ * 완전한 경기 정보가 필요한 화면에서는 [id]를 사용해
+ * 경기 상세 API를 별도로 조회합니다.
+ *
+ * @property id 야구 경기 고유 식별자
+ * @property day 여행 일정에서 경기가 포함된 일차
+ * @property after 경기 이후 배치된 일정 수
+ */
+data class TravelBaseballGame(
+    val id: String,
+    val day: Int,
+    val after: Int,
+)
+
+/**
+ * 여행의 특정 일차와 해당 일차에 방문할 장소 목록입니다.
+ *
+ * @property day 여행 일차
+ * @property places 해당 일차의 방문 장소 목록
  */
 data class TravelDay(
     val day: Int,
@@ -46,29 +69,27 @@ data class TravelDay(
 /**
  * 여행 일정에 포함된 개별 방문 장소입니다.
  *
- * 같은 관광지가 여러 일차에 포함될 수 있으므로 여행 일정상의 ID와
- * 실제 관광지 정보인 [spot]을 분리해서 관리합니다.
+ * 별도의 여행 일정 항목 ID는 API가 제공하지 않으므로
+ * 실제 관광지 정보는 [spot]을 통해 식별합니다.
+ *
+ * [order]는 서버 응답 배열의 순서를 기준으로 Mapper에서 부여합니다.
+ *
+ * @property spot 일정에 포함된 관광지
+ * @property order 해당 일차 안에서의 표시 순서
+ * @property isCertificationTarget 방문 인증 대상인지 여부
+ * @property isCertified 현재 사용자가 방문 인증을 완료했는지 여부
  */
 data class TravelPlace(
-    val id: String,
     val spot: TravelSpot,
-    val day: Int,
     val order: Int,
-    val certifications: List<TravelCertification> = emptyList(),
-) {
-    /**
-     * 특정 사용자가 이 장소를 방문 인증했는지 확인합니다.
-     */
-    fun isCertifiedBy(userId: String): Boolean =
-        certifications.any { certification ->
-            certification.userId == userId
-        }
-}
+    val isCertificationTarget: Boolean = false,
+    val isCertified: Boolean = false,
+)
 
 /**
- * 여행지 방문 인증 정보입니다.
+ * 여행지 방문 인증 결과입니다.
  *
- * ERD의 travel_certi를 앱에서 사용하기 좋은 형태로 표현합니다.
+ * 방문 인증 API가 성공했을 때 인증된 사용자와 시각을 보관합니다.
  */
 data class TravelCertification(
     val id: String,
@@ -79,7 +100,8 @@ data class TravelCertification(
 /**
  * 앱 화면에서 사용하는 여행 진행 상태입니다.
  *
- * 서버의 PLANNED 목록은 날짜를 기준으로 [UPCOMING]과 [ACTIVE]로 구분합니다.
+ * 서버의 PLANNED 목록과 여행 상세 응답은 시작일, 종료일을 기준으로
+ * [UPCOMING], [ACTIVE], [COMPLETED] 상태로 변환합니다.
  */
 enum class TravelStatus {
     UPCOMING,
@@ -135,9 +157,6 @@ data class TravelSummary(
 
 /**
  * 여행 목록과 서버의 페이지 정보를 함께 보관하는 앱 내부 모델입니다.
- *
- * 네트워크 DTO를 화면에 직접 노출하지 않고 Repository를 통해 변환한
- * 여행 목록과 페이지 정보를 전달합니다.
  *
  * @property travels 현재 페이지에 포함된 여행 목록
  * @property pageNumber 현재 페이지 번호

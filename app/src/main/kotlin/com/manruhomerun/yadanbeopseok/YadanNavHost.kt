@@ -10,6 +10,7 @@ import com.manruhomerun.yadanbeopseok.auth.navigation.authEntryProvider
 import com.manruhomerun.yadanbeopseok.home.navigation.homeEntryProvider
 import com.manruhomerun.yadanbeopseok.navigation.YadanNavigationState
 import com.manruhomerun.yadanbeopseok.navigation.rememberSharedViewModelStoreNavEntryDecorator
+import com.manruhomerun.yadanbeopseok.travel.navigation.travelEntryProvider
 
 /**
  * 앱의 Nav3 백스택과 각 Feature의 화면 Entry를 연결합니다.
@@ -46,6 +47,10 @@ fun YadanNavHost(
                 )
 
                 homeEntryProvider(
+                    navigator = navigationState,
+                )
+
+                travelEntryProvider(
                     navigator = navigationState,
                 )
             },

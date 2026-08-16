@@ -16,6 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manruhomerun.yadanbeopseok.home.screen.HomeScreen
 import com.manruhomerun.yadanbeopseok.home.viewmodel.HomeNavigationEvent
@@ -55,6 +57,14 @@ fun HomeRoute(
                 TimeZone.currentSystemDefault(),
             )
         }
+
+    /*
+     * 관광지 상세 등 다른 화면에서 홈으로 돌아오면 데이터를 다시 조회합니다.
+     * 상세 화면에서 변경한 찜 상태도 최신 서버 응답으로 동기화됩니다.
+     */
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refresh()
+    }
 
     /*
      * 세션이 만료되면 기존 백스택을 제거하여

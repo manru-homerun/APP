@@ -39,3 +39,34 @@ data class TravelSpotResponseDto(
 data class TravelSpotListResponseDto(
     val content: List<TravelSpotResponseDto>,
 )
+
+
+/**
+ * 관광지 상세 조회 API의 응답 데이터입니다.
+ *
+ * @property id 관광지 고유 식별자
+ * @property category 관광지 카테고리
+ * @property title 관광지 이름
+ * @property tel 관광지 전화번호
+ * @property homepage 관광지 홈페이지 정보
+ * @property regionCode 관광지가 속한 5자리 지역 코드
+ * @property address 관광지 주소
+ * @property longitude 관광지 경도 문자열
+ * @property latitude 관광지 위도 문자열
+ * @property overview 관광지 상세 소개
+ * @property dibs 현재 사용자의 찜 여부
+ */
+@Serializable
+data class TravelSpotDetailResponseDto(
+    val id: Long,
+    val category: String,
+    val title: String,
+    val tel: String? = null,
+    val homepage: String? = null,
+    val regionCode: String? = null,
+    val address: String? = null,
+    val longitude: String? = null,
+    val latitude: String? = null,
+    val overview: String? = null,
+    val dibs: Boolean,
+)

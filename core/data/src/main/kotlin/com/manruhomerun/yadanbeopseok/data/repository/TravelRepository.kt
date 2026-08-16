@@ -1,13 +1,12 @@
 package com.manruhomerun.yadanbeopseok.data.repository
 
+import com.manruhomerun.yadanbeopseok.model.Travel
 import com.manruhomerun.yadanbeopseok.model.TravelListPage
 
 /**
- * 여행 데이터를 제공하는 Repository입니다.
+ * 여행 목록과 상세 데이터를 제공하는 Repository입니다.
  *
- * 현재는 홈 화면에서 필요한 진행 중·예정 여행 목록 조회만 정의합니다.
- * 이후 여행 상세나 여행 만들기 기능을 개발할 때 관련 함수를 이 인터페이스에
- * 순차적으로 추가합니다.
+ * Network DTO를 외부에 노출하지 않고 앱 내부 여행 모델로 변환해 제공합니다.
  */
 interface TravelRepository {
     /**
@@ -18,4 +17,11 @@ interface TravelRepository {
      * 홈 계층에서 구분합니다.
      */
     suspend fun getPlannedTravels(): TravelListPage
+
+    /**
+     * 여행 ID에 해당하는 상세 일정과 방문 인증 상태를 조회합니다.
+     *
+     * @param travelId 조회할 여행의 고유 식별자
+     */
+    suspend fun getTravel(travelId: String): Travel
 }

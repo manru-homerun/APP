@@ -42,12 +42,10 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.Region
-import com.manruhomerun.yadanbeopseok.model.TravelCertification
 import com.manruhomerun.yadanbeopseok.model.TravelDay
 import com.manruhomerun.yadanbeopseok.model.TravelPlace
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
-import kotlinx.datetime.LocalDateTime
 
 /**
  * 여행의 하루 일정과 해당 일차에 포함된 장소 목록을 표시합니다.
@@ -55,11 +53,11 @@ import kotlinx.datetime.LocalDateTime
  * HTML의 `.cdayblock`, `.dayhdr`, `.timeline`, `.addrow` 구조에 대응합니다.
  * 장소 항목은 기존 [YadanTravelPlaceItem]을 재사용합니다.
  *
- * @param currentUserId 현재 로그인한 야단법석 사용자의 ID입니다.
  * @param travelDay 표시할 일차와 장소 목록입니다.
  * @param dateText 해당 일차의 날짜 문구입니다.
  * 예: `5.22 (금)`
  * @param onPlaceClick 장소 카드를 눌렀을 때 실행할 작업입니다.
+ * null이면 장소 카드를 클릭할 수 없게 표시합니다.
  * @param modifier 섹션 전체의 크기와 배치를 지정합니다.
  * @param mode 장소 목록의 보기, 진행 중 또는 편집 모드입니다.
  * @param supportingText 장소별 방문 시간이나 경기 시간 문구를 반환합니다.
@@ -75,9 +73,8 @@ import kotlinx.datetime.LocalDateTime
 @Composable
 fun YadanTravelDaySection(
     travelDay: TravelDay,
-    currentUserId: String,
     dateText: String,
-    onPlaceClick: (TravelPlace) -> Unit,
+    onPlaceClick: ((TravelPlace) -> Unit)? = null,
     modifier: Modifier = Modifier,
     mode: YadanTravelPlaceItemMode = YadanTravelPlaceItemMode.VIEW,
     supportingText: (TravelPlace) -> String? = { null },
@@ -94,23 +91,18 @@ fun YadanTravelDaySection(
      * API 응답 순서와 관계없이 TravelPlace.order를 기준으로
      * 일정 순서를 안정적으로 표시합니다.
      */
-    val orderedPlaces =
-        travelDay.places.sortedBy { place ->
-            place.order
-        }
+    val orderedPlaces = travelDay.places.sortedBy { it.order }
 
     /*
      * HTML의 장소 개수는 숙박을 제외하고 계산합니다.
      * 야구장은 방문 장소 개수에 포함됩니다.
      */
-    val visitPlaceCount =
-        orderedPlaces.count { place ->
-            place.spot.category != TravelSpotCategory.ACCOMMODATION
-        }
+    val visitPlaceCount = orderedPlaces.count {
+        it.spot.category != TravelSpotCategory.ACCOMMODATION
+    }
 
-    val showAddPlaceButton =
-        mode == YadanTravelPlaceItemMode.EDIT &&
-            onAddPlaceClick != null
+
+    val showAddPlaceButton = mode == YadanTravelPlaceItemMode.EDIT && onAddPlaceClick != null
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -140,32 +132,24 @@ fun YadanTravelDaySection(
                 index == orderedPlaces.lastIndex &&
                     !showAddPlaceButton
 
-            key(place.id) {
+            key(travelDay.day, place.spot.id, place.order) {
                 YadanTravelPlaceItem(
                     place = place,
-                    currentUserId = currentUserId,
                     isLast = isLast,
-                    onClick = {
-                        onPlaceClick(place)
+                    onClick = onPlaceClick?.let { callback ->
+                        { callback(place) }
                     },
                     mode = mode,
                     displayOrder = displayOrder,
                     supportingText = supportingText(place),
                     isFixed = isPlaceFixed(place),
-                    onVerifyClick =
-                        onVerifyClick?.let { onVerify ->
-                            {
-                                onVerify(place)
-                            }
-                        },
-                    onRemoveClick =
-                        onRemoveClick?.let { onRemove ->
-                            {
-                                onRemove(place)
-                            }
-                        },
-                    dragHandleModifier =
-                        dragHandleModifier(place),
+                    onVerifyClick = onVerifyClick?.let { callback ->
+                        { callback(place) }
+                    },
+                    onRemoveClick = onRemoveClick?.let { callback ->
+                        { callback(place) }
+                    },
+                    dragHandleModifier = dragHandleModifier(place),
                     enabled = enabled,
                 )
             }
@@ -437,7 +421,6 @@ private fun YadanTravelDaySectionPreviewContent(
         ) {
             YadanTravelDaySection(
                 travelDay = travelDay,
-                currentUserId = "user-1",
                 dateText = "5.22 (금)",
                 onPlaceClick = {},
                 mode = mode,
@@ -517,38 +500,16 @@ private fun previewTravelPlace(
     category: TravelSpotCategory,
     order: Int,
     certified: Boolean = false,
-): TravelPlace =
-    TravelPlace(
-        id = "place-$id",
-        spot =
-            TravelSpot(
-                id = "spot-$id",
-                name = name,
-                region = Region.BUSAN,
-                category = category,
-                imageUrl = null,
-            ),
-        day = 1,
-        order = order,
-        certifications =
-            if (certified) {
-                listOf(
-                    TravelCertification(
-                        id = "certification-$id",
-                        userId = "user-1",
-                        certificatedAt =
-                            LocalDateTime(
-                                year = 2026,
-                                month = 5,
-                                day = 22,
-                                hour = 11,
-                                minute = 30,
-                                second = 0,
-                                nanosecond = 0,
-                            ),
-                    ),
-                )
-            } else {
-                emptyList()
-            },
-    )
+): TravelPlace = TravelPlace(
+    spot = TravelSpot(
+        id = "spot-$id",
+        name = name,
+        region = Region.BUSAN,
+        category = category,
+        imageUrl = null,
+    ),
+    order = order,
+    isCertificationTarget =
+        category != TravelSpotCategory.ACCOMMODATION,
+    isCertified = certified,
+)

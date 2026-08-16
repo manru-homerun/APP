@@ -59,3 +59,63 @@ data class TravelListResponseDto(
     val totalElements: Long,
     val totalPages: Int,
 )
+
+
+/**
+ * 특정 여행의 상세 일정을 조회한 응답 DTO입니다.
+ *
+ * 여행 ID는 응답에 포함되지 않으므로 요청에 사용한 travelId를
+ * Data 계층에서 앱 내부 여행 모델의 ID로 사용합니다.
+ */
+@Serializable
+data class TravelDetailResponseDto(
+    @SerialName("from")
+    val startDate: String,
+    @SerialName("to")
+    val endDate: String,
+    val baseballGame: TravelDetailBaseballGameResponseDto,
+    val name: String? = null,
+    val regionCode: Int,
+    val friends: List<String>,
+    val isLeader: Boolean,
+    @SerialName("theme")
+    val themeIds: List<Long>,
+    val certificationTargetCount: Int,
+    val certifiedSpotsCount: Int,
+    @SerialName("schedule")
+    val days: List<TravelScheduleDayResponseDto>,
+)
+
+/**
+ * 여행 일정에 포함된 야구 경기 정보입니다.
+ */
+@Serializable
+data class TravelDetailBaseballGameResponseDto(
+    val id: Long,
+    val day: Int,
+    val after: Int,
+)
+
+/**
+ * 여행의 특정 일차와 해당 일차의 관광지 목록입니다.
+ */
+@Serializable
+data class TravelScheduleDayResponseDto(
+    val day: Int,
+    val travelSpotList: List<TravelScheduleSpotResponseDto>,
+)
+
+/**
+ * 여행 일정에 포함된 개별 관광지 응답입니다.
+ *
+ * 관광지의 기본 정보와 현재 사용자의 방문 인증 상태를 포함합니다.
+ */
+@Serializable
+data class TravelScheduleSpotResponseDto(
+    val id: Long,
+    val name: String,
+    val category: String,
+    val image: String? = null,
+    val isCertificationTarget: Boolean,
+    val isCertified: Boolean,
+)

@@ -42,6 +42,7 @@ import com.manruhomerun.yadanbeopseok.model.BaseballStadium
 import com.manruhomerun.yadanbeopseok.model.KboTeam
 import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.Travel
+import com.manruhomerun.yadanbeopseok.model.TravelBaseballGame
 import com.manruhomerun.yadanbeopseok.model.TravelDay
 import com.manruhomerun.yadanbeopseok.model.TravelPlace
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
@@ -320,61 +321,52 @@ private fun YadanTravelRecordCardPreview() {
  */
 private fun previewCompletedTravel(): Travel {
     val region = Region.BUSAN
-    val stadium =
-        BaseballStadium(
-            id = "stadium-sajik",
-            name = "사직야구장",
-            region = region,
-            latitude = 35.194,
-            longitude = 129.061,
+
+    val baseballGame = TravelBaseballGame(
+        id = "game-lotte-kia",
+        day = 1,
+        after = 0,
+    )
+
+    val placeNames = listOf(
+        "감천문화마을",
+        "광안리 해변",
+        "돼지국밥 거리",
+        "자갈치시장",
+    )
+
+    val places = placeNames.mapIndexed { index, name ->
+        TravelPlace(
+            spot = TravelSpot(
+                id = "spot-$index",
+                name = name,
+                region = region,
+                category = TravelSpotCategory.CULTURE,
+            ),
+            order = index + 1,
+            isCertificationTarget = true,
+            isCertified = true,
         )
-    val game =
-        BaseballGame(
-            id = "game-lotte-kia",
-            stadium = stadium,
-            homeTeam = KboTeam.LOTTE,
-            awayTeam = KboTeam.KIA,
-            gameDateTime = LocalDateTime(2026, 4, 18, 17, 0),
-            gameType = BaseballGameType.REGULAR,
-        )
-    val placeNames =
-        listOf(
-            "감천문화마을",
-            "광안리 해변",
-            "돼지국밥 거리",
-            "자갈치시장",
-        )
-    val places =
-        placeNames.mapIndexed { index, name ->
-            TravelPlace(
-                id = "travel-place-$index",
-                spot =
-                    TravelSpot(
-                        id = "spot-$index",
-                        name = name,
-                        region = region,
-                        category = TravelSpotCategory.CULTURE,
-                    ),
-                day = 1,
-                order = index + 1,
-            )
-        }
+    }
 
     return Travel(
         id = "travel-busan",
-        name = "부산 사직 직관 여행",
-        baseballGame = game,
-        region = region,
         startDate = LocalDate(2026, 4, 18),
         endDate = LocalDate(2026, 4, 19),
-        participants = emptyList(),
-        days =
-            listOf(
-                TravelDay(
-                    day = 1,
-                    places = places,
-                ),
+        baseballGame = baseballGame,
+        name = "부산 사직 직관 여행",
+        region = region,
+        friends = emptyList(),
+        isLeader = true,
+        themeIds = emptyList(),
+        certificationTargetCount = places.size,
+        certifiedSpotsCount = places.size,
+        days = listOf(
+            TravelDay(
+                day = 1,
+                places = places,
             ),
+        ),
         status = TravelStatus.COMPLETED,
     )
 }

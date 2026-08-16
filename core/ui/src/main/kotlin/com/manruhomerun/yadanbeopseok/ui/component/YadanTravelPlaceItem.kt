@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -62,11 +63,9 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextSecondary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.Region
-import com.manruhomerun.yadanbeopseok.model.TravelCertification
 import com.manruhomerun.yadanbeopseok.model.TravelPlace
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
-import kotlinx.datetime.LocalDateTime
 
 /**
  * 여행 일정 장소 항목의 표시 모드입니다.
@@ -92,9 +91,9 @@ enum class YadanTravelPlaceItemMode {
  * 지난 여행의 `.tl-done` 구조에 대응합니다.
  *
  * @param place 표시할 여행 장소입니다.
- * @param currentUserId 현재 로그인한 야단법석 사용자의 ID입니다.
  * @param isLast 해당 일차에서 마지막 장소인지 나타냅니다.
  * @param onClick 장소를 눌렀을 때 실행할 작업입니다.
+ * null이면 장소 정보만 표시하며 클릭 동작과 버튼 semantics를 적용하지 않습니다.
  * @param modifier 항목 전체의 크기와 배치를 지정합니다.
  * @param mode 장소 항목의 보기, 진행 중, 완료 또는 편집 모드입니다.
  * @param displayOrder 타임라인 원 안에 표시할 순서입니다.
@@ -110,9 +109,8 @@ enum class YadanTravelPlaceItemMode {
 @Composable
 fun YadanTravelPlaceItem(
     place: TravelPlace,
-    currentUserId: String,
     isLast: Boolean,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     mode: YadanTravelPlaceItemMode = YadanTravelPlaceItemMode.VIEW,
     displayOrder: Int = place.order,
@@ -123,7 +121,7 @@ fun YadanTravelPlaceItem(
     dragHandleModifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    val isCertified = place.isCertifiedBy(currentUserId)
+    val isCertified = place.isCertified
     val isCompleted = mode == YadanTravelPlaceItemMode.COMPLETED
 
     Row(
@@ -194,40 +192,25 @@ private fun YadanTravelTimelineIndicator(
     isLast: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val isGame =
-        place.spot.category == TravelSpotCategory.STADIUM
-    val isStay =
-        place.spot.category == TravelSpotCategory.ACCOMMODATION
-    val isActiveCertified =
-        mode == YadanTravelPlaceItemMode.ACTIVE &&
-            isCertified
-    val isCompleted =
-        mode == YadanTravelPlaceItemMode.COMPLETED
-    val isCompletedCertified =
-        isCompleted && isCertified
-    val isCompletedUncertified =
-        isCompleted && !isCertified
+    val isGame = place.spot.category == TravelSpotCategory.STADIUM
+    val isStay = place.spot.category == TravelSpotCategory.ACCOMMODATION
+    val isActiveCertified = mode == YadanTravelPlaceItemMode.ACTIVE && isCertified
+    val isCompleted = mode == YadanTravelPlaceItemMode.COMPLETED
+    val isCompletedCertified = isCompleted && isCertified
+    val isCompletedUncertified = isCompleted && !isCertified
 
     /*
      * 진행 중인 여행에서는 인증한 장소를 체크로 표시합니다.
      * 지난 여행에서는 인증한 일반 장소만 체크로 표시하며,
      * 인증한 야구장은 HTML과 동일하게 야구공 아이콘을 유지합니다.
      */
-    val showsCompletionCheck =
-        isActiveCertified ||
-            (isCompletedCertified && !isGame)
+    val showsCompletionCheck = isActiveCertified || (isCompletedCertified && !isGame)
 
     /*
      * 지난 여행의 미인증 장소와 일반 화면의 미인증 숙박 장소는
      * 외곽선이 있는 흐린 마커로 구분합니다.
      */
-    val showsMutedMarker =
-        isCompletedUncertified ||
-            (
-                isStay &&
-                    !isActiveCertified &&
-                    !isCompleted
-                )
+    val showsMutedMarker = isCompletedUncertified || (isStay && !isActiveCertified && !isCompleted)
 
     val containerColor =
         when {
@@ -374,46 +357,40 @@ private fun YadanCompletedTravelPlaceContent(
     place: TravelPlace,
     supportingText: String?,
     isLast: Boolean,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     enabled: Boolean,
 ) {
+    val interactionModifier =
+        if (onClick != null) {
+            Modifier.clickable(
+                enabled = enabled,
+                role = Role.Button,
+                onClick = onClick,
+            )
+        } else {
+            Modifier
+        }
+
     Column(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp)
-                .alpha(
-                    if (enabled) {
-                        1f
-                    } else {
-                        0.42f
-                    },
-                )
-                .clip(YadanShapes.small)
-                .clickable(
-                    enabled = enabled,
-                    role = Role.Button,
-                    onClick = onClick,
-                )
-                .padding(
-                    bottom =
-                        if (isLast) {
-                            0.dp
-                        } else {
-                            20.dp
-                        },
-                ),
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .alpha(if (enabled) 1f else 0.42f)
+            .clip(YadanShapes.small)
+            .then(interactionModifier)
+            .padding(
+                bottom = if (isLast) 0.dp else 20.dp,
+            ),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Text(
             text = place.spot.name,
-            style =
-                YadanTypography.labelMedium.copy(
-                    fontSize = 13.5.sp,
-                    lineHeight = 18.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                ),
+            style = YadanTypography.labelMedium.copy(
+                fontSize = 13.5.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.ExtraBold,
+            ),
             color = YadanTextPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -424,12 +401,11 @@ private fun YadanCompletedTravelPlaceContent(
             ?.let { text ->
                 Text(
                     text = text,
-                    style =
-                        YadanTypography.labelSmall.copy(
-                            fontSize = 10.5.sp,
-                            lineHeight = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        ),
+                    style = YadanTypography.labelSmall.copy(
+                        fontSize = 10.5.sp,
+                        lineHeight = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    ),
                     color = YadanTextMuted,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -448,7 +424,7 @@ private fun YadanTravelPlaceCard(
     supportingText: String?,
     mode: YadanTravelPlaceItemMode,
     isFixed: Boolean,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)?,
     onVerifyClick: (() -> Unit)?,
     onRemoveClick: (() -> Unit)?,
     modifier: Modifier,
@@ -473,19 +449,12 @@ private fun YadanTravelPlaceCard(
             Modifier
         }
 
-    YadanCard(
+    YadanTravelPlaceCardContainer(
         onClick = onClick,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .then(gameBorderModifier)
-                .alpha(
-                    if (isActiveCertified) {
-                        0.6f
-                    } else {
-                        1f
-                    },
-                ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(gameBorderModifier)
+            .alpha(if (isActiveCertified) 0.6f else 1f),
         enabled = enabled,
     ) {
         Row(
@@ -564,6 +533,7 @@ private fun YadanTravelPlaceCard(
             }
 
             YadanTravelPlaceTrailingContent(
+                isCertificationTarget = place.isCertificationTarget,
                 isCertified = isCertified,
                 mode = mode,
                 isFixed = isFixed,
@@ -574,6 +544,29 @@ private fun YadanTravelPlaceCard(
         }
     }
 }
+
+@Composable
+private fun YadanTravelPlaceCardContainer(
+    onClick: (() -> Unit)?,
+    modifier: Modifier,
+    enabled: Boolean,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    if (onClick == null) {
+        YadanCard(
+            modifier = modifier,
+            content = content,
+        )
+    } else {
+        YadanCard(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            content = content,
+        )
+    }
+}
+
 
 /**
  * 편집 모드에서 장소 순서를 변경하는 드래그 핸들을 표시합니다.
@@ -615,6 +608,7 @@ private fun YadanTravelDragHandle(
  */
 @Composable
 private fun YadanTravelPlaceTrailingContent(
+    isCertificationTarget: Boolean,
     isCertified: Boolean,
     mode: YadanTravelPlaceItemMode,
     isFixed: Boolean,
@@ -624,36 +618,42 @@ private fun YadanTravelPlaceTrailingContent(
 ) {
     when (mode) {
         YadanTravelPlaceItemMode.VIEW,
-        YadanTravelPlaceItemMode.COMPLETED -> Unit
+        YadanTravelPlaceItemMode.COMPLETED,
+            -> Unit
 
         YadanTravelPlaceItemMode.ACTIVE -> {
-            if (isCertified) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = YadanPrimaryInk,
-                    )
+            when {
+                !isCertificationTarget -> Unit
 
-                    Text(
-                        text = "인증완료",
-                        style =
-                            YadanTypography.labelSmall.copy(
+                isCertified -> {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = YadanPrimaryInk,
+                        )
+
+                        Text(
+                            text = "인증완료",
+                            style = YadanTypography.labelSmall.copy(
                                 fontWeight = FontWeight.ExtraBold,
                             ),
-                        color = YadanPrimaryInk,
-                        maxLines = 1,
+                            color = YadanPrimaryInk,
+                            maxLines = 1,
+                        )
+                    }
+                }
+
+                else -> {
+                    YadanTravelVerifyButton(
+                        onClick = onVerifyClick ?: {},
+                        enabled = enabled && onVerifyClick != null,
                     )
                 }
-            } else {
-                YadanTravelVerifyButton(
-                    onClick = onVerifyClick ?: {},
-                    enabled = enabled && onVerifyClick != null,
-                )
             }
         }
 
@@ -746,7 +746,6 @@ private fun YadanTravelVerifyButton(
 )
 @Composable
 private fun YadanTravelPlaceItemPreview() {
-    val currentUserId = "user-1"
 
     val foodPlace =
         previewTravelPlace(
@@ -789,7 +788,6 @@ private fun YadanTravelPlaceItemPreview() {
         ) {
             YadanTravelPlaceItem(
                 place = foodPlace,
-                currentUserId = currentUserId,
                 isLast = false,
                 onClick = {},
                 supportingText = "11:30 · 음식",
@@ -797,7 +795,6 @@ private fun YadanTravelPlaceItemPreview() {
 
             YadanTravelPlaceItem(
                 place = stayPlace,
-                currentUserId = currentUserId,
                 isLast = false,
                 onClick = {},
                 supportingText = "체크인 21:00",
@@ -805,7 +802,6 @@ private fun YadanTravelPlaceItemPreview() {
 
             YadanTravelPlaceItem(
                 place = gamePlace,
-                currentUserId = currentUserId,
                 isLast = true,
                 onClick = {},
                 supportingText = "17:00 경기 시작",
@@ -815,7 +811,6 @@ private fun YadanTravelPlaceItemPreview() {
 
             YadanTravelPlaceItem(
                 place = certifiedPlace,
-                currentUserId = currentUserId,
                 isLast = true,
                 onClick = {},
                 mode = YadanTravelPlaceItemMode.ACTIVE,
@@ -824,7 +819,6 @@ private fun YadanTravelPlaceItemPreview() {
 
             YadanTravelPlaceItem(
                 place = foodPlace,
-                currentUserId = currentUserId,
                 isLast = true,
                 onClick = {},
                 mode = YadanTravelPlaceItemMode.ACTIVE,
@@ -836,7 +830,6 @@ private fun YadanTravelPlaceItemPreview() {
 
             YadanTravelPlaceItem(
                 place = foodPlace,
-                currentUserId = currentUserId,
                 isLast = true,
                 onClick = {},
                 mode = YadanTravelPlaceItemMode.EDIT,
@@ -845,7 +838,6 @@ private fun YadanTravelPlaceItemPreview() {
 
             YadanTravelPlaceItem(
                 place = gamePlace,
-                currentUserId = currentUserId,
                 isLast = true,
                 onClick = {},
                 mode = YadanTravelPlaceItemMode.EDIT,
@@ -859,7 +851,6 @@ private fun YadanTravelPlaceItemPreview() {
              */
             YadanTravelPlaceItem(
                 place = certifiedPlace,
-                currentUserId = currentUserId,
                 isLast = false,
                 onClick = {},
                 mode = YadanTravelPlaceItemMode.COMPLETED,
@@ -868,7 +859,6 @@ private fun YadanTravelPlaceItemPreview() {
 
             YadanTravelPlaceItem(
                 place = foodPlace,
-                currentUserId = currentUserId,
                 isLast = false,
                 onClick = {},
                 mode = YadanTravelPlaceItemMode.COMPLETED,
@@ -878,7 +868,6 @@ private fun YadanTravelPlaceItemPreview() {
 
             YadanTravelPlaceItem(
                 place = gamePlace,
-                currentUserId = currentUserId,
                 isLast = true,
                 onClick = {},
                 mode = YadanTravelPlaceItemMode.COMPLETED,
@@ -897,38 +886,15 @@ private fun previewTravelPlace(
     category: TravelSpotCategory,
     order: Int,
     certified: Boolean = false,
-): TravelPlace =
-    TravelPlace(
-        id = id,
-        spot =
-            TravelSpot(
-                id = "spot-$id",
-                name = name,
-                region = Region.BUSAN,
-                category = category,
-                imageUrl = null,
-            ),
-        day = 1,
-        order = order,
-        certifications =
-            if (certified) {
-                listOf(
-                    TravelCertification(
-                        id = "certification-$id",
-                        userId = "user-1",
-                        certificatedAt =
-                            LocalDateTime(
-                                year = 2026,
-                                month = 5,
-                                day = 22,
-                                hour = 13,
-                                minute = 0,
-                                second = 0,
-                                nanosecond = 0,
-                            ),
-                    ),
-                )
-            } else {
-                emptyList()
-            },
-    )
+): TravelPlace = TravelPlace(
+    spot = TravelSpot(
+        id = "spot-$id",
+        name = name,
+        region = Region.BUSAN,
+        category = category,
+        imageUrl = null,
+    ),
+    order = order,
+    isCertificationTarget = true,
+    isCertified = certified,
+)

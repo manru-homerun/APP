@@ -2,26 +2,31 @@ package com.manruhomerun.yadanbeopseok.data.repository
 
 import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
+import com.manruhomerun.yadanbeopseok.model.TravelSpotDetail
 
 /**
- * 홈에서 사용하는 인기 관광지 조회와 찜 상태 변경을 담당합니다.
+ * 관광지 조회와 찜 상태 변경을 담당합니다.
  *
- * 검색, 상세 조회와 맞춤 추천 기능은 해당 기능을 개발할 때 추가합니다.
+ * 현재는 인기 관광지, 관광지 상세, 찜 목록 및 찜 상태 변경을 제공합니다.
+ * 검색과 맞춤 추천 기능은 해당 기능을 개발할 때 추가합니다.
  */
 interface TravelSpotRepository {
     /** 홈 화면에 노출할 지역별 인기 관광지를 조회합니다. */
-    suspend fun getPopularTravelSpots(
-        region: Region,
-    ): List<TravelSpot>
+    suspend fun getPopularTravelSpots(region: Region): List<TravelSpot>
+
+    /**
+     * 관광지의 상세 정보와 갤러리 이미지 목록을 조회합니다.
+     *
+     * @param spotId 조회할 관광지의 고유 식별자
+     */
+    suspend fun getTravelSpotDetail(spotId: String): TravelSpotDetail
 
     /**
      * 현재 사용자가 찜한 관광지 목록을 조회합니다.
      *
      * @param region 특정 지역으로 필터링하며, null이면 전체 찜 목록을 조회합니다.
      */
-    suspend fun getTravelSpotDibs(
-        region: Region? = null,
-    ): List<TravelSpot>
+    suspend fun getTravelSpotDibs(region: Region? = null): List<TravelSpot>
 
     /** 지정한 관광지를 찜합니다. */
     suspend fun addTravelSpotDibs(spotId: String)

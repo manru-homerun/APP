@@ -40,7 +40,6 @@ import com.manruhomerun.yadanbeopseok.model.Travel
  * 여행 상세 및 일정 편집 화면 상단에 표시하는 여행 정보 헤더입니다.
  *
  * @param travel 표시할 여행입니다.
- * @param currentUserId 현재 로그인한 사용자의 ID입니다.
  * @param dateText 화면에 표시할 여행 기간입니다. 예: `5.22~5.23`
  * @param modifier 헤더의 크기와 배치를 지정합니다.
  * @param onRenameClick 이름 변경 버튼을 눌렀을 때 실행합니다.
@@ -50,27 +49,18 @@ import com.manruhomerun.yadanbeopseok.model.Travel
 @Composable
 fun YadanTravelHeader(
     travel: Travel,
-    currentUserId: String,
     dateText: String?,
     modifier: Modifier = Modifier,
     onRenameClick: (() -> Unit)? = null,
     enabled: Boolean = true,
 ) {
-    val title =
-        travel.name
-            ?.takeIf { name -> name.isNotBlank() }
-            ?: "${travel.region.displayName} 원정 여행"
-
-    val isLeader =
-        travel.participants.any { participant ->
-            participant.user.id == currentUserId &&
-                participant.isLeader
-        }
+    val title = travel.name?.takeIf { it.isNotBlank() }
+        ?: "${travel.region.displayName} 원정 여행"
 
     YadanTravelHeaderContent(
         title = title,
         dateText = dateText,
-        isLeader = isLeader,
+        isLeader = travel.isLeader,
         modifier = modifier,
         onRenameClick = onRenameClick,
         enabled = enabled,

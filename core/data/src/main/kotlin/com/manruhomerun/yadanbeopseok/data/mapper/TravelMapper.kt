@@ -191,12 +191,11 @@ private fun String.toLocalDate(
 /**
  * 서버의 KBO 구단 ID를 앱의 KBO 구단으로 변환합니다.
  */
-private fun Long.toKboTeam(
-    fieldName: String,
-): KboTeam = KboTeam.findByServerId(this)
-    ?: throw InvalidResponseException(
-        message = "Unsupported $fieldName: $this",
-    )
+internal fun Long.toKboTeam(fieldName: String): KboTeam =
+    KboTeam.findByServerId(this)
+        ?: throw InvalidResponseException(
+            message = "Unsupported $fieldName: $this",
+        )
 
 /**
  * 서버의 시도 코드를 앱의 야구 여행 지역으로 변환합니다.

@@ -1,10 +1,12 @@
 package com.manruhomerun.yadanbeopseok.data.di
 
 import com.manruhomerun.yadanbeopseok.data.repository.AuthRepository
+import com.manruhomerun.yadanbeopseok.data.repository.BaseballRepository
 import com.manruhomerun.yadanbeopseok.data.repository.OnboardingRepository
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRepository
 import com.manruhomerun.yadanbeopseok.data.repository.TravelSpotRepository
 import com.manruhomerun.yadanbeopseok.data.repository.impl.AuthRepositoryImpl
+import com.manruhomerun.yadanbeopseok.data.repository.impl.BaseballRepositoryImpl
 import com.manruhomerun.yadanbeopseok.data.repository.impl.OnboardingRepositoryImpl
 import com.manruhomerun.yadanbeopseok.data.repository.impl.TravelRepositoryImpl
 import com.manruhomerun.yadanbeopseok.data.repository.impl.TravelSpotRepositoryImpl
@@ -60,4 +62,14 @@ internal abstract class RepositoryModule {
     abstract fun bindTravelSpotRepository(
         repositoryImpl: TravelSpotRepositoryImpl,
     ): TravelSpotRepository
+
+    /**
+     * [BaseballRepository] 요청에
+     * [BaseballRepositoryImpl]을 제공합니다.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindBaseballRepository(
+        repositoryImpl: BaseballRepositoryImpl,
+    ): BaseballRepository
 }

@@ -1,34 +1,27 @@
 package com.manruhomerun.yadanbeopseok.data.repository
 
 import com.manruhomerun.yadanbeopseok.model.BaseballGame
+import com.manruhomerun.yadanbeopseok.model.BaseballGameSummary
 import com.manruhomerun.yadanbeopseok.model.KboTeam
-import kotlinx.datetime.LocalDate
 
+/**
+ * KBO 경기 상세와 경기 일정을 제공하는 Repository입니다.
+ */
 interface BaseballRepository {
     /**
      * 특정 야구 경기의 상세 정보를 조회합니다.
+     *
+     * 여행 생성에 필요한 구장 지역과 좌표를 포함합니다.
      */
     suspend fun getGame(gameId: String): BaseballGame
 
     /**
-     * 특정 구단이 포함된 경기 일정을 조회합니다.
-     *
-     * from/to가 null이면 구현체에서 기본 조회 기간을 적용합니다.
+     * 특정 구단의 요청일 기준 최대 2주 경기 일정을 조회합니다.
      */
-    suspend fun getTeamGameSchedule(
-        team: KboTeam,
-        from: LocalDate? = null,
-        to: LocalDate? = null,
-    ): List<BaseballGame>
+    suspend fun getTeamGameSchedule(team: KboTeam): List<BaseballGameSummary>
 
     /**
-     * 특정 구장에서 열리는 경기 일정을 조회합니다.
-     *
-     * from/to가 null이면 구현체에서 기본 조회 기간을 적용합니다.
+     * 특정 구장의 요청일 기준 최대 2주 경기 일정을 조회합니다.
      */
-    suspend fun getStadiumGameSchedule(
-        stadiumId: String,
-        from: LocalDate? = null,
-        to: LocalDate? = null,
-    ): List<BaseballGame>
+    suspend fun getStadiumGameSchedule(stadiumId: String): List<BaseballGameSummary>
 }

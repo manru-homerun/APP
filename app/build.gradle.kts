@@ -96,6 +96,7 @@ dependencies {
 
     implementation(projects.core.navigation)
     implementation(projects.feature.auth)
+    implementation(projects.feature.baseball)
     implementation(projects.feature.home)
     implementation(projects.feature.travel)
     implementation(projects.core.data)

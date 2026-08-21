@@ -6,6 +6,7 @@ import com.manruhomerun.yadanbeopseok.network.auth.interceptor.AuthInterceptor
 import com.manruhomerun.yadanbeopseok.network.auth.interceptor.TokenAuthenticator
 import com.manruhomerun.yadanbeopseok.network.baseball.api.BaseballApi
 import com.manruhomerun.yadanbeopseok.network.travel.api.TravelApi
+import com.manruhomerun.yadanbeopseok.network.travel.api.TravelSpotApi
 import com.manruhomerun.yadanbeopseok.network.user.api.UserApi
 import dagger.Module
 import dagger.Provides
@@ -110,7 +111,7 @@ internal object NetworkModule {
     ): UserApi = retrofit.create(UserApi::class.java)
 
     /**
-     * 여행 목록과 여행지 찜 관련 백엔드 API 구현체를 제공합니다.
+     * 여행 조회 및 생성 관련 백엔드 API 구현체를 제공합니다.
      */
     @Provides
     @Singleton
@@ -118,6 +119,14 @@ internal object NetworkModule {
         retrofit: Retrofit,
     ): TravelApi = retrofit.create(TravelApi::class.java)
 
+    /**
+     * 관광지 조회, 검색, 추천 및 찜 관련 백엔드 API 구현체를 제공합니다.
+     */
+    @Provides
+    @Singleton
+    fun provideTravelSpotApi(
+        retrofit: Retrofit,
+    ): TravelSpotApi = retrofit.create(TravelSpotApi::class.java)
     /**
      * KBO 경기 상세와 구단·구장별 경기 일정 API 구현체를 제공합니다.
      */

@@ -391,7 +391,7 @@ private fun previewTravel(): Travel =
         baseballGame = TravelBaseballGame(
             id = "123",
             day = 1,
-            after = 2,
+            baseballGameAfterIdx = 2,
         ),
         name = "부산 사직 직관 여행",
         region = Region.BUSAN,

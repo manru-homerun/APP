@@ -7,12 +7,22 @@ import com.manruhomerun.yadanbeopseok.model.TravelSpotDetail
 /**
  * 관광지 조회와 찜 상태 변경을 담당합니다.
  *
- * 현재는 인기 관광지, 관광지 상세, 찜 목록 및 찜 상태 변경을 제공합니다.
- * 검색과 맞춤 추천 기능은 해당 기능을 개발할 때 추가합니다.
+ * 인기 관광지, 맞춤 추천, 검색, 상세 조회와 찜 기능을 제공합니다.
  */
 interface TravelSpotRepository {
     /** 홈 화면에 노출할 지역별 인기 관광지를 조회합니다. */
     suspend fun getPopularTravelSpots(region: Region): List<TravelSpot>
+
+    /** 선택한 지역을 기준으로 사용자 맞춤 추천 관광지를 조회합니다. */
+    suspend fun getSuggestedTravelSpots(region: Region): List<TravelSpot>
+
+    /**
+     * 입력한 검색어와 일치하는 관광지를 조회합니다.
+     *
+     * 현재 API에는 페이지 요청 파라미터가 없으므로 응답에 포함된
+     * 현재 페이지의 관광지 목록을 반환합니다.
+     */
+    suspend fun searchTravelSpots(searchKeyword: String): List<TravelSpot>
 
     /**
      * 관광지의 상세 정보와 갤러리 이미지 목록을 조회합니다.

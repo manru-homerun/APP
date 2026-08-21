@@ -73,7 +73,7 @@ data class TravelDetailResponseDto(
     val startDate: String,
     @SerialName("to")
     val endDate: String,
-    val baseballGame: TravelDetailBaseballGameResponseDto,
+    val baseballGame: TravelCourseBaseballGameResponseDto,
     val name: String? = null,
     val regionCode: Int,
     val friends: List<String>,
@@ -87,17 +87,19 @@ data class TravelDetailResponseDto(
 )
 
 /**
- * 여행 일정에 포함된 야구 경기 정보입니다.
+ * 여행 코스에서 야구 경기가 배치된 위치 정보입니다.
+ *
+ * 여행 상세 조회와 코스 생성 응답에서 공통으로 사용합니다.
  */
 @Serializable
-data class TravelDetailBaseballGameResponseDto(
+data class TravelCourseBaseballGameResponseDto(
     val id: Long,
     val day: Int,
-    val after: Int,
+    val baseballGameAfterIdx: Int,
 )
 
 /**
- * 여행의 특정 일차와 해당 일차의 관광지 목록입니다.
+ * 저장된 여행의 특정 일차와 해당 일차의 관광지 목록입니다.
  */
 @Serializable
 data class TravelScheduleDayResponseDto(
@@ -106,9 +108,9 @@ data class TravelScheduleDayResponseDto(
 )
 
 /**
- * 여행 일정에 포함된 개별 관광지 응답입니다.
+ * 저장된 여행 일정에 포함된 개별 관광지 응답입니다.
  *
- * 관광지의 기본 정보와 현재 사용자의 방문 인증 상태를 포함합니다.
+ * 관광지 기본 정보와 현재 사용자의 방문 인증 상태를 포함합니다.
  */
 @Serializable
 data class TravelScheduleSpotResponseDto(
@@ -118,4 +120,37 @@ data class TravelScheduleSpotResponseDto(
     val image: String? = null,
     val isCertificationTarget: Boolean,
     val isCertified: Boolean,
+)
+
+/**
+ * 여행 코스 생성 및 재정렬 API의 공통 응답 DTO입니다.
+ *
+ * 생성된 경기 배치 정보와 일차별 추천 일정을 함께 보관합니다.
+ */
+@Serializable
+data class TravelCourseResponseDto(
+    val baseballGame: TravelCourseBaseballGameResponseDto,
+    @SerialName("schedule")
+    val days: List<TravelCourseDayResponseDto>,
+)
+
+/**
+ * 생성된 여행 코스의 특정 일차와 관광지 목록입니다.
+ *
+ * 개별 관광지는 기존 [TravelSpotResponseDto]를 재사용합니다.
+ */
+@Serializable
+data class TravelCourseDayResponseDto(
+    val day: Int,
+    @SerialName("travelSpotList")
+    val spots: List<TravelSpotResponseDto>,
+)
+
+/**
+ * 여행 테마 종류 조회 API의 개별 응답 DTO입니다.
+ */
+@Serializable
+data class TravelThemeResponseDto(
+    val id: Long,
+    val name: String,
 )

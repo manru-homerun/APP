@@ -325,7 +325,7 @@ private fun previewCompletedTravel(): Travel {
     val baseballGame = TravelBaseballGame(
         id = "game-lotte-kia",
         day = 1,
-        after = 0,
+        baseballGameAfterIdx = 0,
     )
 
     val placeNames = listOf(

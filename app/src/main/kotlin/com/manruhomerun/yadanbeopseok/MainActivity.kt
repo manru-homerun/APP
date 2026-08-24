@@ -55,6 +55,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.component.YadanBottomNavigati
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanSurface
 import com.manruhomerun.yadanbeopseok.navigation.route.GameScheduleNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.MyPageNavKey
+import com.manruhomerun.yadanbeopseok.navigation.route.TravelCreationNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.TravelRecordNavKey
 
 /**
@@ -123,7 +124,9 @@ private fun YadanbeopseokApp(
                     YadanBottomNavigation(
                         centerAction = {
                             YadanBottomNavigationCenterAction(
-                                onClick = {},
+                                onClick = {
+                                    navigationState.navigate(TravelCreationNavKey())
+                                },
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Add,

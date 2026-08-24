@@ -6,13 +6,13 @@ import kotlinx.datetime.LocalDateTime
 /**
  * 앱 내부에서 사용하는 사용자 프로필 모델입니다.
  *
- * ERD의 user 테이블을 참고하지만,
- * 앱 화면과 온보딩 흐름에서 필요한 사용자 정보를 중심으로 구성합니다.
+ * 전체 사용자 프로필뿐 아니라 친구 목록처럼 일부 사용자 정보만
+ * 제공되는 화면에서도 공통으로 사용합니다.
  */
 data class UserProfile(
     val id: String,
-    val provider: LoginProvider,
-    val providerUserId: String,
+    val provider: LoginProvider? = null,
+    val providerUserId: String? = null,
     val nickname: String? = null,
     val profileImageUrl: String? = null,
     val favoriteTeam: KboTeam? = null,

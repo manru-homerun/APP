@@ -47,12 +47,12 @@ data class Travel(
  *
  * @property id 야구 경기 고유 식별자
  * @property day 여행 일정에서 경기가 포함된 일차
- * @property after 경기 이후 배치된 일정 수
+ * @property baseballGameAfterIdx 일차별 일정에서 야구 경기 배치 위치를 나타내는 인덱스
  */
 data class TravelBaseballGame(
     val id: String,
     val day: Int,
-    val after: Int,
+    val baseballGameAfterIdx: Int,
 )
 
 /**
@@ -110,14 +110,45 @@ enum class TravelStatus {
 }
 
 /**
+ * 생성 또는 재정렬된 저장 전 여행 코스입니다.
+ *
+ * 기존 여행 일정 하위 모델을 재사용하며, 서버에 저장되기 전이므로
+ * 여행 ID, 진행 상태와 방문 인증 정보는 포함하지 않습니다.
+ *
+ * @property baseballGame 코스에 포함된 야구 경기의 배치 정보
+ * @property days 일차별 추천 일정
+ */
+data class TravelCourse(
+    val baseballGame: TravelBaseballGame,
+    val days: List<TravelDay>,
+)
+
+/**
  * 여행 코스 생성에 사용하는 여행 테마입니다.
+ *
+ * @property id 서버에서 사용하는 여행 테마 ID
+ * @property name 화면에 표시할 여행 테마 이름
  */
 data class TravelTheme(
     val id: String,
-    val code: String,
     val name: String,
-    val displayOrder: Int,
 )
+
+/**
+ * 여행 코스를 만들 때 고려할 동행 조건입니다.
+ *
+ * 서버 요청에서는 각 Enum 이름을 동행 조건 문자열로 사용합니다.
+ */
+enum class TravelCompanionCondition {
+    /** 유아차와 수유실 등 아이 동반 조건을 고려합니다. */
+    CHILD,
+
+    /** 계단이 적고 이동이 완만한 어르신 동반 조건을 고려합니다. */
+    SENIOR,
+
+    /** 휠체어 접근이 가능한 동선과 관광지를 고려합니다. */
+    WHEELCHAIR,
+}
 
 /**
  * 여행 목록 API의 개별 여행을 표현하는 앱 내부 요약 모델입니다.

@@ -44,7 +44,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 fun YadanTravelStepIndicator(
     currentStepIndex: Int,
     modifier: Modifier = Modifier,
-    stepNames: List<String> = DEFAULT_TRAVEL_STEP_NAMES,
+    stepNames: List<String>,
 ) {
     if (stepNames.isEmpty()) {
         return
@@ -162,21 +162,14 @@ private fun YadanTravelStepSegment(
     )
 }
 
-/**
- * HTML에 정의된 여행 만들기 6단계입니다.
- *
- * 기본 흐름에서 공통으로 사용하되, 흐름이 달라지는 경우
- * stepNames 매개변수로 다른 단계 목록을 전달할 수 있습니다.
- */
-private val DEFAULT_TRAVEL_STEP_NAMES =
-    listOf(
-        "경기 선택",
-        "동행 조건",
-        "목적·스타일",
-        "동행자",
-        "여행 기간",
-        "관광지 담기",
-    )
+private val previewTravelStepNames = listOf(
+    "경기 선택",
+    "동행 조건",
+    "목적·스타일",
+    "동행자",
+    "여행 기간",
+    "관광지 담기",
+)
 
 @Preview(
     name = "Yadan travel step indicator",
@@ -197,14 +190,17 @@ private fun YadanTravelStepIndicatorPreview() {
         ) {
             YadanTravelStepIndicator(
                 currentStepIndex = 0,
+                stepNames = previewTravelStepNames,
             )
 
             YadanTravelStepIndicator(
                 currentStepIndex = 2,
+                stepNames = previewTravelStepNames,
             )
 
             YadanTravelStepIndicator(
                 currentStepIndex = 5,
+                stepNames = previewTravelStepNames,
             )
         }
     }

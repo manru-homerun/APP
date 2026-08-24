@@ -4,6 +4,7 @@ import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
 import com.manruhomerun.yadanbeopseok.navigation.route.GameScheduleNavKey
+import com.manruhomerun.yadanbeopseok.navigation.route.TravelCreationNavKey
 
 /**
  * 야구 기능에서 사용하는 NavKey와 실제 Route를 연결합니다.
@@ -12,12 +13,11 @@ import com.manruhomerun.yadanbeopseok.navigation.route.GameScheduleNavKey
  */
 fun EntryProviderScope<NavKey>.baseballEntryProvider(navigator: Navigator) {
     entry<GameScheduleNavKey> {
-        /*
-         * TODO: B·01 여행 생성 화면 구현 후
-         * 선택한 경기 ID를 전달하는 이동 콜백을 연결합니다.
-         */
         BaseballScheduleRoute(
             navigator = navigator,
+            onPlanClick = { gameId ->
+                navigator.navigate(TravelCreationNavKey(baseballGameId = gameId))
+            },
         )
     }
 }

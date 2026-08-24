@@ -40,6 +40,25 @@ data class TravelSpotListResponseDto(
     val content: List<TravelSpotResponseDto>,
 )
 
+/**
+ * 관광지 검색 API의 페이지 응답 DTO입니다.
+ *
+ * 검색 결과의 개별 관광지는 기존 [TravelSpotResponseDto]를 재사용합니다.
+ *
+ * @property contents 현재 페이지의 관광지 검색 결과
+ * @property pageNumber 현재 페이지 번호
+ * @property pageSize 한 페이지에 포함되는 관광지 수
+ * @property totalElements 전체 검색 결과 수
+ * @property totalPages 전체 페이지 수
+ */
+@Serializable
+data class TravelSpotSearchResponseDto(
+    val contents: List<TravelSpotResponseDto>,
+    val pageNumber: Int,
+    val pageSize: Int,
+    val totalElements: Long,
+    val totalPages: Int,
+)
 
 /**
  * 관광지 상세 조회 API의 응답 데이터입니다.

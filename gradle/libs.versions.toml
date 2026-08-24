@@ -68,6 +68,7 @@ junitKtx = "1.3.0"
 
 # kakao
 kakaoSdk = "2.24.0"
+uiText = "1.12.0"
 
 [bundles]
 androidx-compose-ui-test = ["androidx-compose-ui-test", "androidx-compose-ui-test-manifest"]
@@ -198,6 +199,7 @@ firebase-performance-gradlePlugin = { group = "com.google.firebase", name = "per
 
 # kakao
 kakao-sdk-user = { group = "com.kakao.sdk", name = "v2-user", version.ref = "kakaoSdk" }
+androidx-compose-ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "uiText" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

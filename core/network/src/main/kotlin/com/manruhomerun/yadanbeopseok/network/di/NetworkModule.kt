@@ -5,6 +5,7 @@ import com.manruhomerun.yadanbeopseok.network.auth.api.AuthApi
 import com.manruhomerun.yadanbeopseok.network.auth.interceptor.AuthInterceptor
 import com.manruhomerun.yadanbeopseok.network.auth.interceptor.TokenAuthenticator
 import com.manruhomerun.yadanbeopseok.network.baseball.api.BaseballApi
+import com.manruhomerun.yadanbeopseok.network.friend.api.FriendApi
 import com.manruhomerun.yadanbeopseok.network.travel.api.TravelApi
 import com.manruhomerun.yadanbeopseok.network.travel.api.TravelSpotApi
 import com.manruhomerun.yadanbeopseok.network.user.api.UserApi
@@ -127,6 +128,7 @@ internal object NetworkModule {
     fun provideTravelSpotApi(
         retrofit: Retrofit,
     ): TravelSpotApi = retrofit.create(TravelSpotApi::class.java)
+
     /**
      * KBO 경기 상세와 구단·구장별 경기 일정 API 구현체를 제공합니다.
      */
@@ -135,4 +137,13 @@ internal object NetworkModule {
     fun provideBaseballApi(
         retrofit: Retrofit,
     ): BaseballApi = retrofit.create(BaseballApi::class.java)
+
+    /**
+     * 현재 사용자의 친구 목록 API 구현체를 제공합니다.
+     */
+    @Provides
+    @Singleton
+    fun provideFriendApi(
+        retrofit: Retrofit
+    ): FriendApi = retrofit.create(FriendApi::class.java)
 }

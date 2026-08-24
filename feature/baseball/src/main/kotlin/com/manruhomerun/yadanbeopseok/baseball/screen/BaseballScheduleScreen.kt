@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
@@ -21,17 +20,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.baseball.viewmodel.BaseballScheduleUiState
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanButton
-import com.manruhomerun.yadanbeopseok.designsystem.component.YadanFilterChip
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanMainHeader
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
-import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanDivider
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOutline
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanShapes
@@ -43,6 +39,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.BaseballGameSummary
 import com.manruhomerun.yadanbeopseok.model.BaseballStadiumSummary
 import com.manruhomerun.yadanbeopseok.model.KboTeam
+import com.manruhomerun.yadanbeopseok.ui.component.YadanBaseballTeamFilter
 import com.manruhomerun.yadanbeopseok.ui.component.YadanGameScheduleCard
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -90,7 +87,7 @@ fun BaseballScheduleScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item(key = "team-filter") {
-                BaseballTeamFilter(
+                YadanBaseballTeamFilter(
                     selectedTeam = uiState.selectedTeam,
                     onTeamSelected = onTeamSelected,
                 )
@@ -139,40 +136,6 @@ fun BaseballScheduleScreen(
                     }
                 }
             }
-        }
-    }
-}
-
-/**
- * 일정 조회에 사용할 KBO 구단 필터를 표시합니다.
- *
- * 서버 구단 ID 순서로 정렬하므로 첫 구단은 KIA입니다.
- */
-@Composable
-private fun BaseballTeamFilter(
-    selectedTeam: KboTeam,
-    onTeamSelected: (KboTeam) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val teams = KboTeam.entries.sortedBy { team -> team.serverId }
-
-    LazyRow(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(YadanShapes.medium)
-            .background(YadanDivider),
-        contentPadding = PaddingValues(3.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        items(
-            items = teams,
-            key = { team -> team.serverId },
-        ) { team ->
-            YadanFilterChip(
-                text = team.displayName,
-                selected = selectedTeam == team,
-                onClick = { onTeamSelected(team) },
-            )
         }
     }
 }

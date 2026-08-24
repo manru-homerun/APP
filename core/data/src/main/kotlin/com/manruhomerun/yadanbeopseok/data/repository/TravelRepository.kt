@@ -2,6 +2,7 @@ package com.manruhomerun.yadanbeopseok.data.repository
 
 import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.Travel
+import com.manruhomerun.yadanbeopseok.model.TravelCompanionCondition
 import com.manruhomerun.yadanbeopseok.model.TravelCourse
 import com.manruhomerun.yadanbeopseok.model.TravelListPage
 import com.manruhomerun.yadanbeopseok.model.TravelTheme
@@ -61,6 +62,7 @@ interface TravelRepository {
  * @property baseballGameId 선택한 야구 경기 ID
  * @property region 여행 지역
  * @property friendNicknames 동행하는 사용자의 고유 닉네임 목록
+ * @property companionConditions AI 코스 생성에 반영할 동행 조건 목록
  * @property themeIds 선택한 여행 테마 ID 목록
  * @property travelSpotIds 일정에 반드시 포함할 관광지 ID 목록
  */
@@ -70,6 +72,7 @@ data class GenerateTravelCourseParams(
     val baseballGameId: String,
     val region: Region,
     val friendNicknames: List<String>,
+    val companionConditions: List<TravelCompanionCondition>,
     val themeIds: List<String>,
     val travelSpotIds: List<String>,
 )

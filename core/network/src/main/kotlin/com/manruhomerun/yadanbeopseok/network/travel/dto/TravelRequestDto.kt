@@ -11,6 +11,7 @@ import kotlinx.serialization.Serializable
  * @property baseballGameId 선택한 야구 경기 ID
  * @property regionCode 여행 지역의 5자리 법정동 코드
  * @property friends 동행하는 사용자의 고유 닉네임 목록
+ * @property companionConditions AI 코스 생성에 반영할 동행 조건 목록
  * @property theme 선택한 여행 테마 ID 목록
  * @property travelSpotIdList 일정에 반드시 포함할 관광지 ID 목록
  */
@@ -23,6 +24,7 @@ data class TravelCourseGenerateRequestDto(
     val baseballGameId: Long,
     val regionCode: String,
     val friends: List<String>,
+    val companionConditions: List<String>,
     val theme: List<Long>,
     val travelSpotIdList: List<Long>,
 )

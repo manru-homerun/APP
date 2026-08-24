@@ -57,10 +57,32 @@ fun YadanTravelHeader(
     val title = travel.name?.takeIf { it.isNotBlank() }
         ?: "${travel.region.displayName} 원정 여행"
 
-    YadanTravelHeaderContent(
+    YadanTravelHeader(
         title = title,
         dateText = dateText,
         isLeader = travel.isLeader,
+        modifier = modifier,
+        onRenameClick = onRenameClick,
+        enabled = enabled,
+    )
+}
+
+/**
+ * 저장 전 추천 여행처럼 완성된 [Travel]이 없는 화면에서 사용하는 여행 헤더입니다.
+ */
+@Composable
+fun YadanTravelHeader(
+    title: String,
+    dateText: String?,
+    isLeader: Boolean,
+    modifier: Modifier = Modifier,
+    onRenameClick: (() -> Unit)? = null,
+    enabled: Boolean = true,
+) {
+    YadanTravelHeaderContent(
+        title = title,
+        dateText = dateText,
+        isLeader = isLeader,
         modifier = modifier,
         onRenameClick = onRenameClick,
         enabled = enabled,

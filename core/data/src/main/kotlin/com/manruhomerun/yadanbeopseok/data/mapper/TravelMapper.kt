@@ -76,6 +76,8 @@ internal fun TravelCourseResponseDto.toTravelCourse(): TravelCourse =
 
 /**
  * 앱 내부의 여행 코스 생성 조건을 서버 요청 DTO로 변환합니다.
+ *
+ * 동행 조건은 서버 계약에 맞춰 CHILD, SENIOR, WHEELCHAIR 문자열로 전달합니다.
  */
 internal fun GenerateTravelCourseParams.toTravelCourseGenerateRequestDto() =
     TravelCourseGenerateRequestDto(
@@ -84,6 +86,7 @@ internal fun GenerateTravelCourseParams.toTravelCourseGenerateRequestDto() =
         baseballGameId = baseballGameId.toRequestId("baseballGameId"),
         regionCode = region.legalDongCode,
         friends = friendNicknames,
+        companionConditions = companionConditions.map { condition -> condition.name },
         theme = themeIds.map { themeId ->
             themeId.toRequestId("themeId")
         },

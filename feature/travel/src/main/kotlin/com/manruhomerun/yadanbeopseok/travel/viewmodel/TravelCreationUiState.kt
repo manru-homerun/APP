@@ -1,6 +1,7 @@
 package com.manruhomerun.yadanbeopseok.travel.viewmodel
 
 import com.manruhomerun.yadanbeopseok.model.BaseballGame
+import com.manruhomerun.yadanbeopseok.model.TravelCompanionCondition
 import com.manruhomerun.yadanbeopseok.model.TravelCourse
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelTheme
@@ -17,6 +18,9 @@ import kotlinx.datetime.LocalDate
 data class TravelCreationUiState(
     /** B·01에서 선택한 경기의 상세 정보입니다. */
     val selectedGame: BaseballGame? = null,
+
+    /** B·02에서 선택한 동행 조건 목록입니다. */
+    val selectedCompanionConditions: Set<TravelCompanionCondition> = emptySet(),
 
     /** B·03에서 선택한 여행 테마 목록입니다. */
     val selectedThemes: List<TravelTheme> = emptyList(),

@@ -45,13 +45,8 @@ import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelDaySelector
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelHeader
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelPlaceItemMode
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelProgress
-import java.time.format.DateTimeFormatter
-import java.util.Locale
-import kotlinx.datetime.DateTimeUnit
+
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.number
-import kotlinx.datetime.plus
-import kotlinx.datetime.toJavaLocalDate
 
 /**
  * 선택한 여행의 상세 일정과 방문 인증 상태를 표시합니다.
@@ -146,7 +141,7 @@ private fun TravelDetailContent(
         item {
             YadanTravelHeader(
                 travel = travel,
-                dateText = travel.toDateRangeText(),
+                dateText = travel.startDate.toTravelDateRangeText(travel.endDate),
                 onRenameClick = onRenameClick,
             )
         }
@@ -175,7 +170,7 @@ private fun TravelDetailContent(
             item(key = selectedTravelDay.day) {
                 YadanTravelDaySection(
                     travelDay = selectedTravelDay,
-                    dateText = travel.toDayDateText(selectedTravelDay.day),
+                    dateText = travel.startDate.toTravelDayDateText(selectedTravelDay.day),
                     mode = placeItemMode,
                     onVerifyClick =
                         if (travel.status == TravelStatus.ACTIVE) {
@@ -282,38 +277,6 @@ private fun TravelStatus.toPlaceItemMode(): YadanTravelPlaceItemMode =
         TravelStatus.ACTIVE -> YadanTravelPlaceItemMode.ACTIVE
         TravelStatus.COMPLETED -> YadanTravelPlaceItemMode.COMPLETED
     }
-
-/**
- * 여행 기간을 헤더에 표시할 짧은 날짜 문구로 변환합니다.
- */
-private fun Travel.toDateRangeText(): String {
-    val startText = startDate.toMonthDayText()
-
-    return if (startDate == endDate) {
-        startText
-    } else {
-        "$startText~${endDate.toMonthDayText()}"
-    }
-}
-
-/**
- * 여행 일차에 해당하는 날짜와 요일을 반환합니다.
- */
-private fun Travel.toDayDateText(day: Int): String {
-    val dayOffset = (day - 1).coerceAtLeast(0)
-    val date = startDate.plus(dayOffset, DateTimeUnit.DAY)
-
-    return date.toJavaLocalDate().format(travelDayDateFormatter)
-}
-
-private fun LocalDate.toMonthDayText(): String =
-    "${month.number}.$day"
-
-private val travelDayDateFormatter =
-    DateTimeFormatter.ofPattern(
-        "M.d (E)",
-        Locale.KOREAN,
-    )
 
 @Preview(
     name = "Travel detail - Active",

@@ -2,11 +2,13 @@ package com.manruhomerun.yadanbeopseok.data.di
 
 import com.manruhomerun.yadanbeopseok.data.repository.AuthRepository
 import com.manruhomerun.yadanbeopseok.data.repository.BaseballRepository
+import com.manruhomerun.yadanbeopseok.data.repository.FriendRepository
 import com.manruhomerun.yadanbeopseok.data.repository.OnboardingRepository
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRepository
 import com.manruhomerun.yadanbeopseok.data.repository.TravelSpotRepository
 import com.manruhomerun.yadanbeopseok.data.repository.impl.AuthRepositoryImpl
 import com.manruhomerun.yadanbeopseok.data.repository.impl.BaseballRepositoryImpl
+import com.manruhomerun.yadanbeopseok.data.repository.impl.FriendRepositoryImpl
 import com.manruhomerun.yadanbeopseok.data.repository.impl.OnboardingRepositoryImpl
 import com.manruhomerun.yadanbeopseok.data.repository.impl.TravelRepositoryImpl
 import com.manruhomerun.yadanbeopseok.data.repository.impl.TravelSpotRepositoryImpl
@@ -72,4 +74,14 @@ internal abstract class RepositoryModule {
     abstract fun bindBaseballRepository(
         repositoryImpl: BaseballRepositoryImpl,
     ): BaseballRepository
+
+    /**
+     * [FriendRepository] 요청에
+     * [FriendRepositoryImpl]을 제공합니다.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindFriendRepository(
+        repositoryImpl: FriendRepositoryImpl,
+    ): FriendRepository
 }

@@ -2,10 +2,12 @@ package com.manruhomerun.yadanbeopseok.data.repository.impl
 
 import com.manruhomerun.yadanbeopseok.data.mapper.toTravel
 import com.manruhomerun.yadanbeopseok.data.mapper.toTravelCourse
+import com.manruhomerun.yadanbeopseok.data.mapper.toTravelCourseAlignRequestDto
 import com.manruhomerun.yadanbeopseok.data.mapper.toTravelCourseGenerateRequestDto
 import com.manruhomerun.yadanbeopseok.data.mapper.toTravelCreateRequestDto
 import com.manruhomerun.yadanbeopseok.data.mapper.toTravelListPage
 import com.manruhomerun.yadanbeopseok.data.mapper.toTravelTheme
+import com.manruhomerun.yadanbeopseok.data.mapper.toTravelUpdateRequestDto
 import com.manruhomerun.yadanbeopseok.data.repository.CreateTravelParams
 import com.manruhomerun.yadanbeopseok.data.repository.GenerateTravelCourseParams
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRepository
@@ -22,7 +24,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 
 /**
- * 여행 조회와 여행 생성에 필요한 데이터를 제공하는 Repository 구현체입니다.
+ * 여행 조회, 생성 및 수정에 필요한 데이터를 제공하는 Repository 구현체입니다.
  */
 internal class TravelRepositoryImpl @Inject constructor(
     private val travelApi: TravelApi,
@@ -82,6 +84,19 @@ internal class TravelRepositoryImpl @Inject constructor(
     }
 
     /**
+     * 저장 전 여행 코스의 관광지 순서를 거리 기준으로 재정렬합니다.
+     */
+    override suspend fun alignTravelCourse(course: TravelCourse): TravelCourse {
+        val request = course.toTravelCourseAlignRequestDto()
+
+        val response = apiCallExecutor.execute {
+            travelApi.alignTravelCourse(request = request)
+        }
+
+        return response.requireData().toTravelCourse()
+    }
+
+    /**
      * 사용자가 최종 확정한 여행 코스를 서버에 저장합니다.
      */
     override suspend fun createTravel(params: CreateTravelParams) {
@@ -89,6 +104,24 @@ internal class TravelRepositoryImpl @Inject constructor(
 
         apiCallExecutor.execute {
             travelApi.createTravel(request = request)
+        }
+    }
+
+    /**
+     * 저장된 여행의 이름, 야구 경기 배치와 일차별 관광지 일정을 수정합니다.
+     */
+    override suspend fun updateTravel(
+        travelId: String,
+        name: String,
+        course: TravelCourse,
+    ) {
+        val request = course.toTravelUpdateRequestDto(name = name)
+
+        apiCallExecutor.execute {
+            travelApi.updateTravel(
+                travelId = travelId,
+                request = request,
+            )
         }
     }
 }

@@ -37,6 +37,11 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.Travel
 
 /**
+ * 여행 이름이 없거나 공백이면 지역명을 사용해 화면 표시용 제목을 반환합니다.
+ */
+fun Travel.displayTitle(): String = name?.takeIf { it.isNotBlank() } ?: "${region.displayName} 원정 여행"
+
+/**
  * 여행 상세 및 일정 편집 화면 상단에 표시하는 여행 정보 헤더입니다.
  *
  * @param travel 표시할 여행입니다.
@@ -54,11 +59,8 @@ fun YadanTravelHeader(
     onRenameClick: (() -> Unit)? = null,
     enabled: Boolean = true,
 ) {
-    val title = travel.name?.takeIf { it.isNotBlank() }
-        ?: "${travel.region.displayName} 원정 여행"
-
     YadanTravelHeader(
-        title = title,
+        title = travel.displayTitle(),
         dateText = dateText,
         isLeader = travel.isLeader,
         modifier = modifier,

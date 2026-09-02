@@ -8,13 +8,26 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.minus
 
-/** 닉네임 입력값의 검증 상태입니다. */
+/** 닉네임 입력값의 로컬 검증과 중복 확인 상태입니다. */
 enum class NicknameInputState {
     EMPTY,
     TOO_SHORT,
     TOO_LONG,
-    INVALID_CHARACTER,
+
+    /** 로컬 입력 규칙은 통과했지만 서버 중복 확인 전인 상태입니다. */
     VALID,
+
+    /** 서버에서 닉네임 중복 여부를 확인하고 있습니다. */
+    CHECKING,
+
+    /** 서버에서 사용할 수 있는 닉네임으로 확인됐습니다. */
+    AVAILABLE,
+
+    /** 서버에서 이미 사용 중인 닉네임으로 확인됐습니다. */
+    DUPLICATED,
+
+    /** 네트워크 또는 서버 오류로 중복 여부를 확인하지 못했습니다. */
+    CHECK_FAILED,
 }
 
 /** 생년월일 입력값의 검증 상태입니다. */
@@ -41,14 +54,37 @@ data class OnboardingUiState(
     val isSubmitting: Boolean = false,
     val errorMessage: String? = null,
 ) {
+    /** 서버 요청과 길이 검사에 사용하는 앞뒤 공백이 제거된 닉네임입니다. */
+    val normalizedNickname: String
+        get() = nickname.trim()
+
+    /** 앞뒤 공백을 제외한 닉네임 길이입니다. */
+    val nicknameLength: Int
+        get() = normalizedNickname.length
+
+    /** 서버에서 닉네임 중복 여부를 확인하고 있는지 나타냅니다. */
+    val isNicknameChecking: Boolean
+        get() = nicknameInputState == NicknameInputState.CHECKING
+
+    /** 서버에서 사용 가능한 닉네임으로 확인됐는지 나타냅니다. */
+    val isNicknameAvailable: Boolean
+        get() = nicknameInputState == NicknameInputState.AVAILABLE
+
+    /** 닉네임 입력란에 오류 상태를 표시해야 하는지 나타냅니다. */
+    val hasNicknameValidationError: Boolean
+        get() =
+            nicknameInputState == NicknameInputState.TOO_SHORT ||
+                nicknameInputState == NicknameInputState.TOO_LONG ||
+                nicknameInputState == NicknameInputState.DUPLICATED ||
+                nicknameInputState == NicknameInputState.CHECK_FAILED
+
     /** 모든 필수 약관에 동의했는지 나타냅니다. */
     val isAllAgreed: Boolean
         get() = isServiceTermsAgreed && isPrivacyAgreementAgreed
 
     /** 기본 정보 화면에서 다음 단계로 이동할 수 있는지 나타냅니다. */
     val isBasicInfoNextEnabled: Boolean
-        get() =
-            nicknameInputState == NicknameInputState.VALID &&
+        get() = isNicknameAvailable &&
                 gender != null &&
                 birthDateInputState == BirthDateInputState.VALID
 
@@ -81,9 +117,11 @@ data class OnboardingUiState(
                 NicknameInputState.EMPTY -> null
                 NicknameInputState.TOO_SHORT -> "닉네임은 2자 이상 입력해주세요"
                 NicknameInputState.TOO_LONG -> "닉네임은 12자 이하로 입력해주세요"
-                NicknameInputState.INVALID_CHARACTER ->
-                    "한글, 영문, 숫자만 사용할 수 있어요"
-                NicknameInputState.VALID -> "사용 가능한 닉네임이에요"
+                NicknameInputState.VALID -> null
+                NicknameInputState.CHECKING -> "닉네임 중복을 확인하고 있어요"
+                NicknameInputState.AVAILABLE -> "사용 가능한 닉네임이에요"
+                NicknameInputState.DUPLICATED -> "이미 사용 중인 닉네임이에요"
+                NicknameInputState.CHECK_FAILED -> "닉네임을 확인하지 못했어요"
             }
 
     /** 생년월일 검증 결과에 맞는 사용자 안내 문구입니다. */
@@ -99,16 +137,21 @@ data class OnboardingUiState(
             }
 }
 
-/** 닉네임을 온보딩 입력 규칙에 따라 검증합니다. */
-internal fun String.toNicknameInputState(): NicknameInputState =
-    when {
-        isEmpty() -> NicknameInputState.EMPTY
-        length < NICKNAME_MIN_LENGTH -> NicknameInputState.TOO_SHORT
-        length > NICKNAME_MAX_LENGTH -> NicknameInputState.TOO_LONG
-        !matches(NICKNAME_ALLOWED_PATTERN) ->
-            NicknameInputState.INVALID_CHARACTER
+/**
+ * 닉네임의 앞뒤 공백을 제거한 뒤 API와 동일한 길이 규칙을 검사합니다.
+ *
+ * 글자 사이 공백은 허용하며, 문자 종류는 별도로 제한하지 않습니다.
+ */
+internal fun String.toNicknameInputState(): NicknameInputState {
+    val normalizedNickname = trim()
+
+    return when {
+        normalizedNickname.isEmpty() -> NicknameInputState.EMPTY
+        normalizedNickname.length < NICKNAME_MIN_LENGTH -> NicknameInputState.TOO_SHORT
+        normalizedNickname.length > NICKNAME_MAX_LENGTH -> NicknameInputState.TOO_LONG
         else -> NicknameInputState.VALID
     }
+}
 
 /** 생년월일과 최소 가입 연령을 검증합니다. */
 internal fun LocalDate?.toBirthDateInputState(
@@ -132,8 +175,7 @@ internal fun LocalDate?.toBirthDateInputState(
     }
 }
 
-private val NICKNAME_ALLOWED_PATTERN = Regex("^[가-힣A-Za-z0-9]+$")
+internal const val NICKNAME_MIN_LENGTH = 2
+internal const val NICKNAME_MAX_LENGTH = 12
 
-private const val NICKNAME_MIN_LENGTH = 2
-private const val NICKNAME_MAX_LENGTH = 12
 private const val MINIMUM_SIGN_UP_AGE = 14

@@ -169,7 +169,7 @@ fun YadanTravelDaySection(
  * 일차, 날짜와 숙박을 제외한 방문 장소 개수를 표시합니다.
  */
 @Composable
-private fun YadanTravelDayHeader(
+fun YadanTravelDayHeader(
     day: Int,
     dateText: String,
     placeCount: Int,
@@ -222,7 +222,7 @@ private fun YadanTravelDayHeader(
  * 편집 모드에서 일차 마지막에 표시하는 관광지 추가 행입니다.
  */
 @Composable
-private fun YadanTravelDayAddPlaceRow(
+fun YadanTravelDayAddPlaceRow(
     day: Int,
     onClick: () -> Unit,
     enabled: Boolean,

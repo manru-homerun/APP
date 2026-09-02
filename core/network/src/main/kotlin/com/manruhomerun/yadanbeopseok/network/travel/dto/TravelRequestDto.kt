@@ -26,7 +26,7 @@ data class TravelCourseGenerateRequestDto(
     val friends: List<String>,
     val companionConditions: List<String>,
     val theme: List<Long>,
-    val travelSpotIdList: List<Long>,
+    val travelSpotIdList: List<String>,
 )
 
 /**
@@ -56,7 +56,36 @@ data class TravelCreateRequestDto(
 )
 
 /**
- * 여행 저장 요청에 포함되는 야구 경기 배치 정보입니다.
+ * 여행 코스의 관광지 순서를 거리 기준으로 재정렬하는 요청 DTO입니다.
+ *
+ * @property baseballGame 여행 일정에 포함된 야구 경기 배치 정보
+ * @property schedule 재정렬할 일차별 관광지 일정
+ */
+@Serializable
+data class TravelCourseAlignRequestDto(
+    val baseballGame: TravelBaseballGameRequestDto,
+    val schedule: List<TravelScheduleDayRequestDto>,
+)
+
+/**
+ * 저장된 여행의 이름, 경기 위치와 일차별 관광지 일정을 수정하는 요청 DTO입니다.
+ *
+ * 기존 여행의 경기와 날짜는 변경하지 않습니다. 서버는 [gameIdx]를
+ * 기존 경기 일차 안에서의 0부터 시작하는 삽입 위치로 사용합니다.
+ *
+ * @property name 수정할 여행 이름
+ * @property gameIdx 경기 일차 안에서 야구 경기가 삽입될 위치
+ * @property schedule 수정할 일차별 관광지 일정
+ */
+@Serializable
+data class TravelUpdateRequestDto(
+    val name: String,
+    val gameIdx: Int,
+    val schedule: List<TravelScheduleDayRequestDto>,
+)
+
+/**
+ * 여행 생성과 재정렬 요청에 포함되는 야구 경기 배치 정보입니다.
  */
 @Serializable
 data class TravelBaseballGameRequestDto(
@@ -66,10 +95,13 @@ data class TravelBaseballGameRequestDto(
 )
 
 /**
- * 여행 저장 요청에 포함되는 일차별 관광지 일정입니다.
+ * 여행 요청에 포함되는 일차별 관광지 일정입니다.
+ *
+ * @property day 여행 일차
+ * @property travelSpotIdList 방문 순서대로 정렬된 관광지 ID 목록
  */
 @Serializable
 data class TravelScheduleDayRequestDto(
     val day: Int,
-    val travelSpotIdList: List<Long>,
+    val travelSpotIdList: List<String>,
 )

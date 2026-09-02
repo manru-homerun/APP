@@ -43,6 +43,14 @@ interface TravelRepository {
     suspend fun generateTravelCourse(params: GenerateTravelCourseParams): TravelCourse
 
     /**
+     * 저장 전 여행 코스의 관광지 순서를 거리 기준으로 재정렬합니다.
+     *
+     * @param course 현재 경기 배치와 일차별 관광지 일정
+     * @return 재정렬된 여행 코스
+     */
+    suspend fun alignTravelCourse(course: TravelCourse): TravelCourse
+
+    /**
      * 사용자가 최종 확정한 여행 코스를 서버에 저장합니다.
      *
      * 서버는 저장 성공 시 201 Created를 반환하며 별도 응답 데이터는 없습니다.
@@ -50,6 +58,15 @@ interface TravelRepository {
      * @param params 여행 기본 정보와 최종 여행 코스
      */
     suspend fun createTravel(params: CreateTravelParams)
+
+    /**
+     * 저장된 여행의 이름, 야구 경기 배치와 일차별 관광지 일정을 수정합니다.
+     *
+     * @param travelId 수정할 여행의 고유 식별자
+     * @param name 수정할 여행 이름
+     * @param course 수정할 야구 경기 배치와 일차별 관광지 일정
+     */
+    suspend fun updateTravel(travelId: String, name: String, course: TravelCourse)
 }
 
 /**

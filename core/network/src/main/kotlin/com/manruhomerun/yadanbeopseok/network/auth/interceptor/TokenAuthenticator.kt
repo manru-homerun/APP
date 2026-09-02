@@ -1,7 +1,7 @@
 package com.manruhomerun.yadanbeopseok.network.auth.interceptor
 
 import com.manruhomerun.yadanbeopseok.common.error.AppException
-import com.manruhomerun.yadanbeopseok.network.auth.token.AuthorizationHeaderProvider
+import com.manruhomerun.yadanbeopseok.network.auth.token.AuthSessionProvider
 import com.manruhomerun.yadanbeopseok.network.auth.token.TokenRefreshHandler
 import dagger.Lazy
 import java.io.IOException
@@ -21,7 +21,7 @@ import okhttp3.Route
 @Singleton
 internal class TokenAuthenticator @Inject constructor(
     private val tokenRefreshHandler: Lazy<TokenRefreshHandler>,
-    private val authorizationHeaderProvider: AuthorizationHeaderProvider,
+    private val authSessionProvider: AuthSessionProvider,
 ) : Authenticator {
     /**
      * 여러 요청이 동시에 401을 받더라도 재발급 요청이 한 번만 실행되도록 사용합니다.
@@ -87,7 +87,7 @@ internal class TokenAuthenticator @Inject constructor(
     private fun getCurrentAuthorizationHeader(): String? =
         try {
             runBlocking {
-                authorizationHeaderProvider.getAuthorizationHeader()
+                authSessionProvider.getAuthorizationHeader()
             }
         } catch (_: IOException) {
             null
@@ -102,7 +102,7 @@ internal class TokenAuthenticator @Inject constructor(
         try {
             runBlocking {
                 tokenRefreshHandler.get().refreshToken()
-                authorizationHeaderProvider.getAuthorizationHeader()
+                authSessionProvider.getAuthorizationHeader()
             }
         } catch (_: AppException) {
             null

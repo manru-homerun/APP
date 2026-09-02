@@ -23,6 +23,7 @@ import com.manruhomerun.yadanbeopseok.auth.viewmodel.OnboardingViewModel
 import com.manruhomerun.yadanbeopseok.navigation.LocalSharedViewModelStoreOwner
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
 import com.manruhomerun.yadanbeopseok.navigation.route.HomeNavKey
+import com.manruhomerun.yadanbeopseok.navigation.route.LoginNavKey
 
 /**
  * 여행 프로필 화면과 온보딩 공유 ViewModel을 연결합니다.
@@ -56,6 +57,16 @@ fun TravelProfileRoute(
     LaunchedEffect(viewModel, navigator) {
         viewModel.completionEvents.collect {
             navigator.resetTo(HomeNavKey)
+        }
+    }
+
+    /**
+     * 온보딩 저장 중 인증 세션이 만료되면
+     * 온보딩 백스택을 제거하고 로그인 화면으로 이동합니다.
+     */
+    LaunchedEffect(viewModel, navigator) {
+        viewModel.sessionExpiredEvents.collect {
+            navigator.resetTo(LoginNavKey)
         }
     }
 

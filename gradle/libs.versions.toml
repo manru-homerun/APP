@@ -68,7 +68,9 @@ junitKtx = "1.3.0"
 
 # kakao
 kakaoSdk = "2.24.0"
-uiText = "1.12.0"
+
+# etc library
+reorderable = "3.1.0"
 
 [bundles]
 androidx-compose-ui-test = ["androidx-compose-ui-test", "androidx-compose-ui-test-manifest"]
@@ -120,6 +122,7 @@ androidx-compose-runtime-tracing = { group = "androidx.compose.runtime", name = 
 androidx-compose-ui-test = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-ui-util = { group = "androidx.compose.ui", name = "ui-util" }
 androidx-savedstate-compose = { group = "androidx.savedstate", name = "savedstate-compose", version.ref = "androidxSavedStateCompose" }
+androidx-compose-ui-text = { group = "androidx.compose.ui", name = "ui-text" }
 
 # Nav3
 androidx-navigation-testing = { group = "androidx.navigation", name = "navigation-testing", version.ref = "androidxNavigation" }
@@ -199,7 +202,10 @@ firebase-performance-gradlePlugin = { group = "com.google.firebase", name = "per
 
 # kakao
 kakao-sdk-user = { group = "com.kakao.sdk", name = "v2-user", version.ref = "kakaoSdk" }
-androidx-compose-ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "uiText" }
+
+# etc Library
+# 일정 카드 드래그 재정렬
+reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

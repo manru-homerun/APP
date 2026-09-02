@@ -17,6 +17,7 @@ import com.manruhomerun.yadanbeopseok.model.TravelStatus
 import com.manruhomerun.yadanbeopseok.model.TravelSummary
 import com.manruhomerun.yadanbeopseok.model.TravelTheme
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelBaseballGameRequestDto
+import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelCourseAlignRequestDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelCourseGenerateRequestDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelCourseResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelCreateRequestDto
@@ -25,6 +26,7 @@ import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelListResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelScheduleDayRequestDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelThemeResponseDto
+import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelUpdateRequestDto
 import kotlinx.datetime.LocalDate
 
 /**
@@ -90,9 +92,16 @@ internal fun GenerateTravelCourseParams.toTravelCourseGenerateRequestDto() =
         theme = themeIds.map { themeId ->
             themeId.toRequestId("themeId")
         },
-        travelSpotIdList = travelSpotIds.map { travelSpotId ->
-            travelSpotId.toRequestId("travelSpotId")
-        },
+        travelSpotIdList = travelSpotIds,
+    )
+
+/**
+ * 저장 전 여행 코스를 서버의 일정 재정렬 요청 DTO로 변환합니다.
+ */
+internal fun TravelCourse.toTravelCourseAlignRequestDto() =
+    TravelCourseAlignRequestDto(
+        baseballGame = baseballGame.toTravelBaseballGameRequestDto(),
+        schedule = days.toTravelScheduleDayRequestDtos(),
     )
 
 /**
@@ -104,30 +113,49 @@ internal fun CreateTravelParams.toTravelCreateRequestDto() =
     TravelCreateRequestDto(
         startDate = startDate.toString(),
         endDate = endDate.toString(),
-        baseballGame = TravelBaseballGameRequestDto(
-            id = course.baseballGame.id.toRequestId("baseballGameId"),
-            day = course.baseballGame.day,
-            baseballGameAfterIdx = course.baseballGame.baseballGameAfterIdx,
-        ),
+        baseballGame = course.baseballGame.toTravelBaseballGameRequestDto(),
         name = name,
         regionCode = region.legalDongCode,
         friends = friendNicknames,
         theme = themeIds.map { themeId ->
             themeId.toRequestId("themeId")
         },
-        schedule = course.days
-            .sortedBy { travelDay -> travelDay.day }
-            .map { travelDay ->
-                TravelScheduleDayRequestDto(
-                    day = travelDay.day,
-                    travelSpotIdList = travelDay.places
-                        .sortedBy { place -> place.order }
-                        .map { place ->
-                            place.spot.id.toRequestId("travelSpotId")
-                        },
-                )
-            },
+        schedule = course.days.toTravelScheduleDayRequestDtos(),
     )
+
+/**
+ * 수정할 여행 이름, 경기 위치와 일차별 관광지 일정을 요청 DTO로 변환합니다.
+ */
+internal fun TravelCourse.toTravelUpdateRequestDto(name: String) =
+    TravelUpdateRequestDto(
+        name = name,
+        gameIdx = baseballGame.baseballGameAfterIdx,
+        schedule = days.toTravelScheduleDayRequestDtos(),
+    )
+
+/**
+ * 앱 내부 야구 경기 배치 정보를 서버 요청 DTO로 변환합니다.
+ */
+private fun TravelBaseballGame.toTravelBaseballGameRequestDto() =
+    TravelBaseballGameRequestDto(
+        id = id.toRequestId("baseballGameId"),
+        day = day,
+        baseballGameAfterIdx = baseballGameAfterIdx,
+    )
+
+/**
+ * 일차와 관광지 방문 순서를 정렬하여 서버 일정 요청 목록으로 변환합니다.
+ */
+private fun List<TravelDay>.toTravelScheduleDayRequestDtos() =
+    sortedBy { travelDay -> travelDay.day }
+        .map { travelDay ->
+            TravelScheduleDayRequestDto(
+                day = travelDay.day,
+                travelSpotIdList = travelDay.places
+                    .sortedBy { place -> place.order }
+                    .map { place -> place.spot.id },
+            )
+        }
 
 /**
  * 여행 상세 응답을 앱 내부 여행 모델로 변환합니다.

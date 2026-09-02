@@ -10,6 +10,7 @@ android {
 dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.ui.text)
+    implementation(libs.reorderable)
 
     implementation(projects.core.data)
     implementation(projects.core.navigation)

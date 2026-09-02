@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -78,6 +79,7 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 import kotlinx.datetime.number
 import kotlinx.datetime.todayIn
+import com.manruhomerun.yadanbeopseok.auth.viewmodel.NICKNAME_MAX_LENGTH
 
 /**
  * 신규 회원이 닉네임, 성별 및 생년월일을 입력하는 화면입니다.
@@ -85,13 +87,18 @@ import kotlinx.datetime.todayIn
 @Composable
 fun BasicInfoScreen(
     nickname: String,
+    nicknameLength: Int,
+    isNicknameChecking: Boolean,
     isNicknameValid: Boolean,
+    hasNicknameValidationError: Boolean,
+    isNicknameCheckRetryEnabled: Boolean,
     nicknameValidationMessage: String?,
     selectedGender: Gender?,
     birthDate: LocalDate?,
     birthDateValidationMessage: String?,
     isNextEnabled: Boolean,
     onNicknameChange: (String) -> Unit,
+    onNicknameCheckRetry: () -> Unit,
     onGenderSelect: (Gender) -> Unit,
     onBirthDateChange: (LocalDate) -> Unit,
     onBackClick: () -> Unit,
@@ -155,17 +162,11 @@ fun BasicInfoScreen(
 
             YadanTextField(
                 value = nickname,
-                onValueChange = { changedNickname ->
-                    onNicknameChange(
-                        changedNickname.take(NICKNAME_MAX_LENGTH),
-                    )
-                },
+                onValueChange = onNicknameChange,
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = "닉네임을 입력해주세요",
                 size = YadanTextFieldSize.LARGE,
-                isError =
-                    nicknameValidationMessage != null &&
-                        !isNicknameValid,
+                isError = hasNicknameValidationError,
                 errorMessage =
                     nicknameValidationMessage
                         ?: DEFAULT_NICKNAME_ERROR_MESSAGE,
@@ -187,15 +188,19 @@ fun BasicInfoScreen(
             Spacer(modifier = Modifier.height(10.dp))
 
             NicknameValidationRow(
-                nicknameLength = nickname.length,
+                nicknameLength = nicknameLength,
+                isNicknameChecking = isNicknameChecking,
                 isNicknameValid = isNicknameValid,
+                hasNicknameValidationError = hasNicknameValidationError,
+                isRetryEnabled = isNicknameCheckRetryEnabled,
                 validationMessage = nicknameValidationMessage,
+                onRetryClick = onNicknameCheckRetry,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "2~12자 · 한글, 영문, 숫자 사용 가능",
+                text = "2~12자 · 글자 사이 공백 사용 가능",
                 modifier = Modifier.padding(horizontal = 4.dp),
                 style = YadanTypography.bodySmall,
                 color = YadanTextMuted,
@@ -448,13 +453,17 @@ private fun BirthDateSelectionCard(
 }
 
 /**
- * 닉네임 검증 결과와 현재 글자 수를 표시합니다.
+ * 닉네임 중복 확인 상태와 앞뒤 공백을 제외한 글자 수를 표시합니다.
  */
 @Composable
 private fun NicknameValidationRow(
     nicknameLength: Int,
+    isNicknameChecking: Boolean,
     isNicknameValid: Boolean,
+    hasNicknameValidationError: Boolean,
+    isRetryEnabled: Boolean,
     validationMessage: String?,
+    onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -471,9 +480,23 @@ private fun NicknameValidationRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                ValidationIcon(
-                    isValid = isNicknameValid,
-                )
+                when {
+                    isNicknameChecking -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = YadanPrimary,
+                            strokeWidth = 2.dp,
+                        )
+                    }
+
+                    isNicknameValid -> {
+                        ValidationIcon(isValid = true)
+                    }
+
+                    else -> {
+                        ValidationIcon(isValid = false)
+                    }
+                }
 
                 Text(
                     text = validationMessage,
@@ -482,15 +505,25 @@ private fun NicknameValidationRow(
                             fontWeight = FontWeight.Bold,
                         ),
                     color =
-                        if (isNicknameValid) {
-                            YadanPrimaryInk
-                        } else {
-                            YadanError
+                        when {
+                            isNicknameValid -> YadanPrimaryInk
+                            hasNicknameValidationError -> YadanError
+                            else -> YadanTextMuted
                         },
                 )
             }
         } else {
             Spacer(modifier = Modifier.weight(1f))
+        }
+
+        if (isRetryEnabled) {
+            TextButton(onClick = onRetryClick) {
+                Text(
+                    text = "다시 확인",
+                    style = YadanTypography.labelMedium,
+                    color = YadanPrimaryInk,
+                )
+            }
         }
 
         Text(
@@ -658,7 +691,6 @@ private fun Long.toKotlinLocalDate(): LocalDate =
         .toLocalDateTime(TimeZone.UTC)
         .date
 
-private const val NICKNAME_MAX_LENGTH = 12
 private const val DEFAULT_NICKNAME_ERROR_MESSAGE =
     "닉네임을 확인해주세요."
 
@@ -672,14 +704,19 @@ private const val DEFAULT_NICKNAME_ERROR_MESSAGE =
 private fun BasicInfoScreenPreview() {
     YadanbeopseokTheme {
         BasicInfoScreen(
-            nickname = "야구좋아",
+            nickname = "야구 좋아",
+            nicknameLength = 5,
+            isNicknameChecking = false,
             isNicknameValid = true,
+            hasNicknameValidationError = false,
+            isNicknameCheckRetryEnabled = false,
             nicknameValidationMessage = "사용 가능한 닉네임이에요",
             selectedGender = Gender.MALE,
             birthDate = LocalDate(1998, 5, 17),
             birthDateValidationMessage = null,
             isNextEnabled = true,
             onNicknameChange = {},
+            onNicknameCheckRetry = {},
             onGenderSelect = {},
             onBirthDateChange = {},
             onBackClick = {},

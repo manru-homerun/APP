@@ -1,6 +1,6 @@
 package com.manruhomerun.yadanbeopseok.network.auth.interceptor
 
-import com.manruhomerun.yadanbeopseok.network.auth.token.AuthorizationHeaderProvider
+import com.manruhomerun.yadanbeopseok.network.auth.token.AuthSessionProvider
 import javax.inject.Inject
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
@@ -10,11 +10,11 @@ import okhttp3.Response
 /**
  * 인증이 필요한 네트워크 요청에 Authorization 헤더를 추가합니다.
  *
- * 토큰의 저장 방식은 알지 않고 [AuthorizationHeaderProvider]를 통해
+ * 토큰의 저장 방식은 알지 않고 [AuthSessionProvider]를 통해
  * 현재 사용할 인증 헤더만 전달받습니다.
  */
 internal class AuthInterceptor @Inject constructor(
-    private val authorizationHeaderProvider: AuthorizationHeaderProvider,
+    private val authSessionProvider: AuthSessionProvider,
 ) : Interceptor {
     /**
      * 로그인과 토큰 재발급 요청을 제외한 요청에 인증 헤더를 추가합니다.
@@ -34,7 +34,7 @@ internal class AuthInterceptor @Inject constructor(
 
         val authorizationHeader =
             runBlocking {
-                authorizationHeaderProvider.getAuthorizationHeader()
+                authSessionProvider.getAuthorizationHeader()
             } ?: return chain.proceed(request)
 
         val authenticatedRequest =

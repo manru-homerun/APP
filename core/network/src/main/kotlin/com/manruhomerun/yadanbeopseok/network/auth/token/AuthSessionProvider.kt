@@ -1,12 +1,12 @@
 package com.manruhomerun.yadanbeopseok.network.auth.token
 
 /**
- * 인증이 필요한 네트워크 요청에 사용할 Authorization 헤더를 제공합니다.
+ * Network 계층에서 사용할 현재 인증 세션을 제공합니다.
  *
  * Network 모듈은 토큰의 저장 방식을 알지 않고,
- * 이 인터페이스를 통해 현재 인증 헤더만 전달받습니다.
+ * 이 인터페이스를 통해 인증 헤더를 조회하거나 만료된 세션을 삭제합니다.
  */
-interface AuthorizationHeaderProvider {
+interface AuthSessionProvider {
     /**
      * 현재 저장된 서비스 토큰으로 완성된 Authorization 헤더를 반환합니다.
      *
@@ -15,4 +15,9 @@ interface AuthorizationHeaderProvider {
      * 반환 예시: "Bearer access-token"
      */
     suspend fun getAuthorizationHeader(): String?
+
+    /**
+     * 최종 401 응답으로 더 이상 사용할 수 없는 인증 세션을 삭제합니다.
+     */
+    suspend fun clearSession()
 }

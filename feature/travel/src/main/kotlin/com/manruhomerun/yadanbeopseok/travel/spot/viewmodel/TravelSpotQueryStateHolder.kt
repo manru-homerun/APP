@@ -123,16 +123,29 @@ internal class TravelSpotQueryStateHolder(
         _uiState.update { it.copy(selectedCategory = category) }
     }
 
-    /** 현재 검색 또는 선택한 탭을 다시 조회합니다. */
-    fun retryTravelSpotSelection() {
+    /**
+     * 관광지 상세 화면에서 돌아온 경우 현재 목록을 다시 조회합니다.
+     *
+     * 검색 중이면 동일한 검색어로 검색 결과를 갱신하고,
+     * 추천 또는 찜 탭이면 캐시 여부와 관계없이 현재 탭을 갱신합니다.
+     */
+    fun refreshTravelSpotSelection() {
         val state = _uiState.value
-        if (state.isLoading) return
+
+        if (state.isLoading) {
+            return
+        }
 
         if (state.isSearchMode) {
             searchTravelSpots()
         } else {
             loadSelectedTab(forceRefresh = true)
         }
+    }
+
+    /** 실패한 현재 검색 또는 선택한 탭을 다시 조회합니다. */
+    fun retryTravelSpotSelection() {
+        refreshTravelSpotSelection()
     }
 
     /** 조회 상태를 초기화합니다. 부모 ViewModel의 Scope는 취소하지 않습니다. */

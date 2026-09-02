@@ -302,6 +302,9 @@ class TravelCreationViewModel @Inject constructor(
 
     fun selectTravelSpotCategory(category: TravelSpotCategory?) = spotQuery.selectTravelSpotCategory(category)
 
+    /** 관광지 상세에서 B06으로 돌아오면 현재 목록을 갱신합니다. */
+    fun refreshTravelSpotSelection() = spotQuery.refreshTravelSpotSelection()
+
     fun retryTravelSpotSelection() = spotQuery.retryTravelSpotSelection()
 
     /** 필수 포함 관광지를 선택·해제하고 이전 생성 결과를 초기화합니다. */

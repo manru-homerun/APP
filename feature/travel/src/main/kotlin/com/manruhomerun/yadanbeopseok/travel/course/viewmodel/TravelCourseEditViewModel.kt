@@ -237,6 +237,8 @@ class TravelCourseEditViewModel @Inject constructor(
     fun searchTravelSpots() = spotQuery.searchTravelSpots()
     fun clearTravelSpotSearch() = spotQuery.clearTravelSpotSearch()
     fun selectTravelSpotCategory(category: TravelSpotCategory?) = spotQuery.selectTravelSpotCategory(category)
+    /** 관광지 상세에서 C01b/C01c로 돌아오면 현재 목록을 갱신합니다. */
+    fun refreshTravelSpotSelection() = spotQuery.refreshTravelSpotSelection()
     fun retryTravelSpotSelection() = spotQuery.retryTravelSpotSelection()
 
     /** C01에서 여행 이름을 변경합니다. */

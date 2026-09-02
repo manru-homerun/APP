@@ -22,6 +22,18 @@ internal class OnboardingRepositoryImpl @Inject constructor(
     private val apiCallExecutor: ApiCallExecutor,
     private val authTokenDataSource: AuthTokenDataSource,
 ) : OnboardingRepository {
+
+    /**
+     * 서버를 통해 닉네임의 사용 가능 여부를 확인합니다.
+     */
+    override suspend fun isNicknameAvailable(nickname: String): Boolean {
+        val normalizedNickname = nickname.trim()
+
+        return apiCallExecutor.execute {
+            userApi.checkNicknameAvailability(nickname = normalizedNickname)
+        }.available
+    }
+
     /**
      * 온보딩 정보를 서버에 저장합니다.
      *

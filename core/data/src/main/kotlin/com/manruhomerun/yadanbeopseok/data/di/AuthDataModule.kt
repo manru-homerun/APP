@@ -1,8 +1,8 @@
 package com.manruhomerun.yadanbeopseok.data.di
 
-import com.manruhomerun.yadanbeopseok.data.auth.AuthorizationHeaderProviderImpl
+import com.manruhomerun.yadanbeopseok.data.auth.AuthSessionProviderImpl
 import com.manruhomerun.yadanbeopseok.data.auth.TokenRefreshHandlerImpl
-import com.manruhomerun.yadanbeopseok.network.auth.token.AuthorizationHeaderProvider
+import com.manruhomerun.yadanbeopseok.network.auth.token.AuthSessionProvider
 import com.manruhomerun.yadanbeopseok.network.auth.token.TokenRefreshHandler
 import dagger.Binds
 import dagger.Module
@@ -18,14 +18,14 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 internal abstract class AuthDataModule {
     /**
-     * Network가 요청하는 [AuthorizationHeaderProvider]에
-     * [AuthorizationHeaderProviderImpl]을 제공합니다.
+     * Network가 요청하는 [AuthSessionProvider]에
+     * [AuthSessionProviderImpl]을 제공합니다.
      */
     @Binds
     @Singleton
-    abstract fun bindAuthorizationHeaderProvider(
-        implementation: AuthorizationHeaderProviderImpl,
-    ): AuthorizationHeaderProvider
+    abstract fun bindAuthSessionProvider(
+        implementation: AuthSessionProviderImpl
+    ): AuthSessionProvider
 
     /**
      * Network가 요청하는 [TokenRefreshHandler]에

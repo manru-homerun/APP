@@ -17,8 +17,12 @@ import com.manruhomerun.yadanbeopseok.model.TravelStyleScore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,10 +47,13 @@ class OnboardingViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(OnboardingUiState())
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
 
-    private val _completionEvents =
-        Channel<Unit>(capacity = Channel.BUFFERED)
-    val completionEvents: Flow<Unit> =
-        _completionEvents.receiveAsFlow()
+    private var nicknameCheckJob: Job? = null
+
+    private val _sessionExpiredEvents = Channel<Unit>(capacity = Channel.BUFFERED)
+    val sessionExpiredEvents: Flow<Unit> = _sessionExpiredEvents.receiveAsFlow()
+
+    private val _completionEvents = Channel<Unit>(capacity = Channel.BUFFERED)
+    val completionEvents: Flow<Unit> = _completionEvents.receiveAsFlow()
 
     /** 서비스 이용약관 동의 상태를 변경합니다. */
     fun updateServiceTermsAgreement(agreed: Boolean) {
@@ -72,14 +79,110 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
-    /** 닉네임을 저장하고 로컬 입력 규칙을 검사합니다. */
+    /** 닉네임을 저장하고 로컬 규칙을 통과하면 중복 확인을 예약합니다. */
     fun updateNickname(nickname: String) {
+        nicknameCheckJob?.cancel()
+
+        val inputState = nickname.toNicknameInputState()
+
         _uiState.update {
             it.copy(
                 nickname = nickname,
-                nicknameInputState =
-                    nickname.toNicknameInputState(),
+                nicknameInputState = inputState,
             )
+        }
+
+        if (inputState != NicknameInputState.VALID) {
+            return
+        }
+
+        scheduleNicknameAvailabilityCheck(
+            normalizedNickname = nickname.trim(),
+        )
+    }
+
+    /** 실패한 현재 닉네임의 중복 확인을 다시 요청합니다. */
+    fun retryNicknameAvailabilityCheck() {
+        val currentState = _uiState.value
+
+        if (currentState.nicknameInputState != NicknameInputState.CHECK_FAILED) {
+            return
+        }
+
+        updateNickname(currentState.nickname)
+    }
+
+    /**
+     * 연속 입력이 끝난 뒤 닉네임 중복 확인 API를 호출합니다.
+     *
+     * 새 입력이 들어오면 이전 Job을 취소하고, 늦게 도착한 응답도
+     * 현재 입력과 일치할 때만 상태에 반영합니다.
+     */
+    private fun scheduleNicknameAvailabilityCheck(normalizedNickname: String) {
+        nicknameCheckJob =
+            viewModelScope.launch {
+                delay(NICKNAME_CHECK_DEBOUNCE_MILLIS.milliseconds)
+
+                if (_uiState.value.normalizedNickname != normalizedNickname) {
+                    return@launch
+                }
+
+                updateNicknameStateIfCurrent(
+                    normalizedNickname = normalizedNickname,
+                    inputState = NicknameInputState.CHECKING,
+                )
+
+                try {
+                    val isAvailable =
+                        onboardingRepository.isNicknameAvailable(
+                            nickname = normalizedNickname,
+                        )
+
+                    ensureActive()
+
+                    updateNicknameStateIfCurrent(
+                        normalizedNickname = normalizedNickname,
+                        inputState =
+                            if (isAvailable) {
+                                NicknameInputState.AVAILABLE
+                            } else {
+                                NicknameInputState.DUPLICATED
+                            },
+                    )
+                } catch (exception: CancellationException) {
+                    throw exception
+                } catch (exception: SessionExpiredException) {
+                    ensureActive()
+
+                    updateNicknameStateIfCurrent(
+                        normalizedNickname = normalizedNickname,
+                        inputState = NicknameInputState.CHECK_FAILED,
+                    )
+                    _sessionExpiredEvents.send(Unit)
+                } catch (exception: Exception) {
+                    ensureActive()
+
+                    updateNicknameStateIfCurrent(
+                        normalizedNickname = normalizedNickname,
+                        inputState = NicknameInputState.CHECK_FAILED,
+                    )
+                }
+            }
+    }
+
+    /** 현재 입력과 요청한 닉네임이 일치할 때만 검증 상태를 변경합니다. */
+    private fun updateNicknameStateIfCurrent(
+        normalizedNickname: String,
+        inputState: NicknameInputState,
+    ) {
+        _uiState.update { currentState ->
+            if (currentState.normalizedNickname != normalizedNickname) {
+                currentState
+            } else {
+                currentState.copy(
+                    nicknameInputState = inputState,
+                )
+            }
         }
     }
 
@@ -168,9 +271,7 @@ class OnboardingViewModel @Inject constructor(
             return
         }
 
-        val params =
-            currentState.toSaveOnboardingParams()
-                ?: return
+        val params = currentState.toSaveOnboardingParams() ?: return
 
         _uiState.update {
             it.copy(
@@ -193,12 +294,20 @@ class OnboardingViewModel @Inject constructor(
                 _completionEvents.send(Unit)
             } catch (exception: CancellationException) {
                 throw exception
+            } catch (exception: SessionExpiredException) {
+                _uiState.update {
+                    it.copy(
+                        isSubmitting = false,
+                        errorMessage = null,
+                    )
+                }
+
+                _sessionExpiredEvents.send(Unit)
             } catch (exception: Exception) {
                 _uiState.update {
                     it.copy(
                         isSubmitting = false,
-                        errorMessage =
-                            exception.toOnboardingErrorMessage(),
+                        errorMessage = exception.toOnboardingErrorMessage(),
                     )
                 }
             }
@@ -236,7 +345,7 @@ private fun OnboardingUiState.toSaveOnboardingParams():
                 serviceTerms = isServiceTermsAgreed,
                 privacyPolicy = isPrivacyAgreementAgreed,
             ),
-        nickname = nickname,
+        nickname = normalizedNickname,
         gender = resolvedGender,
         birthDate = resolvedBirthDate,
         favoriteTeam = resolvedTeam,
@@ -271,3 +380,5 @@ private fun Exception.toOnboardingErrorMessage(): String =
         else ->
             "온보딩 저장에 실패했습니다. 잠시 후 다시 시도해주세요."
     }
+
+private const val NICKNAME_CHECK_DEBOUNCE_MILLIS = 300L

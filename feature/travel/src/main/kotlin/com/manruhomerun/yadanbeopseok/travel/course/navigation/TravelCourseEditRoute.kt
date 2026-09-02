@@ -13,6 +13,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.travel.component.TravelNameEditDialog
@@ -62,6 +64,10 @@ fun TravelCourseEditRoute(
         mutableStateOf(false)
     }
 
+    var shouldRefreshTravelSpotSelection by rememberSaveable(viewModel) {
+        mutableStateOf(false)
+    }
+
     val disabledSpotIds = remember(uiState.course) {
         uiState.course?.days.orEmpty()
             .flatMap { it.places }
@@ -108,6 +114,16 @@ fun TravelCourseEditRoute(
         navigateBackWithinEdit()
     }
 
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (shouldRefreshTravelSpotSelection) {
+            shouldRefreshTravelSpotSelection = false
+
+            if (spotSelectionUiState.isActive) {
+                viewModel.refreshTravelSpotSelection()
+            }
+        }
+    }
+
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
@@ -148,7 +164,10 @@ fun TravelCourseEditRoute(
                     onSearch = viewModel::searchTravelSpots,
                     onTabSelected = viewModel::selectTravelSpotTab,
                     onCategorySelected = viewModel::selectTravelSpotCategory,
-                    onTravelSpotClick = onTravelSpotClick,
+                    onTravelSpotClick = { travelSpot ->
+                        shouldRefreshTravelSpotSelection = true
+                        onTravelSpotClick(travelSpot)
+                    },
                     onTravelSpotToggle = viewModel::toggleTravelSpotSelection,
                     onBackClick = ::navigateBackWithinEdit,
                     onDoneClick = viewModel::confirmTravelSpotSelection,

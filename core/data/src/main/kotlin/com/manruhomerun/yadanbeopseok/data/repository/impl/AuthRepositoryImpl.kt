@@ -1,6 +1,5 @@
 package com.manruhomerun.yadanbeopseok.data.repository.impl
 
-import com.manruhomerun.yadanbeopseok.common.error.ApiException
 import com.manruhomerun.yadanbeopseok.common.error.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.mapper.toAuthTokens
 import com.manruhomerun.yadanbeopseok.data.mapper.toLoginResult
@@ -15,7 +14,6 @@ import com.manruhomerun.yadanbeopseok.network.auth.dto.TokenRefreshRequestDto
 import com.manruhomerun.yadanbeopseok.network.common.error.ApiCallExecutor
 import com.manruhomerun.yadanbeopseok.network.common.extension.requireData
 import com.manruhomerun.yadanbeopseok.network.common.extension.requireSuccess
-import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
 import java.time.Instant
 import javax.inject.Inject
 import kotlinx.coroutines.NonCancellable
@@ -42,17 +40,16 @@ internal class AuthRepositoryImpl @Inject constructor(
         kakaoAccessToken: String,
         fcmToken: String?,
     ): LoginResult {
-        val response =
-            apiCallExecutor.execute {
-                authApi.login(
-                    request =
-                        LoginRequestDto(
-                            providerAccessToken = kakaoAccessToken,
-                            deviceType = ANDROID_DEVICE_TYPE,
-                            fcmToken = fcmToken?.takeIf { it.isNotBlank() },
-                        ),
-                )
-            }
+        val response = apiCallExecutor.executeLogin {
+            authApi.login(
+                request =
+                    LoginRequestDto(
+                        providerAccessToken = kakaoAccessToken,
+                        deviceType = ANDROID_DEVICE_TYPE,
+                        fcmToken = fcmToken?.takeIf { it.isNotBlank() },
+                    ),
+            )
+        }
 
         val loginResponse = response.requireData()
 
@@ -132,19 +129,11 @@ internal class AuthRepositoryImpl @Inject constructor(
             throw SessionExpiredException()
         }
 
-        val response =
-            try {
-                apiCallExecutor.execute {
-                    authApi.refreshToken(
-                        request =
-                            TokenRefreshRequestDto(
-                                refreshToken = storedTokens.refreshToken,
-                            ),
-                    )
-                }
-            } catch (exception: ApiException) {
-                handleAuthenticatedApiException(exception)
-            }
+        val response = apiCallExecutor.execute {
+            authApi.refreshToken(
+                request = TokenRefreshRequestDto(refreshToken = storedTokens.refreshToken),
+            )
+        }
 
         val refreshResponse = response.requireData()
 
@@ -173,22 +162,17 @@ internal class AuthRepositoryImpl @Inject constructor(
         fcmToken: String?,
     ) {
         try {
-            val response =
-                try {
-                    apiCallExecutor.execute {
-                        authApi.logout(
-                            request =
-                                LogoutRequestDto(
-                                    providerAccessToken = kakaoAccessToken,
-                                    deviceType = ANDROID_DEVICE_TYPE,
-                                    deviceId = deviceId?.takeIf { it.isNotBlank() },
-                                    fcmToken = fcmToken?.takeIf { it.isNotBlank() },
-                                ),
-                        )
-                    }
-                } catch (exception: ApiException) {
-                    handleAuthenticatedApiException(exception)
-                }
+            val response = apiCallExecutor.execute {
+                authApi.logout(
+                    request =
+                        LogoutRequestDto(
+                            providerAccessToken = kakaoAccessToken,
+                            deviceType = ANDROID_DEVICE_TYPE,
+                            deviceId = deviceId?.takeIf { it.isNotBlank() },
+                            fcmToken = fcmToken?.takeIf { it.isNotBlank() },
+                        ),
+                )
+            }
 
             response.requireSuccess()
         } finally {
@@ -204,32 +188,12 @@ internal class AuthRepositoryImpl @Inject constructor(
      * 서버에서 탈퇴 처리가 완료된 경우에만 로컬 인증 정보를 삭제합니다.
      */
     override suspend fun withdraw() {
-        val response =
-            try {
-                apiCallExecutor.execute {
-                    authApi.withdraw()
-                }
-            } catch (exception: ApiException) {
-                handleAuthenticatedApiException(exception)
-            }
+        val response = apiCallExecutor.execute {
+            authApi.withdraw()
+        }
 
         response.requireSuccess()
         authTokenDataSource.clearAuthTokens()
-    }
-
-    /**
-     * 인증이 필요한 요청에서 401 응답을 받은 경우
-     * 로컬 인증 정보를 삭제하고 세션 만료 예외로 변환합니다.
-     */
-    private suspend fun handleAuthenticatedApiException(
-        exception: ApiException,
-    ): Nothing {
-        if (exception.statusCode == HTTP_UNAUTHORIZED) {
-            authTokenDataSource.clearAuthTokens()
-            throw SessionExpiredException(cause = exception)
-        }
-
-        throw exception
     }
 
     /**

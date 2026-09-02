@@ -35,6 +35,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
@@ -104,6 +106,10 @@ fun TravelCreationRoute(
 
     var currentStep by rememberSaveable(directGameId) { mutableStateOf(initialStep) }
     var isNameEditDialogVisible by rememberSaveable { mutableStateOf(false) }
+
+    var shouldRefreshTravelSpotSelection by rememberSaveable(directGameId) {
+        mutableStateOf(false)
+    }
 
     var isSaved by rememberSaveable {
         mutableStateOf(false)
@@ -226,6 +232,22 @@ fun TravelCreationRoute(
             }
 
             else -> Unit
+        }
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (shouldRefreshTravelSpotSelection) {
+            shouldRefreshTravelSpotSelection = false
+
+            val isSpotSelectionVisible =
+                currentStep == TravelCreationStep.SPOT_SELECTION &&
+                    generatedCourse == null &&
+                    !isEditing &&
+                    !isSaved
+
+            if (isSpotSelectionVisible) {
+                viewModel.refreshTravelSpotSelection()
+            }
         }
     }
 
@@ -437,6 +459,7 @@ fun TravelCreationRoute(
                     onTabSelected = viewModel::selectTravelSpotTab,
                     onCategorySelected = viewModel::selectTravelSpotCategory,
                     onTravelSpotClick = { travelSpot ->
+                        shouldRefreshTravelSpotSelection = true
                         navigator.navigate(TravelSpotDetailNavKey(travelSpot.id))
                     },
                     onTravelSpotToggle = viewModel::toggleTravelSpot,

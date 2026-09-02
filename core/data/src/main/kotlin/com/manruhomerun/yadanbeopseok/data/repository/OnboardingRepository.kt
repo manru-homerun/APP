@@ -10,6 +10,12 @@ import kotlinx.datetime.LocalDate
  * 신규 사용자의 온보딩 정보를 저장하는 Repository 계약입니다.
  */
 interface OnboardingRepository {
+
+    /**
+     * 앞뒤 공백을 제거한 닉네임의 사용 가능 여부를 확인합니다.
+     */
+    suspend fun isNicknameAvailable(nickname: String): Boolean
+
     /**
      * 온보딩에서 입력한 약관, 기본 정보 및 여행 취향을 저장합니다.
      *

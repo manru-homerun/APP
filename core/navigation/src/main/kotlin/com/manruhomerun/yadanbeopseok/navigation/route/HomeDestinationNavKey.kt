@@ -41,3 +41,27 @@ data class TravelSpotDetailNavKey(
 data class TravelCreationNavKey(
     val baseballGameId: String? = null,
 ) : NavKey
+
+/**
+ * 여행 중 인증 대상 관광지의 방문 인증 화면으로 이동합니다.
+ *
+ * @property travelId 인증할 관광지가 포함된 여행 ID
+ * @property travelSpotId 방문 인증 대상 관광지 ID
+ */
+@Serializable
+data class TravelVerificationNavKey(
+    val travelId: String,
+    val travelSpotId: String,
+) : NavKey
+
+/**
+ * 획득한 스티커로 사진을 꾸미는 D04 화면으로 이동합니다.
+ *
+ * D04에서는 [travelId]로 스티커팩을 다시 조회합니다.
+ *
+ * @property travelId 스티커를 획득한 여행의 고유 식별자
+ */
+@Serializable
+data class TravelStickerPhotoNavKey(
+    val travelId: String,
+) : NavKey

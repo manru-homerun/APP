@@ -11,6 +11,7 @@ import com.manruhomerun.yadanbeopseok.baseball.navigation.baseballEntryProvider
 import com.manruhomerun.yadanbeopseok.home.navigation.homeEntryProvider
 import com.manruhomerun.yadanbeopseok.navigation.YadanNavigationState
 import com.manruhomerun.yadanbeopseok.navigation.rememberSharedViewModelStoreNavEntryDecorator
+import com.manruhomerun.yadanbeopseok.record.navigation.recordEntryProvider
 import com.manruhomerun.yadanbeopseok.travel.navigation.travelEntryProvider
 
 /**
@@ -56,6 +57,10 @@ fun YadanNavHost(
                 )
 
                 travelEntryProvider(
+                    navigator = navigationState,
+                )
+
+                recordEntryProvider(
                     navigator = navigationState,
                 )
             }

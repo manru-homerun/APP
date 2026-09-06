@@ -91,6 +91,23 @@ class TravelDetailViewModel @Inject constructor(
     }
 
     /**
+     * 인증 화면 등 다른 화면에서 돌아왔을 때 현재 여행을 다시 조회합니다.
+     *
+     * 기존 여행 정보가 있으면 화면을 유지한 상태로 최신 인증 정보를 반영합니다.
+     */
+    fun refreshTravel() {
+        if (loadJob?.isActive == true) return
+
+        val travelId = currentTravelId ?: return
+        val preserveCurrentContent = _uiState.value.hasTravel
+
+        requestTravel(
+            travelId = travelId,
+            preserveCurrentContent = preserveCurrentContent,
+        )
+    }
+
+    /**
      * 여행 상세 화면에 표시할 일차를 변경합니다.
      */
     fun selectDay(day: Int) {
@@ -117,31 +134,39 @@ class TravelDetailViewModel @Inject constructor(
      *
      * 두 요청이 모두 성공한 경우에만 화면에 여행 일정을 표시합니다.
      */
-    private fun requestTravel(travelId: String) {
+    private fun requestTravel(travelId: String, preserveCurrentContent: Boolean = false) {
         loadJob?.cancel()
 
-        _uiState.update {
-            it.copy(
-                travel = null,
-                baseballGame = null,
-                selectedDay = null,
-                isLoading = true,
-                errorMessage = null,
-            )
+        if (preserveCurrentContent) {
+            _uiState.update {
+                it.copy(errorMessage = null)
+            }
+        } else {
+            _uiState.update {
+                it.copy(
+                    travel = null,
+                    baseballGame = null,
+                    selectedDay = null,
+                    isLoading = true,
+                    errorMessage = null,
+                )
+            }
         }
 
         loadJob = viewModelScope.launch {
             try {
                 val travel = travelRepository.getTravel(travelId)
-                val baseballGame =
-                    baseballRepository.getGame(travel.baseballGame.id)
-                val firstDay = travel.days.firstOrNull()?.day
+                val baseballGame = baseballRepository.getGame(travel.baseballGame.id)
+                val currentSelectedDay = _uiState.value.selectedDay
+                val selectedDay = currentSelectedDay?.takeIf { day ->
+                    travel.days.any { travelDay -> travelDay.day == day }
+                } ?: travel.days.firstOrNull()?.day
 
                 _uiState.update {
                     it.copy(
                         travel = travel,
                         baseballGame = baseballGame,
-                        selectedDay = firstDay,
+                        selectedDay = selectedDay,
                         isLoading = false,
                         errorMessage = null,
                     )

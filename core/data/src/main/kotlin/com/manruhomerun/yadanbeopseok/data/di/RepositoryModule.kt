@@ -4,12 +4,16 @@ import com.manruhomerun.yadanbeopseok.data.repository.AuthRepository
 import com.manruhomerun.yadanbeopseok.data.repository.BaseballRepository
 import com.manruhomerun.yadanbeopseok.data.repository.FriendRepository
 import com.manruhomerun.yadanbeopseok.data.repository.OnboardingRepository
+import com.manruhomerun.yadanbeopseok.data.repository.StickerRepository
+import com.manruhomerun.yadanbeopseok.data.repository.TravelRecordRepository
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRepository
 import com.manruhomerun.yadanbeopseok.data.repository.TravelSpotRepository
 import com.manruhomerun.yadanbeopseok.data.repository.impl.AuthRepositoryImpl
 import com.manruhomerun.yadanbeopseok.data.repository.impl.BaseballRepositoryImpl
 import com.manruhomerun.yadanbeopseok.data.repository.impl.FriendRepositoryImpl
 import com.manruhomerun.yadanbeopseok.data.repository.impl.OnboardingRepositoryImpl
+import com.manruhomerun.yadanbeopseok.data.repository.impl.StickerRepositoryImpl
+import com.manruhomerun.yadanbeopseok.data.repository.impl.TravelRecordRepositoryImpl
 import com.manruhomerun.yadanbeopseok.data.repository.impl.TravelRepositoryImpl
 import com.manruhomerun.yadanbeopseok.data.repository.impl.TravelSpotRepositoryImpl
 import dagger.Binds
@@ -84,4 +88,22 @@ internal abstract class RepositoryModule {
     abstract fun bindFriendRepository(
         repositoryImpl: FriendRepositoryImpl,
     ): FriendRepository
+
+    /**
+     * 방문 인증 Repository에 실제 API 구현체를 제공합니다.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindTravelRecordRepository(
+        repositoryImpl: TravelRecordRepositoryImpl
+    ): TravelRecordRepository
+
+    /**
+     * 획득 스티커 조회 Repository에 실제 API 구현체를 제공합니다.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindStickerRepository(
+        repositoryImpl: StickerRepositoryImpl
+    ): StickerRepository
 }

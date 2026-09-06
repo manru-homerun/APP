@@ -6,6 +6,7 @@ import com.manruhomerun.yadanbeopseok.navigation.Navigator
 import com.manruhomerun.yadanbeopseok.navigation.route.TravelCreationNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.TravelDetailNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.TravelSpotDetailNavKey
+import com.manruhomerun.yadanbeopseok.navigation.route.TravelVerificationNavKey
 import com.manruhomerun.yadanbeopseok.travel.creation.navigation.TravelCreationRoute
 import com.manruhomerun.yadanbeopseok.travel.detail.navigation.TravelDetailRoute
 import com.manruhomerun.yadanbeopseok.travel.spot.navigation.TravelSpotDetailRoute
@@ -25,6 +26,14 @@ fun EntryProviderScope<NavKey>.travelEntryProvider(navigator: Navigator) {
         TravelDetailRoute(
             travelId = key.travelId,
             navigator = navigator,
+            onVerifyClick = { travelPlace ->
+                navigator.navigate(
+                    TravelVerificationNavKey(
+                        travelId = key.travelId,
+                        travelSpotId = travelPlace.spot.id,
+                    ),
+                )
+            },
         )
     }
 

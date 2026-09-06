@@ -78,6 +78,7 @@ dependencies {
 
 
     implementation(libs.kakao.sdk.user)
+    implementation(libs.kakao.map.sdk)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
@@ -99,6 +100,7 @@ dependencies {
     implementation(projects.feature.baseball)
     implementation(projects.feature.home)
     implementation(projects.feature.travel)
+    implementation(projects.feature.record)
     implementation(projects.core.data)
     implementation(projects.core.designsystem)
 

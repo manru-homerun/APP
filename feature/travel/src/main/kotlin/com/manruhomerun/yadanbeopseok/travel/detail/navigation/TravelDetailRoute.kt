@@ -26,6 +26,8 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manruhomerun.yadanbeopseok.model.TravelPlace
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
@@ -146,6 +148,14 @@ fun TravelDetailRoute(
 
     LaunchedEffect(travelId, viewModel) {
         viewModel.loadTravel(travelId)
+    }
+
+    /**
+    * 방문 인증 화면에서 돌아오면 여행을 다시 조회하여
+    * 인증 진행률과 관광지별 인증 상태를 갱신합니다.
+    */
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshTravel()
     }
 
     LaunchedEffect(viewModel, navigator) {

@@ -23,6 +23,14 @@ interface TravelRepository {
      */
     suspend fun getPlannedTravels(): TravelListPage
 
+
+    /**
+     * 종료된 여행 기록 목록을 조회합니다.
+     *
+     * 구현체는 여행 목록 API에 COMPLETED 상태를 전달합니다.
+     */
+    suspend fun getCompletedTravels(): TravelListPage
+
     /**
      * 여행 ID에 해당하는 상세 일정과 방문 인증 상태를 조회합니다.
      *

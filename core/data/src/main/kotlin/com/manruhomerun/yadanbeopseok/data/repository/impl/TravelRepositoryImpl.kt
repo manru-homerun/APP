@@ -42,6 +42,17 @@ internal class TravelRepositoryImpl @Inject constructor(
     }
 
     /**
+     * 종료된 여행 기록 목록을 조회합니다.
+     */
+    override suspend fun getCompletedTravels(): TravelListPage {
+        val response = apiCallExecutor.execute {
+            travelApi.getTravels(status = "COMPLETED")
+        }
+
+        return response.requireData().toTravelListPage()
+    }
+
+    /**
      * 여행 ID에 해당하는 상세 일정과 방문 인증 상태를 조회합니다.
      */
     override suspend fun getTravel(travelId: String): Travel {

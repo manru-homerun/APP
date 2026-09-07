@@ -26,16 +26,16 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manruhomerun.yadanbeopseok.model.TravelPlace
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
 import com.manruhomerun.yadanbeopseok.navigation.route.HomeNavKey
-import com.manruhomerun.yadanbeopseok.navigation.route.LoginNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.TravelSpotDetailNavKey
 import com.manruhomerun.yadanbeopseok.travel.course.navigation.TravelCourseEditRoute
 import com.manruhomerun.yadanbeopseok.travel.course.viewmodel.TravelCourseEditViewModel
 import com.manruhomerun.yadanbeopseok.travel.detail.screen.TravelDetailScreen
-import com.manruhomerun.yadanbeopseok.travel.detail.viewmodel.TravelDetailNavigationEvent
 import com.manruhomerun.yadanbeopseok.travel.detail.viewmodel.TravelDetailViewModel
 import com.manruhomerun.yadanbeopseok.travel.share.openTravelPosterShareSheet
 import com.manruhomerun.yadanbeopseok.travel.share.saveTravelPosterImage
@@ -83,12 +83,6 @@ fun TravelDetailRoute(
 
     fun exitEdit() {
         editViewModel.reset()
-    }
-
-    fun navigateToLogin() {
-        isShareVisible = false
-        editViewModel.reset()
-        navigator.resetTo(LoginNavKey)
     }
 
     fun closeShare() {
@@ -148,14 +142,12 @@ fun TravelDetailRoute(
         viewModel.loadTravel(travelId)
     }
 
-    LaunchedEffect(viewModel, navigator) {
-        viewModel.navigationEvents.collect { event ->
-            when (event) {
-                TravelDetailNavigationEvent.NavigateToLogin -> {
-                    navigateToLogin()
-                }
-            }
-        }
+    /**
+    * 방문 인증 화면에서 돌아오면 여행을 다시 조회하여
+    * 인증 진행률과 관광지별 인증 상태를 갱신합니다.
+    */
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshTravel()
     }
 
     /*
@@ -184,7 +176,6 @@ fun TravelDetailRoute(
                             TravelSpotDetailNavKey(travelSpot.id),
                         )
                     },
-                    onSessionExpired = ::navigateToLogin,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

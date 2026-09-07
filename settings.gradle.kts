@@ -24,6 +24,12 @@ dependencyResolutionManagement {
         }
         mavenCentral()
         maven {
+            url = uri("https://devrepo.kakao.com/nexus/repository/kakaomap-releases/")
+            content {
+                includeGroup("com.kakao.maps.open")
+            }
+        }
+        maven {
             url = uri("https://devrepo.kakao.com/nexus/content/groups/public/")
             content {
                 includeGroup("com.kakao.sdk")
@@ -53,3 +59,4 @@ include(":feature:auth")
 include(":feature:home")
 include(":feature:travel")
 include(":feature:baseball")
+include(":feature:record")

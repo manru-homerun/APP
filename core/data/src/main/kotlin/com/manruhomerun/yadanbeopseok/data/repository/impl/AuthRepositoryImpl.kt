@@ -6,6 +6,7 @@ import com.manruhomerun.yadanbeopseok.data.mapper.toLoginResult
 import com.manruhomerun.yadanbeopseok.data.repository.AuthRepository
 import com.manruhomerun.yadanbeopseok.data.repository.AuthSessionState
 import com.manruhomerun.yadanbeopseok.datastore.AuthTokenDataSource
+import com.manruhomerun.yadanbeopseok.datastore.AuthTokens
 import com.manruhomerun.yadanbeopseok.model.LoginResult
 import com.manruhomerun.yadanbeopseok.network.auth.api.AuthApi
 import com.manruhomerun.yadanbeopseok.network.auth.dto.LoginRequestDto
@@ -17,6 +18,9 @@ import com.manruhomerun.yadanbeopseok.network.common.extension.requireSuccess
 import java.time.Instant
 import javax.inject.Inject
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 /**
@@ -95,22 +99,33 @@ internal class AuthRepositoryImpl @Inject constructor(
                     return AuthSessionState.LOGGED_OUT
                 }
 
-                authTokenDataSource.getAuthTokens() ?: return AuthSessionState.LOGGED_OUT
+                authTokenDataSource.getAuthTokens()
+                    ?: return AuthSessionState.LOGGED_OUT
             }
 
-        return if (activeTokens.onboardingCompleted) {
-            AuthSessionState.AUTHENTICATED
-        } else {
-            AuthSessionState.ONBOARDING_REQUIRED
-        }
+        return activeTokens.toAuthSessionState()
     }
+
+    /**
+     * DataStore의 인증 정보 변경을 앱에서 사용하는 세션 상태로 변환합니다.
+     *
+     * 토큰 재발급으로 토큰 값만 변경된 경우에는 같은 세션 상태를
+     * 다시 전달하지 않도록 중복 상태를 제거합니다.
+     */
+    override fun observeSessionState(): Flow<AuthSessionState> =
+        authTokenDataSource.authTokens
+            .map { authTokens ->
+                authTokens.toAuthSessionState()
+            }
+            .distinctUntilChanged()
 
     /**
      * DataStore에 저장된 현재 야단법석 사용자 ID를 조회합니다.
      *
      * 네트워크 요청 없이 로컬 인증 정보에서 사용자 ID를 반환합니다.
      */
-    override suspend fun getCurrentUserId(): String? = authTokenDataSource.getCurrentUserId()
+    override suspend fun getCurrentUserId(): String? =
+        authTokenDataSource.getCurrentUserId()
 
     /**
      * DataStore에 저장된 refresh token으로 서비스 토큰을 재발급합니다.
@@ -122,7 +137,9 @@ internal class AuthRepositoryImpl @Inject constructor(
      * 재발급에 성공하면 access token과 refresh token을 모두 교체합니다.
      */
     override suspend fun refreshAccessToken() {
-        val storedTokens = authTokenDataSource.getAuthTokens() ?: throw SessionExpiredException()
+        val storedTokens =
+            authTokenDataSource.getAuthTokens()
+                ?: throw SessionExpiredException()
 
         if (storedTokens.refreshTokenExpiresAtEpochSeconds <= currentEpochSeconds()) {
             authTokenDataSource.clearAuthTokens()
@@ -131,7 +148,10 @@ internal class AuthRepositoryImpl @Inject constructor(
 
         val response = apiCallExecutor.execute {
             authApi.refreshToken(
-                request = TokenRefreshRequestDto(refreshToken = storedTokens.refreshToken),
+                request =
+                    TokenRefreshRequestDto(
+                        refreshToken = storedTokens.refreshToken,
+                    ),
             )
         }
 
@@ -202,5 +222,15 @@ internal class AuthRepositoryImpl @Inject constructor(
     private fun currentEpochSeconds(): Long =
         Instant.now().epochSecond
 }
+
+/**
+ * 저장된 인증 정보를 앱에서 사용하는 세션 상태로 변환합니다.
+ */
+private fun AuthTokens?.toAuthSessionState(): AuthSessionState =
+    when (this?.onboardingCompleted) {
+        null -> AuthSessionState.LOGGED_OUT
+        true -> AuthSessionState.AUTHENTICATED
+        false -> AuthSessionState.ONBOARDING_REQUIRED
+    }
 
 private const val ANDROID_DEVICE_TYPE = "ANDROID"

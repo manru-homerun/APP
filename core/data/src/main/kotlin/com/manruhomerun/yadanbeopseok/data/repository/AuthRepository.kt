@@ -1,6 +1,7 @@
 package com.manruhomerun.yadanbeopseok.data.repository
 
 import com.manruhomerun.yadanbeopseok.model.LoginResult
+import kotlinx.coroutines.flow.Flow
 
 /**
  * 저장된 인증 정보를 확인한 결과입니다.
@@ -41,6 +42,14 @@ interface AuthRepository {
      * 네트워크 오류처럼 재시도할 수 있는 문제는 호출자에게 전달합니다.
      */
     suspend fun restoreSession(): AuthSessionState
+
+    /**
+     * 로컬 인증 정보의 변경을 세션 상태로 관찰합니다.
+     *
+     * 로그인, 온보딩 완료, 로그아웃 또는 세션 만료로 인증 정보가 변경되면
+     * 변경된 상태를 방출합니다.
+     */
+    fun observeSessionState(): Flow<AuthSessionState>
 
     /**
      * 현재 로컬 인증 정보에 저장된 야단법석 사용자 ID를 조회합니다.

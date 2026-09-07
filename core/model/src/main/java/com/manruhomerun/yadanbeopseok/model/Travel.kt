@@ -87,16 +87,24 @@ data class TravelPlace(
 )
 
 /**
- * 여행지 방문 인증 결과입니다.
+ * 특정 관광지의 방문 인증이 완료된 결과입니다.
  *
- * 방문 인증 API가 성공했을 때 인증된 사용자와 시각을 보관합니다.
+ * 서버가 확인한 관광지 이름과 인증 시각을 보관합니다.
+ * 전체 인증 진행률과 스티커 지급 여부는 별도 조회 결과로 판단합니다.
+ *
+ * @property id 방문 인증 기록의 고유 식별자
+ * @property travelId 인증한 관광지가 포함된 여행의 식별자
+ * @property spotId 인증한 관광지의 식별자
+ * @property spotName 인증한 관광지 이름
+ * @property verifiedAt 서버에서 반환한 인증 완료 시각
  */
 data class TravelCertification(
     val id: String,
-    val userId: String,
-    val certificatedAt: LocalDateTime,
+    val travelId: String,
+    val spotId: String,
+    val spotName: String,
+    val verifiedAt: LocalDateTime,
 )
-
 /**
  * 앱 화면에서 사용하는 여행 진행 상태입니다.
  *

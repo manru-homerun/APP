@@ -27,7 +27,6 @@ import kotlinx.coroutines.launch
 internal class TravelSpotQueryStateHolder(
     private val repository: TravelSpotRepository,
     private val scope: CoroutineScope,
-    private val onSessionExpired: suspend () -> Unit,
 ) {
     private val _uiState = MutableStateFlow(TravelSpotSelectionUiState())
     val uiState: StateFlow<TravelSpotSelectionUiState> = _uiState.asStateFlow()
@@ -217,9 +216,7 @@ internal class TravelSpotQueryStateHolder(
                 onSuccess(spots)
             } catch (exception: CancellationException) {
                 throw exception
-            } catch (exception: SessionExpiredException) {
-                ensureActive()
-                onSessionExpired()
+            } catch (_: SessionExpiredException) {
             } catch (exception: Exception) {
                 ensureActive()
                 val message = exception.toTravelErrorMessage(fallbackMessage)

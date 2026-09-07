@@ -105,3 +105,21 @@ data class TravelScheduleDayRequestDto(
     val day: Int,
     val travelSpotIdList: List<String>,
 )
+
+/**
+ * 여행 일정에 포함된 관광지의 방문 인증 요청입니다.
+ *
+ * 여행 ID와 관광지 ID는 URL 경로로 전달하므로 본문에 포함하지 않습니다.
+ *
+ * @property latitude 사용자의 현재 위도
+ * @property longitude 사용자의 현재 경도
+ * @property visitedAt 방문 인증 요청 시각(ISO 8601 형식)
+ * @property accuracy GPS 위치 정확도(m). 제공할 수 없으면 null
+ */
+@Serializable
+data class TravelSpotVerifyRequestDto(
+    val latitude: Double,
+    val longitude: Double,
+    val visitedAt: String,
+    val accuracy: Double? = null,
+)

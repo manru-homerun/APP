@@ -41,9 +41,6 @@ import com.manruhomerun.yadanbeopseok.travel.util.toggleTravelSpotSelection
 sealed interface TravelCourseEditEvent {
     /** 신규 여행 저장 또는 기존 여행 수정이 완료됐습니다. */
     data object Saved : TravelCourseEditEvent
-
-    /** 인증 정보가 만료되어 로그인 화면으로 이동해야 합니다. */
-    data object SessionExpired : TravelCourseEditEvent
 }
 
 /**
@@ -78,7 +75,6 @@ class TravelCourseEditViewModel @Inject constructor(
     private val spotQuery = TravelSpotQueryStateHolder(
         repository = travelSpotRepository,
         scope = viewModelScope,
-        onSessionExpired = { _events.send(TravelCourseEditEvent.SessionExpired) },
     )
 
     init {
@@ -237,6 +233,7 @@ class TravelCourseEditViewModel @Inject constructor(
     fun searchTravelSpots() = spotQuery.searchTravelSpots()
     fun clearTravelSpotSearch() = spotQuery.clearTravelSpotSearch()
     fun selectTravelSpotCategory(category: TravelSpotCategory?) = spotQuery.selectTravelSpotCategory(category)
+
     /** 관광지 상세에서 C01b/C01c로 돌아오면 현재 목록을 갱신합니다. */
     fun refreshTravelSpotSelection() = spotQuery.refreshTravelSpotSelection()
     fun retryTravelSpotSelection() = spotQuery.retryTravelSpotSelection()
@@ -403,12 +400,10 @@ class TravelCourseEditViewModel @Inject constructor(
                 }
             } catch (exception: CancellationException) {
                 throw exception
-            } catch (exception: SessionExpiredException) {
+            } catch (_: SessionExpiredException) {
                 _uiState.update {
                     it.copy(isAligning = false)
                 }
-
-                _events.send(TravelCourseEditEvent.SessionExpired)
             } catch (exception: Exception) {
                 _uiState.update {
                     it.copy(
@@ -478,12 +473,10 @@ class TravelCourseEditViewModel @Inject constructor(
                 _events.send(TravelCourseEditEvent.Saved)
             } catch (exception: CancellationException) {
                 throw exception
-            } catch (exception: SessionExpiredException) {
+            } catch (_: SessionExpiredException) {
                 _uiState.update {
                     it.copy(isSaving = false)
                 }
-
-                _events.send(TravelCourseEditEvent.SessionExpired)
             } catch (exception: Exception) {
                 _uiState.update {
                     it.copy(
@@ -554,12 +547,10 @@ class TravelCourseEditViewModel @Inject constructor(
                 )
             } catch (exception: CancellationException) {
                 throw exception
-            } catch (exception: SessionExpiredException) {
+            } catch (_: SessionExpiredException) {
                 _uiState.update {
                     it.copy(isLoading = false)
                 }
-
-                _events.send(TravelCourseEditEvent.SessionExpired)
             } catch (exception: Exception) {
                 _uiState.update {
                     it.copy(

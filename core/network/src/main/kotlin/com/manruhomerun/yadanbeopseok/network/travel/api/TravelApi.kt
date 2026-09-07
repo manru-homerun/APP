@@ -7,6 +7,9 @@ import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelCourseResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelCreateRequestDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelDetailResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelListResponseDto
+import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotVerifyRequestDto
+import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotVerifyResponseDto
+import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelStickerResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelThemeResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelUpdateRequestDto
 import retrofit2.http.Body
@@ -85,4 +88,25 @@ interface TravelApi {
         @Path("travelId") travelId: String,
         @Body request: TravelUpdateRequestDto,
     )
+
+    /**
+     * 현재 사용자의 위치와 요청 시각으로 관광지 방문 인증을 요청합니다.
+     *
+     * 인증 성공 결과는 공통 응답의 data에 포함됩니다.
+     */
+    @POST("travel/{travelId}/spots/{spotId}/verify")
+    suspend fun verifyTravelSpot(
+        @Path("travelId") travelId: String,
+        @Path("spotId") spotId: String,
+        @Body request: TravelSpotVerifyRequestDto,
+    ): ApiResponseDto<TravelSpotVerifyResponseDto>
+
+    /**
+     * 특정 여행에서 획득한 스티커팩과 스티커 목록을 조회합니다.
+     *
+     * 공통 응답 Wrapper 없이 직접 반환하며,
+     * 미획득 상태에서는 응답의 stickerPack이 null입니다.
+     */
+    @GET("travel/{travelId}/stickers")
+    suspend fun getTravelStickerPack(@Path("travelId") travelId: String): TravelStickerResponseDto
 }

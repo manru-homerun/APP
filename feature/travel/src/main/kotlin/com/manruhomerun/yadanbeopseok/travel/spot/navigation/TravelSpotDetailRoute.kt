@@ -18,15 +18,14 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
-import com.manruhomerun.yadanbeopseok.navigation.route.LoginNavKey
 import com.manruhomerun.yadanbeopseok.travel.spot.screen.TravelSpotDetailScreen
-import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotDetailNavigationEvent
 import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotDetailViewModel
 
 /**
  * 관광지 상세 화면과 ViewModel을 연결합니다.
  *
- * 관광지 상세 조회, 찜 상태 변경, 세션 만료와 화면 이동을 처리합니다.
+ * 관광지 상세 조회, 찜 상태 변경, 뒤로가기와 오류 메시지 표시를 처리합니다.
+ * 세션 만료에 따른 로그인 화면 전환은 앱의 공통 세션 관찰이 처리합니다.
  */
 @Composable
 fun TravelSpotDetailRoute(
@@ -42,16 +41,6 @@ fun TravelSpotDetailRoute(
         viewModel.loadTravelSpot(travelSpotId)
     }
 
-    LaunchedEffect(viewModel, navigator) {
-        viewModel.navigationEvents.collect { event ->
-            when (event) {
-                TravelSpotDetailNavigationEvent.NavigateToLogin -> {
-                    navigator.resetTo(LoginNavKey)
-                }
-            }
-        }
-    }
-
     LaunchedEffect(uiState.errorMessage, uiState.hasDetail) {
         val errorMessage = uiState.errorMessage ?: return@LaunchedEffect
 
@@ -63,9 +52,7 @@ fun TravelSpotDetailRoute(
         viewModel.clearErrorMessage()
     }
 
-    Box(
-        modifier = modifier.fillMaxSize(),
-    ) {
+    Box(modifier = modifier.fillMaxSize()) {
         TravelSpotDetailScreen(
             uiState = uiState,
             onBackClick = navigator::navigateBack,

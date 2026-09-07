@@ -70,8 +70,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            val startupState by
-            viewModel.startupState.collectAsStateWithLifecycle()
+            val startupState by viewModel.startupState.collectAsStateWithLifecycle()
 
             YadanbeopseokTheme {
                 val initialNavKey = startupState.toInitialNavKey()
@@ -101,12 +100,8 @@ class MainActivity : ComponentActivity() {
 private fun YadanbeopseokApp(
     initialNavKey: NavKey,
 ) {
-    val navigationState =
-        rememberYadanNavigationState(
-            initialKey = initialNavKey,
-        )
-    val selectedDestination =
-        navigationState.currentTopLevelKey
+    val navigationState = rememberYadanNavigationState(initialKey = initialNavKey)
+    val selectedDestination = navigationState.currentTopLevelKey
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),

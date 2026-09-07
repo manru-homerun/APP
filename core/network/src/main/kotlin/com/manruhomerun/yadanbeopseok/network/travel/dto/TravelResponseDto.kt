@@ -154,3 +154,51 @@ data class TravelThemeResponseDto(
     val id: Long,
     val name: String,
 )
+
+/**
+ * 관광지 방문 인증 성공 응답의 data 부분입니다.
+ *
+ * 인증 결과 식별과 완료 화면에 필요한 필드만 수신합니다.
+ * 인증 시각은 Mapper에서 앱 내부 날짜 타입으로 변환합니다.
+ */
+@Serializable
+data class TravelSpotVerifyResponseDto(
+    val visitVerificationId: Long,
+    val travelId: Long,
+    val tourSpotId: Long,
+    val tourSpotName: String,
+    val verifiedAt: String,
+)
+
+/**
+ * 특정 여행에서 획득한 스티커 조회 응답입니다.
+ *
+ * 공통 ApiResponseDto로 감싸지 않는 직접 응답입니다.
+ * 미획득 상태에서는 hasSticker가 false이고 stickerPack이 null입니다.
+ */
+@Serializable
+data class TravelStickerResponseDto(
+    val hasSticker: Boolean,
+    val stickerPack: StickerPackResponseDto?,
+)
+
+/**
+ * 획득한 스티커팩의 정보와 소속 스티커 목록입니다.
+ */
+@Serializable
+data class StickerPackResponseDto(
+    val id: Long,
+    val name: String,
+    val stickers: List<StickerResponseDto>,
+)
+
+/**
+ * 스티커의 식별자와 이미지 URL입니다.
+ *
+ * 소속 스티커팩 ID는 Mapper에서 상위 객체의 ID를 사용합니다.
+ */
+@Serializable
+data class StickerResponseDto(
+    val id: Long,
+    val image: String,
+)

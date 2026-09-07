@@ -45,7 +45,6 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.model.KboTeam
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
 import com.manruhomerun.yadanbeopseok.navigation.route.HomeNavKey
-import com.manruhomerun.yadanbeopseok.navigation.route.LoginNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.TravelSpotDetailNavKey
 import com.manruhomerun.yadanbeopseok.travel.component.TravelNameEditDialog
 import com.manruhomerun.yadanbeopseok.travel.course.navigation.TravelCourseEditRoute
@@ -141,11 +140,6 @@ fun TravelCreationRoute(
 
         // 현재 화면을 제거하고 홈 탭의 시작 화면으로 이동합니다.
         navigator.replaceCurrent(HomeNavKey)
-    }
-
-    fun navigateToLogin() {
-        viewModel.resetCreation()
-        navigator.resetTo(LoginNavKey)
     }
 
     fun closeCreation() {
@@ -272,10 +266,6 @@ fun TravelCreationRoute(
                         finishAtHome()
                     }
                 }
-
-                TravelCreationEvent.SessionExpired -> {
-                    navigateToLogin()
-                }
             }
         }
     }
@@ -338,7 +328,6 @@ fun TravelCreationRoute(
                         onTravelSpotClick = { travelSpot ->
                             navigator.navigate(TravelSpotDetailNavKey(travelSpot.id))
                         },
-                        onSessionExpired = ::navigateToLogin,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }

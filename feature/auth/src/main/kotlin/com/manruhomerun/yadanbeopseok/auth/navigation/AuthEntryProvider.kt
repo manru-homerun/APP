@@ -27,9 +27,7 @@ fun EntryProviderScope<NavKey>.authEntryProvider(
         )
 
     entry<LoginNavKey> {
-        LoginRoute(
-            navigator = navigator,
-        )
+        LoginRoute()
     }
 
     /*

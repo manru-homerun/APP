@@ -20,11 +20,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manruhomerun.yadanbeopseok.home.screen.HomeScreen
-import com.manruhomerun.yadanbeopseok.home.viewmodel.HomeNavigationEvent
 import com.manruhomerun.yadanbeopseok.home.viewmodel.HomeViewModel
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
 import com.manruhomerun.yadanbeopseok.navigation.route.GameScheduleNavKey
-import com.manruhomerun.yadanbeopseok.navigation.route.LoginNavKey
 import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
@@ -32,8 +30,10 @@ import kotlinx.datetime.todayIn
 /**
  * 홈 화면과 [HomeViewModel]을 연결합니다.
  *
- * 화면 상태와 사용자 입력은 ViewModel에 연결하고,
- * 홈에서 발생하는 화면 이동과 오류 표시를 처리합니다.
+ * 화면 상태와 사용자 입력, 홈에서 발생하는 화면 이동과
+ * 오류 메시지 표시를 처리합니다.
+ *
+ * 세션 만료에 따른 로그인 화면 전환은 앱의 공통 세션 관찰이 처리합니다.
  */
 @Composable
 fun HomeRoute(
@@ -67,26 +67,10 @@ fun HomeRoute(
     }
 
     /*
-     * 세션이 만료되면 기존 백스택을 제거하여
-     * 뒤로 가기로 인증이 필요한 화면에 돌아오지 않게 합니다.
-     */
-    LaunchedEffect(viewModel, navigator) {
-        viewModel.navigationEvents.collect { event ->
-            when (event) {
-                HomeNavigationEvent.NavigateToLogin -> {
-                    navigator.resetTo(LoginNavKey)
-                }
-            }
-        }
-    }
-
-    /*
      * ViewModel의 오류를 한 번 표시한 뒤 상태에서 제거합니다.
      */
     LaunchedEffect(uiState.errorMessage) {
-        val errorMessage =
-            uiState.errorMessage
-                ?: return@LaunchedEffect
+        val errorMessage = uiState.errorMessage ?: return@LaunchedEffect
 
         snackbarHostState.showSnackbar(
             message = errorMessage,
@@ -103,9 +87,7 @@ fun HomeRoute(
             onNotificationClick = onNotificationClick,
             onTravelClick = onTravelClick,
             onGameScheduleClick = {
-                navigator.navigateToTopLevel(
-                    GameScheduleNavKey,
-                )
+                navigator.navigateToTopLevel(GameScheduleNavKey)
             },
             onRegionSelected = viewModel::selectRegion,
             onCategorySelected = viewModel::selectCategory,

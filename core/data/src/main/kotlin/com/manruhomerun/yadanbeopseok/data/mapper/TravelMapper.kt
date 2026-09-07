@@ -8,6 +8,7 @@ import com.manruhomerun.yadanbeopseok.model.ProfileRegion
 import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.Travel
 import com.manruhomerun.yadanbeopseok.model.TravelBaseballGame
+import com.manruhomerun.yadanbeopseok.model.TravelCertification
 import com.manruhomerun.yadanbeopseok.model.TravelCourse
 import com.manruhomerun.yadanbeopseok.model.TravelDay
 import com.manruhomerun.yadanbeopseok.model.TravelListPage
@@ -25,9 +26,11 @@ import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelDetailResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelListResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelScheduleDayRequestDto
+import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotVerifyResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelThemeResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelUpdateRequestDto
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 
 /**
  * 여행 목록 API 응답을 앱 내부 페이지 모델로 변환합니다.
@@ -349,4 +352,29 @@ private fun String.toRegion(): Region =
  */
 private fun String.toRequestId(fieldName: String): Long {
     return toLongOrNull() ?: throw IllegalArgumentException("$fieldName must be numeric.")
+}
+
+/**
+ * 관광지 방문 인증 응답을 앱 내부 인증 결과로 변환합니다.
+ *
+ * 숫자 ID는 앱에서 사용하는 문자열 ID로 변환합니다.
+ * 인증 시각은 서버 값을 그대로 해석하며 시간대를 임의로 보정하지 않습니다.
+ */
+internal fun TravelSpotVerifyResponseDto.toTravelCertification(): TravelCertification {
+    val parsedVerifiedAt = try {
+        LocalDateTime.parse(verifiedAt)
+    } catch (exception: IllegalArgumentException) {
+        throw InvalidResponseException(
+            message = "Invalid travel verification verifiedAt.",
+            cause = exception,
+        )
+    }
+
+    return TravelCertification(
+        id = visitVerificationId.toString(),
+        travelId = travelId.toString(),
+        spotId = tourSpotId.toString(),
+        spotName = tourSpotName,
+        verifiedAt = parsedVerifiedAt,
+    )
 }

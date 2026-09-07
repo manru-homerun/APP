@@ -11,22 +11,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * A·05 경기 일정 화면에서 발생하는 일회성 이동 이벤트입니다.
- */
-sealed interface BaseballScheduleNavigationEvent {
-    /** 인증 정보가 만료되어 로그인 화면으로 이동해야 합니다. */
-    data object NavigateToLogin : BaseballScheduleNavigationEvent
-}
 
 /**
  * A·05의 구단 선택과 구단별 경기 일정을 관리합니다.
@@ -37,11 +27,6 @@ class BaseballScheduleViewModel @Inject constructor(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(BaseballScheduleUiState())
     val uiState: StateFlow<BaseballScheduleUiState> = _uiState.asStateFlow()
-
-    private val _navigationEvents = Channel<BaseballScheduleNavigationEvent>(
-        capacity = Channel.BUFFERED,
-    )
-    val navigationEvents: Flow<BaseballScheduleNavigationEvent> = _navigationEvents.receiveAsFlow()
 
     private var scheduleLoadJob: Job? = null
 
@@ -94,17 +79,8 @@ class BaseballScheduleViewModel @Inject constructor(
                 }
             } catch (exception: CancellationException) {
                 throw exception
-            } catch (exception: SessionExpiredException) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = null,
-                    )
-                }
-
-                _navigationEvents.send(
-                    BaseballScheduleNavigationEvent.NavigateToLogin,
-                )
+            } catch (_: SessionExpiredException) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = null) }
             } catch (exception: Exception) {
                 if (_uiState.value.selectedTeam == team) {
                     val errorMessage = exception.toBaseballScheduleErrorMessage()

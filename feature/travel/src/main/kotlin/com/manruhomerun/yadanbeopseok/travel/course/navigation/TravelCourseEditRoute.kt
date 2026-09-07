@@ -8,7 +8,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
@@ -37,7 +36,6 @@ import kotlinx.datetime.todayIn
  * 신규 여행의 원본 저장 등 진입 경로별 종료 처리는 호출자가 담당합니다.
  * @param onHomeClick 저장 완료 후 홈으로 이동하는 콜백입니다.
  * @param onTravelSpotClick 관광지 카드 본문을 눌렀을 때의 콜백입니다.
- * @param onSessionExpired 인증 만료 시 로그인 흐름으로 이동하는 콜백입니다.
  */
 @Composable
 fun TravelCourseEditRoute(
@@ -45,12 +43,10 @@ fun TravelCourseEditRoute(
     onExitRequest: () -> Unit,
     onHomeClick: () -> Unit,
     onTravelSpotClick: (TravelSpot) -> Unit,
-    onSessionExpired: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spotSelectionUiState by viewModel.spotSelectionUiState.collectAsStateWithLifecycle()
-    val currentOnSessionExpired by rememberUpdatedState(onSessionExpired)
     val screenStateHolder = rememberSaveableStateHolder()
 
     val currentDate = remember {
@@ -130,13 +126,6 @@ fun TravelCourseEditRoute(
                 TravelCourseEditEvent.Saved -> {
                     isNameEditDialogVisible = false
                     isSaved = true
-                }
-
-                TravelCourseEditEvent.SessionExpired -> {
-                    isNameEditDialogVisible = false
-                    isSaved = false
-                    viewModel.reset()
-                    currentOnSessionExpired()
                 }
             }
         }

@@ -9,12 +9,11 @@ import com.manruhomerun.yadanbeopseok.navigation.route.TravelCreationNavKey
 /**
  * 야구 기능에서 사용하는 NavKey와 실제 Route를 연결합니다.
  *
- * @param navigator 화면 이동과 세션 만료 처리를 담당합니다.
+ * @param navigator 경기 일정에서 여행 생성 화면으로 이동할 때 사용합니다.
  */
 fun EntryProviderScope<NavKey>.baseballEntryProvider(navigator: Navigator) {
     entry<GameScheduleNavKey> {
         BaseballScheduleRoute(
-            navigator = navigator,
             onPlanClick = { gameId ->
                 navigator.navigate(TravelCreationNavKey(baseballGameId = gameId))
             },

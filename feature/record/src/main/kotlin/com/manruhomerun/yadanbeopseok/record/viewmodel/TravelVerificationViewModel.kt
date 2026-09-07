@@ -45,9 +45,6 @@ class TravelVerificationViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(TravelVerificationUiState())
     val uiState = _uiState.asStateFlow()
 
-    private val _sessionExpiredEvents = Channel<Unit>(Channel.BUFFERED)
-    val sessionExpiredEvents = _sessionExpiredEvents.receiveAsFlow()
-
     private val verificationTimeZone = TimeZone.of("Asia/Seoul")
 
     private var currentTravelId: String? = null
@@ -146,8 +143,13 @@ class TravelVerificationViewModel @Inject constructor(
                 throw exception
             } catch (_: SessionExpiredException) {
                 isSessionExpired = true
-                showError("로그인이 만료되었습니다. 다시 로그인해주세요.")
-                _sessionExpiredEvents.send(Unit)
+                _uiState.update {
+                    it.copy(
+                        phase = TravelVerificationPhase.ERROR,
+                        retryAction = null,
+                        errorMessage = null,
+                    )
+                }
             } catch (exception: Exception) {
                 val retryAction = when (_uiState.value.phase) {
                     TravelVerificationPhase.LOCATING ->

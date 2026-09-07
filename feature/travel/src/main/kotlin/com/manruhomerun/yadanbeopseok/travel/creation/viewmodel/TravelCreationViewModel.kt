@@ -54,8 +54,6 @@ sealed interface TravelCreationEvent {
     /** 최종 여행 저장이 완료됐습니다. */
     data object TravelSaved : TravelCreationEvent
 
-    /** 인증 정보가 만료됐습니다. */
-    data object SessionExpired : TravelCreationEvent
 }
 
 /**
@@ -87,9 +85,6 @@ class TravelCreationViewModel @Inject constructor(
     private val spotQuery = TravelSpotQueryStateHolder(
         repository = travelSpotRepository,
         scope = viewModelScope,
-        onSessionExpired = {
-            _events.send(TravelCreationEvent.SessionExpired)
-        },
     )
     val spotSelectionUiState: StateFlow<TravelSpotSelectionUiState> = spotQuery.uiState
 
@@ -380,12 +375,8 @@ class TravelCreationViewModel @Inject constructor(
                 _events.send(TravelCreationEvent.CourseGenerated)
             } catch (exception: CancellationException) {
                 throw exception
-            } catch (exception: SessionExpiredException) {
-                _uiState.update {
-                    it.copy(isGenerating = false)
-                }
-
-                _events.send(TravelCreationEvent.SessionExpired)
+            } catch (_: SessionExpiredException) {
+                _uiState.update { it.copy(isGenerating = false) }
             } catch (exception: Exception) {
                 _uiState.update {
                     it.copy(
@@ -424,12 +415,8 @@ class TravelCreationViewModel @Inject constructor(
                 _events.send(TravelCreationEvent.TravelSaved)
             } catch (exception: CancellationException) {
                 throw exception
-            } catch (exception: SessionExpiredException) {
-                _uiState.update {
-                    it.copy(isSaving = false)
-                }
-
-                _events.send(TravelCreationEvent.SessionExpired)
+            } catch (_: SessionExpiredException) {
+                _uiState.update { it.copy(isSaving = false) }
             } catch (exception: Exception) {
                 _uiState.update {
                     it.copy(
@@ -503,12 +490,8 @@ class TravelCreationViewModel @Inject constructor(
                 _events.send(TravelCreationEvent.GameSelected)
             } catch (exception: CancellationException) {
                 throw exception
-            } catch (exception: SessionExpiredException) {
-                _gameSelectionUiState.update {
-                    it.copy(isGameDetailLoading = false)
-                }
-
-                _events.send(TravelCreationEvent.SessionExpired)
+            } catch (_: SessionExpiredException) {
+                _gameSelectionUiState.update { it.copy(isGameDetailLoading = false) }
             } catch (exception: Exception) {
                 _gameSelectionUiState.update {
                     it.copy(
@@ -558,12 +541,8 @@ class TravelCreationViewModel @Inject constructor(
                 }
             } catch (exception: CancellationException) {
                 throw exception
-            } catch (exception: SessionExpiredException) {
-                _gameSelectionUiState.update {
-                    it.copy(isScheduleLoading = false)
-                }
-
-                _events.send(TravelCreationEvent.SessionExpired)
+            } catch (_: SessionExpiredException) {
+                _gameSelectionUiState.update { it.copy(isScheduleLoading = false) }
             } catch (exception: Exception) {
                 if (_gameSelectionUiState.value.selectedTeam == team) {
                     _gameSelectionUiState.update {
@@ -605,12 +584,8 @@ class TravelCreationViewModel @Inject constructor(
                 }
             } catch (exception: CancellationException) {
                 throw exception
-            } catch (exception: SessionExpiredException) {
-                _themeSelectionUiState.update {
-                    it.copy(isLoading = false)
-                }
-
-                _events.send(TravelCreationEvent.SessionExpired)
+            } catch (_: SessionExpiredException) {
+                _themeSelectionUiState.update { it.copy(isLoading = false) }
             } catch (exception: Exception) {
                 _themeSelectionUiState.update {
                     it.copy(
@@ -652,12 +627,8 @@ class TravelCreationViewModel @Inject constructor(
                 }
             } catch (exception: CancellationException) {
                 throw exception
-            } catch (exception: SessionExpiredException) {
-                _companionSelectionUiState.update {
-                    it.copy(isLoading = false)
-                }
-
-                _events.send(TravelCreationEvent.SessionExpired)
+            } catch (_: SessionExpiredException) {
+                _companionSelectionUiState.update { it.copy(isLoading = false) }
             } catch (exception: Exception) {
                 _companionSelectionUiState.update {
                     it.copy(

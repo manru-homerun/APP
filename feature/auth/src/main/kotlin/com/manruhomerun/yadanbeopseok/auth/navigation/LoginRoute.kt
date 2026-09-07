@@ -24,44 +24,22 @@ import com.kakao.sdk.common.model.ClientError
 import com.kakao.sdk.common.model.ClientErrorCause
 import com.kakao.sdk.user.UserApiClient
 import com.manruhomerun.yadanbeopseok.auth.screen.LoginScreen
-import com.manruhomerun.yadanbeopseok.auth.viewmodel.LoginNavigationEvent
 import com.manruhomerun.yadanbeopseok.auth.viewmodel.LoginViewModel
-import com.manruhomerun.yadanbeopseok.navigation.Navigator
-import com.manruhomerun.yadanbeopseok.navigation.route.HomeNavKey
-import com.manruhomerun.yadanbeopseok.navigation.route.TermsAgreementNavKey
 
 /**
- * 로그인 화면의 상태 수집, 카카오 SDK 실행 및 화면 이동을 연결합니다.
+ * 로그인 화면의 상태 수집과 카카오 SDK 실행을 연결합니다.
  *
  * 화면 UI는 [LoginScreen], 백엔드 로그인 처리는 [LoginViewModel]에 위임합니다.
+ * 로그인 성공 이후 최상위 화면 전환은 앱의 공통 세션 관찰이 처리합니다.
  */
 @Composable
 fun LoginRoute(
-    navigator: Navigator,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-
-    /*
-     * 로그인 결과에 따라 온보딩 또는 홈으로 이동합니다.
-     * 기존 회원은 뒤로 가기로 로그인 화면에 돌아오지 않도록 백스택을 초기화합니다.
-     */
-    LaunchedEffect(viewModel, navigator) {
-        viewModel.navigationEvents.collect { event ->
-            when (event) {
-                LoginNavigationEvent.NavigateToTermsAgreement -> {
-                    navigator.navigate(TermsAgreementNavKey)
-                }
-
-                LoginNavigationEvent.NavigateToHome -> {
-                    navigator.resetTo(HomeNavKey)
-                }
-            }
-        }
-    }
 
     /*
      * ViewModel에서 전달된 로그인 오류를 한 번 표시한 뒤 제거합니다.

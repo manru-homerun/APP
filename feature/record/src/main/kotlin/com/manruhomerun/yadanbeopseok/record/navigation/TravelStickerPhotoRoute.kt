@@ -23,7 +23,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
-import com.manruhomerun.yadanbeopseok.navigation.route.LoginNavKey
 import com.manruhomerun.yadanbeopseok.record.screen.TravelStickerPhotoScreen
 import com.manruhomerun.yadanbeopseok.record.viewmodel.TravelStickerPhotoViewModel
 import java.io.IOException
@@ -58,12 +57,6 @@ fun TravelStickerPhotoRoute(
 
     LaunchedEffect(travelId, viewModel) {
         viewModel.loadStickers(travelId)
-    }
-
-    LaunchedEffect(viewModel, navigator) {
-        viewModel.sessionExpiredEvents.collect {
-            navigator.resetTo(LoginNavKey)
-        }
     }
 
     /*

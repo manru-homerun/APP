@@ -23,7 +23,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
 import com.manruhomerun.yadanbeopseok.navigation.route.HomeNavKey
-import com.manruhomerun.yadanbeopseok.navigation.route.LoginNavKey
 import com.manruhomerun.yadanbeopseok.record.location.CurrentLocationResult
 import com.manruhomerun.yadanbeopseok.record.screen.TravelStickerRewardScreen
 import com.manruhomerun.yadanbeopseok.record.screen.TravelVerificationCompletedScreen
@@ -40,7 +39,7 @@ import kotlinx.coroutines.delay
  *
  * @param travelId 인증 대상 여행 ID
  * @param spotId 인증 대상 관광지 ID
- * @param navigator 뒤로가기, 홈 이동과 세션 만료 이동에 사용하는 Navigator
+ * @param navigator 뒤로가기와 홈 이동에 사용하는 Navigator
  * @param onDecoratePhotoClick D03에서 D04로 이동하는 콜백입니다.
  * null이면 사진에 붙이기 버튼을 비활성화합니다.
  */
@@ -182,12 +181,6 @@ fun TravelVerificationRoute(
             viewModel.loadStickerReward()
         } else {
             navigator.navigateBack()
-        }
-    }
-
-    LaunchedEffect(viewModel, navigator) {
-        viewModel.sessionExpiredEvents.collect {
-            navigator.resetTo(LoginNavKey)
         }
     }
 

@@ -22,20 +22,21 @@ import com.manruhomerun.yadanbeopseok.auth.screen.TravelProfileScreen
 import com.manruhomerun.yadanbeopseok.auth.viewmodel.OnboardingViewModel
 import com.manruhomerun.yadanbeopseok.navigation.LocalSharedViewModelStoreOwner
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
-import com.manruhomerun.yadanbeopseok.navigation.route.HomeNavKey
-import com.manruhomerun.yadanbeopseok.navigation.route.LoginNavKey
 
 /**
  * 여행 프로필 화면과 온보딩 공유 ViewModel을 연결합니다.
  *
- * 입력 완료 시 온보딩 정보를 서버에 저장하고,
- * 저장 성공 이벤트를 받은 뒤 홈 화면으로 이동합니다.
+ * 입력 완료 후 변경되는 인증 상태는 앱의 공통 세션 관찰이 처리하고,
+ * 이 Route는 화면 상태와 사용자 입력만 연결합니다.
  */
 @Composable
 fun TravelProfileRoute(
     navigator: Navigator,
     modifier: Modifier = Modifier,
-    viewModel: OnboardingViewModel = hiltViewModel(viewModelStoreOwner = LocalSharedViewModelStoreOwner.current,),
+    viewModel: OnboardingViewModel =
+        hiltViewModel(
+            viewModelStoreOwner = LocalSharedViewModelStoreOwner.current,
+        ),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -50,27 +51,7 @@ fun TravelProfileRoute(
         // 저장이 끝날 때까지 현재 화면을 유지합니다.
     }
 
-    /**
-     * 서버에서 온보딩 완료가 확인된 경우에만
-     * 인증 화면 백스택을 제거하고 홈으로 이동합니다.
-     */
-    LaunchedEffect(viewModel, navigator) {
-        viewModel.completionEvents.collect {
-            navigator.resetTo(HomeNavKey)
-        }
-    }
-
-    /**
-     * 온보딩 저장 중 인증 세션이 만료되면
-     * 온보딩 백스택을 제거하고 로그인 화면으로 이동합니다.
-     */
-    LaunchedEffect(viewModel, navigator) {
-        viewModel.sessionExpiredEvents.collect {
-            navigator.resetTo(LoginNavKey)
-        }
-    }
-
-    /**
+    /*
      * 온보딩 저장 오류를 한 번 표시한 뒤
      * ViewModel에 남아 있는 오류 상태를 제거합니다.
      */

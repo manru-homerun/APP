@@ -32,12 +32,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manruhomerun.yadanbeopseok.model.TravelPlace
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
 import com.manruhomerun.yadanbeopseok.navigation.route.HomeNavKey
-import com.manruhomerun.yadanbeopseok.navigation.route.LoginNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.TravelSpotDetailNavKey
 import com.manruhomerun.yadanbeopseok.travel.course.navigation.TravelCourseEditRoute
 import com.manruhomerun.yadanbeopseok.travel.course.viewmodel.TravelCourseEditViewModel
 import com.manruhomerun.yadanbeopseok.travel.detail.screen.TravelDetailScreen
-import com.manruhomerun.yadanbeopseok.travel.detail.viewmodel.TravelDetailNavigationEvent
 import com.manruhomerun.yadanbeopseok.travel.detail.viewmodel.TravelDetailViewModel
 import com.manruhomerun.yadanbeopseok.travel.share.openTravelPosterShareSheet
 import com.manruhomerun.yadanbeopseok.travel.share.saveTravelPosterImage
@@ -85,12 +83,6 @@ fun TravelDetailRoute(
 
     fun exitEdit() {
         editViewModel.reset()
-    }
-
-    fun navigateToLogin() {
-        isShareVisible = false
-        editViewModel.reset()
-        navigator.resetTo(LoginNavKey)
     }
 
     fun closeShare() {
@@ -158,16 +150,6 @@ fun TravelDetailRoute(
         viewModel.refreshTravel()
     }
 
-    LaunchedEffect(viewModel, navigator) {
-        viewModel.navigationEvents.collect { event ->
-            when (event) {
-                TravelDetailNavigationEvent.NavigateToLogin -> {
-                    navigateToLogin()
-                }
-            }
-        }
-    }
-
     /*
      * 최초 상세 조회 실패는 오류 화면으로 표시합니다.
      * 이미 여행 정보가 표시된 상태의 오류만 Snackbar로 안내합니다.
@@ -194,7 +176,6 @@ fun TravelDetailRoute(
                             TravelSpotDetailNavKey(travelSpot.id),
                         )
                     },
-                    onSessionExpired = ::navigateToLogin,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

@@ -10,20 +10,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-/** 관광지 상세 화면에서 발생하는 일회성 이동 이벤트입니다. */
-sealed interface TravelSpotDetailNavigationEvent {
-    /** 인증 정보가 만료되어 로그인 화면으로 이동해야 합니다. */
-    data object NavigateToLogin : TravelSpotDetailNavigationEvent
-}
 
 /** 관광지 상세 정보와 찜 상태를 관리합니다. */
 @HiltViewModel
@@ -32,9 +23,6 @@ class TravelSpotDetailViewModel @Inject constructor(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TravelSpotDetailUiState())
     val uiState: StateFlow<TravelSpotDetailUiState> = _uiState.asStateFlow()
-
-    private val _navigationEvents = Channel<TravelSpotDetailNavigationEvent>(Channel.BUFFERED)
-    val navigationEvents: Flow<TravelSpotDetailNavigationEvent> = _navigationEvents.receiveAsFlow()
 
     private var currentSpotId: String? = null
     private var loadJob: Job? = null
@@ -102,10 +90,11 @@ class TravelSpotDetailViewModel @Inject constructor(
                 }
             } catch (exception: CancellationException) {
                 throw exception
-            } catch (exception: SessionExpiredException) {
-                _navigationEvents.send(
-                    TravelSpotDetailNavigationEvent.NavigateToLogin,
-                )
+            } catch (_: SessionExpiredException) {
+                /*
+                 * 로그인 이동은 앱의 공통 세션 관찰이 처리합니다.
+                 * 찜 변경 진행 상태는 finally에서 정리합니다.
+                 */
             } catch (exception: Exception) {
                 _uiState.update {
                     it.copy(
@@ -146,11 +135,13 @@ class TravelSpotDetailViewModel @Inject constructor(
                 }
             } catch (exception: CancellationException) {
                 throw exception
-            } catch (exception: SessionExpiredException) {
-                _uiState.update { it.copy(isLoading = false) }
-                _navigationEvents.send(
-                    TravelSpotDetailNavigationEvent.NavigateToLogin,
-                )
+            } catch (_: SessionExpiredException) {
+                /*
+                 * 로그인 이동은 앱의 공통 세션 관찰이 처리합니다.
+                 */
+                _uiState.update {
+                    it.copy(isLoading = false, errorMessage = null)
+                }
             } catch (exception: Exception) {
                 _uiState.update {
                     it.copy(

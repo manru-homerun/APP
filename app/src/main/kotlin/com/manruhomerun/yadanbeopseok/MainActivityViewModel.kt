@@ -11,10 +11,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 /**
- * 앱 시작 시 저장된 인증 정보를 확인한 결과입니다.
+ * 앱의 인증 상태에 따라 표시할 최상위 화면 상태입니다.
  */
 sealed interface AppStartupState {
     /** 저장된 세션을 확인하고 있습니다. */
@@ -34,43 +35,67 @@ sealed interface AppStartupState {
 }
 
 /**
- * 앱 실행 시 저장된 야단법석 세션을 확인합니다.
+ * 앱 시작 시 저장된 세션을 복원하고 이후 인증 상태 변경을 관찰합니다.
  */
 @HiltViewModel
 class MainActivityViewModel @Inject constructor(
     private val authRepository: AuthRepository,
 ) : ViewModel() {
     private val _startupState = MutableStateFlow<AppStartupState>(AppStartupState.Checking)
-
     val startupState: StateFlow<AppStartupState> = _startupState.asStateFlow()
 
     private var restoreSessionJob: Job? = null
+    private var observeSessionJob: Job? = null
 
     init {
         restoreSession()
     }
 
     /**
-     * 저장된 인증 정보를 확인하고 앱의 최초 화면 상태를 결정합니다.
+     * 저장된 토큰의 만료 상태를 확인하고 최초 화면을 결정합니다.
      *
-     * 오류 화면에서 재시도할 때도 이 함수를 사용합니다.
+     * 초기 복원이 완료된 뒤에만 세션 관찰을 시작하여,
+     * 만료된 저장 토큰이 잠시 유효한 세션으로 처리되는 것을 방지합니다.
      */
     fun restoreSession() {
         if (restoreSessionJob?.isActive == true) {
             return
         }
 
+        observeSessionJob?.cancel()
         _startupState.value = AppStartupState.Checking
 
         restoreSessionJob =
             viewModelScope.launch {
                 try {
+                    val sessionState = authRepository.restoreSession()
+
                     _startupState.value =
-                        when (authRepository.restoreSession()) {
-                            AuthSessionState.LOGGED_OUT -> AppStartupState.LoginRequired
-                            AuthSessionState.ONBOARDING_REQUIRED -> AppStartupState.OnboardingRequired
-                            AuthSessionState.AUTHENTICATED -> AppStartupState.Authenticated
-                        }
+                        sessionState.toAppStartupState()
+
+                    observeSessionChanges()
+                } catch (exception: CancellationException) {
+                    throw exception
+                } catch (_: Exception) {
+                    _startupState.value = AppStartupState.Error
+                }
+            }
+    }
+
+    /**
+     * 로그인, 온보딩 완료, 로그아웃과 세션 만료로 발생하는
+     * DataStore 인증 정보 변경을 계속 관찰합니다.
+     */
+    private fun observeSessionChanges() {
+        observeSessionJob?.cancel()
+
+        observeSessionJob =
+            viewModelScope.launch {
+                try {
+                    authRepository.observeSessionState().collect { sessionState ->
+                        _startupState.value =
+                            sessionState.toAppStartupState()
+                    }
                 } catch (exception: CancellationException) {
                     throw exception
                 } catch (_: Exception) {
@@ -79,3 +104,18 @@ class MainActivityViewModel @Inject constructor(
             }
     }
 }
+
+/**
+ * Repository의 인증 상태를 앱 최상위 화면 상태로 변환합니다.
+ */
+private fun AuthSessionState.toAppStartupState(): AppStartupState =
+    when (this) {
+        AuthSessionState.LOGGED_OUT ->
+            AppStartupState.LoginRequired
+
+        AuthSessionState.ONBOARDING_REQUIRED ->
+            AppStartupState.OnboardingRequired
+
+        AuthSessionState.AUTHENTICATED ->
+            AppStartupState.Authenticated
+    }

@@ -22,14 +22,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * D01 여행 기록 화면에서 발생하는 일회성 이동 이벤트입니다.
- */
-sealed interface TravelRecordNavigationEvent {
-    /** 인증 정보가 만료되어 로그인 화면으로 이동해야 합니다. */
-    data object NavigateToLogin : TravelRecordNavigationEvent
-}
-
-/**
  * D01의 완료 여행 목록과 시즌 선택 상태를 관리합니다.
  */
 @HiltViewModel
@@ -38,12 +30,6 @@ class TravelRecordViewModel @Inject constructor(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TravelRecordUiState())
     val uiState: StateFlow<TravelRecordUiState> = _uiState.asStateFlow()
-
-    private val _navigationEvents = Channel<TravelRecordNavigationEvent>(
-        capacity = Channel.BUFFERED,
-    )
-    val navigationEvents: Flow<TravelRecordNavigationEvent> =
-        _navigationEvents.receiveAsFlow()
 
     private var loadJob: Job? = null
 
@@ -125,17 +111,8 @@ class TravelRecordViewModel @Inject constructor(
                 }
             } catch (exception: CancellationException) {
                 throw exception
-            } catch (exception: SessionExpiredException) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = null,
-                    )
-                }
-
-                _navigationEvents.send(
-                    TravelRecordNavigationEvent.NavigateToLogin,
-                )
+            } catch (_: SessionExpiredException) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = null) }
             } catch (exception: Exception) {
                 _uiState.update {
                     it.copy(

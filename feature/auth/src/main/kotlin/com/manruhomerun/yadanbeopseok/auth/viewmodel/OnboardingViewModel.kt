@@ -20,14 +20,11 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
@@ -48,12 +45,6 @@ class OnboardingViewModel @Inject constructor(
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
 
     private var nicknameCheckJob: Job? = null
-
-    private val _sessionExpiredEvents = Channel<Unit>(capacity = Channel.BUFFERED)
-    val sessionExpiredEvents: Flow<Unit> = _sessionExpiredEvents.receiveAsFlow()
-
-    private val _completionEvents = Channel<Unit>(capacity = Channel.BUFFERED)
-    val completionEvents: Flow<Unit> = _completionEvents.receiveAsFlow()
 
     /** 서비스 이용약관 동의 상태를 변경합니다. */
     fun updateServiceTermsAgreement(agreed: Boolean) {
@@ -151,14 +142,13 @@ class OnboardingViewModel @Inject constructor(
                     )
                 } catch (exception: CancellationException) {
                     throw exception
-                } catch (exception: SessionExpiredException) {
+                } catch (_: SessionExpiredException) {
                     ensureActive()
 
                     updateNicknameStateIfCurrent(
                         normalizedNickname = normalizedNickname,
                         inputState = NicknameInputState.CHECK_FAILED,
                     )
-                    _sessionExpiredEvents.send(Unit)
                 } catch (exception: Exception) {
                     ensureActive()
 
@@ -263,6 +253,7 @@ class OnboardingViewModel @Inject constructor(
      * 입력한 온보딩 정보를 서버에 저장합니다.
      *
      * 필수 입력이 누락됐거나 요청이 진행 중이면 실행하지 않습니다.
+     * 저장 성공과 세션 만료에 따른 화면 전환은 공통 세션 관찰이 처리합니다.
      */
     fun submitOnboarding() {
         val currentState = _uiState.value
@@ -290,19 +281,15 @@ class OnboardingViewModel @Inject constructor(
                         errorMessage = null,
                     )
                 }
-
-                _completionEvents.send(Unit)
             } catch (exception: CancellationException) {
                 throw exception
-            } catch (exception: SessionExpiredException) {
+            } catch (_: SessionExpiredException) {
                 _uiState.update {
                     it.copy(
                         isSubmitting = false,
                         errorMessage = null,
                     )
                 }
-
-                _sessionExpiredEvents.send(Unit)
             } catch (exception: Exception) {
                 _uiState.update {
                     it.copy(
@@ -367,9 +354,6 @@ private fun Exception.toOnboardingErrorMessage(): String =
 
         is NetworkTimeoutException ->
             "서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해주세요."
-
-        is SessionExpiredException ->
-            "로그인 정보가 만료되었습니다. 다시 로그인해주세요."
 
         is ApiException ->
             "온보딩 저장에 실패했습니다. 잠시 후 다시 시도해주세요."

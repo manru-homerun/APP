@@ -30,9 +30,6 @@ class TravelStickerPhotoViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(TravelStickerPhotoUiState())
     val uiState = _uiState.asStateFlow()
 
-    private val _sessionExpiredEvents = Channel<Unit>(Channel.BUFFERED)
-    val sessionExpiredEvents = _sessionExpiredEvents.receiveAsFlow()
-
     private var currentTravelId: String? = null
     private var loadJob: Job? = null
     private var nextPlacedStickerId = 0L
@@ -285,15 +282,8 @@ class TravelStickerPhotoViewModel @Inject constructor(
                 throw exception
             } catch (_: SessionExpiredException) {
                 isSessionExpired = true
-
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = null,
-                    )
+                _uiState.update { it.copy(isLoading = false, errorMessage = null)
                 }
-
-                _sessionExpiredEvents.send(Unit)
             } catch (exception: Exception) {
                 _uiState.update {
                     it.copy(

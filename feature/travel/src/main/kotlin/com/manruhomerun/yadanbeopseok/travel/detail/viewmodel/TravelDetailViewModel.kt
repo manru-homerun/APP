@@ -13,22 +13,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * 여행 상세 화면에서 발생하는 일회성 이동 이벤트입니다.
- */
-sealed interface TravelDetailNavigationEvent {
-    /** 인증 정보가 만료되어 로그인 화면으로 이동해야 합니다. */
-    data object NavigateToLogin : TravelDetailNavigationEvent
-}
 
 /**
  * 여행 상세 정보, 야구 경기와 현재 선택한 일차를 관리합니다.
@@ -41,10 +31,6 @@ class TravelDetailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(TravelDetailUiState())
     val uiState: StateFlow<TravelDetailUiState> = _uiState.asStateFlow()
 
-    private val _navigationEvents =
-        Channel<TravelDetailNavigationEvent>(Channel.BUFFERED)
-    val navigationEvents: Flow<TravelDetailNavigationEvent> =
-        _navigationEvents.receiveAsFlow()
 
     private var currentTravelId: String? = null
     private var loadJob: Job? = null
@@ -173,24 +159,10 @@ class TravelDetailViewModel @Inject constructor(
                 }
             } catch (exception: CancellationException) {
                 throw exception
-            } catch (exception: SessionExpiredException) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = null,
-                    )
-                }
-
-                _navigationEvents.send(
-                    TravelDetailNavigationEvent.NavigateToLogin,
-                )
+            } catch (_: SessionExpiredException) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = null) }
             } catch (exception: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = exception.toTravelDetailErrorMessage(),
-                    )
-                }
+                _uiState.update { it.copy(isLoading = false, errorMessage = exception.toTravelDetailErrorMessage()) }
             }
         }
     }

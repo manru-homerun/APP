@@ -18,25 +18,12 @@ import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
-
-/**
- * 홈 화면에서 발생하는 일회성 이동 이벤트입니다.
- */
-sealed interface HomeNavigationEvent {
-    /**
-     * 인증 정보가 만료되어 로그인 화면으로 이동해야 합니다.
-     */
-    data object NavigateToLogin : HomeNavigationEvent
-}
 
 /**
  * 홈 화면의 여행, 인기 관광지, 필터와 찜 상태를 관리합니다.
@@ -50,22 +37,15 @@ class HomeViewModel @Inject constructor(
     private val travelRepository: TravelRepository,
     private val travelSpotRepository: TravelSpotRepository,
 ) : ViewModel() {
+
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
-
-    private val _navigationEvents =
-        Channel<HomeNavigationEvent>(
-            capacity = Channel.BUFFERED,
-        )
-    val navigationEvents: Flow<HomeNavigationEvent> =
-        _navigationEvents.receiveAsFlow()
 
     /*
      * 인기 관광지 API는 지역을 기준으로 전체 카테고리를 반환하므로,
      * 카테고리를 변경할 때 다시 요청하지 않도록 원본 목록을 보관합니다.
      */
-    private var allPopularTravelSpots: List<TravelSpot> =
-        emptyList()
+    private var allPopularTravelSpots: List<TravelSpot> = emptyList()
 
     private var homeLoadJob: Job? = null
     private var regionLoadJob: Job? = null
@@ -87,8 +67,7 @@ class HomeViewModel @Inject constructor(
         }
 
         loadHome(
-            isInitialLoad =
-                currentState.currentUserId == null,
+            isInitialLoad = currentState.currentUserId == null,
         )
     }
 
@@ -100,11 +79,7 @@ class HomeViewModel @Inject constructor(
     fun selectRegion(region: Region) {
         val currentState = _uiState.value
 
-        if (
-            currentState.isLoading ||
-            currentState.isRefreshing ||
-            currentState.selectedRegion == region
-        ) {
+        if (currentState.isLoading || currentState.isRefreshing || currentState.selectedRegion == region) {
             return
         }
 
@@ -119,67 +94,56 @@ class HomeViewModel @Inject constructor(
         }
 
         regionLoadJob?.cancel()
-        regionLoadJob =
-            viewModelScope.launch {
-                try {
-                    val travelSpots =
-                        travelSpotRepository
-                            .getPopularTravelSpots(region)
+        regionLoadJob = viewModelScope.launch {
+            try {
+                val travelSpots = travelSpotRepository.getPopularTravelSpots(region)
 
-                    /*
-                     * 요청 중 다른 지역으로 변경되지 않은 경우에만
-                     * 이번 응답을 현재 화면 상태에 반영합니다.
-                     */
-                    if (_uiState.value.selectedRegion == region) {
-                        allPopularTravelSpots = travelSpots
+                /*
+                 * 요청 중 다른 지역으로 변경되지 않은 경우에만
+                 * 이번 응답을 현재 화면 상태에 반영합니다.
+                 */
+                if (_uiState.value.selectedRegion == region) {
+                    allPopularTravelSpots = travelSpots
 
-                        _uiState.update { current ->
-                            current.copy(
-                                popularTravelSpots =
-                                    travelSpots.filterBy(
-                                        category =
-                                            current.selectedCategory,
-                                    ),
-                                isRefreshing = false,
-                                errorMessage = null,
-                            )
-                        }
-                    }
-                } catch (exception: CancellationException) {
-                    throw exception
-                } catch (exception: SessionExpiredException) {
-                    _uiState.update {
-                        it.copy(
+                    _uiState.update { current ->
+                        current.copy(
+                            popularTravelSpots = travelSpots.filterBy(
+                                category = current.selectedCategory,
+                            ),
                             isRefreshing = false,
                             errorMessage = null,
                         )
                     }
-
-                    _navigationEvents.send(
-                        HomeNavigationEvent.NavigateToLogin,
+                }
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (_: SessionExpiredException) {
+                /*
+                 * ApiCallExecutor가 로컬 세션을 삭제합니다.
+                 * 화면 이동은 앱의 공통 세션 관찰이 처리합니다.
+                 */
+                _uiState.update {
+                    it.copy(
+                        isRefreshing = false,
+                        errorMessage = null,
                     )
-                } catch (exception: Exception) {
-                    /*
-                     * 지역 조회가 실패하면 이전 지역과 기존 목록으로 되돌립니다.
-                     */
-                    _uiState.update { current ->
-                        current.copy(
-                            selectedRegion = previousRegion,
-                            popularTravelSpots =
-                                allPopularTravelSpots.filterBy(
-                                    category =
-                                        current.selectedCategory,
-                                ),
-                            isRefreshing = false,
-                            errorMessage =
-                                exception.toHomeErrorMessage(
-                                    fallbackMessage =
-                                        "인기 여행지를 불러오지 못했습니다.",
-                                ),
-                        )
-                    }
+                }
+            } catch (exception: Exception) {
+                /*
+                 * 지역 조회가 실패하면 이전 지역과 기존 목록으로 되돌립니다.
+                 */
+                _uiState.update { current ->
+                    current.copy(
+                        selectedRegion = previousRegion,
+                        popularTravelSpots = allPopularTravelSpots.filterBy(
+                            category = current.selectedCategory,
+                        ),
+                        isRefreshing = false,
+                        errorMessage = exception.toHomeErrorMessage(fallbackMessage = "인기 여행지를 불러오지 못했습니다."),
+                    )
                 }
             }
+        }
     }
 
     /**
@@ -193,21 +157,14 @@ class HomeViewModel @Inject constructor(
     ) {
         val currentState = _uiState.value
 
-        if (
-            currentState.isLoading ||
-            currentState.isRefreshing ||
-            currentState.selectedCategory == category
-        ) {
+        if (currentState.isLoading || currentState.isRefreshing || currentState.selectedCategory == category) {
             return
         }
 
         _uiState.update {
             it.copy(
                 selectedCategory = category,
-                popularTravelSpots =
-                    allPopularTravelSpots.filterBy(
-                        category = category,
-                    ),
+                popularTravelSpots = allPopularTravelSpots.filterBy(category = category),
             )
         }
     }
@@ -215,31 +172,20 @@ class HomeViewModel @Inject constructor(
     /**
      * 관광지의 현재 찜 상태에 따라 찜 또는 찜 취소를 요청합니다.
      */
-    /**
-     * 관광지의 현재 찜 상태에 따라 찜 또는 찜 취소를 요청합니다.
-     */
     fun toggleDibs(spotId: String) {
         val currentState = _uiState.value
 
-        if (
-            currentState.isLoading ||
-            currentState.isRefreshing ||
-            spotId in currentState.updatingDibsSpotIds
-        ) {
+        if (currentState.isLoading || currentState.isRefreshing || spotId in currentState.updatingDibsSpotIds) {
             return
         }
 
-        val targetSpot =
-            allPopularTravelSpots.firstOrNull { spot ->
-                spot.id == spotId
-            } ?: return
+        val targetSpot = allPopularTravelSpots.firstOrNull { spot -> spot.id == spotId } ?: return
 
         val requestedRegion = currentState.selectedRegion
 
         _uiState.update {
             it.copy(
-                updatingDibsSpotIds =
-                    it.updatingDibsSpotIds + spotId,
+                updatingDibsSpotIds = it.updatingDibsSpotIds + spotId,
                 errorMessage = null,
             )
         }
@@ -256,56 +202,45 @@ class HomeViewModel @Inject constructor(
                     travelSpotRepository.addTravelSpotDibs(spotId)
                 }
 
-                val updatedSpot =
-                    targetSpot.copy(
-                        dibs = !targetSpot.dibs,
-                    )
+                val updatedSpot = targetSpot.copy(dibs = !targetSpot.dibs)
 
                 /*
                  * 찜 요청 중 지역이 변경됐다면 이전 지역의 응답을
                  * 현재 관광지 목록에 반영하지 않습니다.
                  */
                 if (_uiState.value.selectedRegion == requestedRegion) {
-                    allPopularTravelSpots =
-                        allPopularTravelSpots.map { spot ->
-                            if (spot.id == spotId) {
-                                updatedSpot
-                            } else {
-                                spot
-                            }
+                    allPopularTravelSpots = allPopularTravelSpots.map { spot ->
+                        if (spot.id == spotId) {
+                            updatedSpot
+                        } else {
+                            spot
                         }
+                    }
 
                     _uiState.update { current ->
                         current.copy(
-                            popularTravelSpots =
-                                allPopularTravelSpots.filterBy(
-                                    category = current.selectedCategory,
-                                ),
+                            popularTravelSpots = allPopularTravelSpots.filterBy(category = current.selectedCategory),
                             errorMessage = null,
                         )
                     }
                 }
             } catch (exception: CancellationException) {
                 throw exception
-            } catch (exception: SessionExpiredException) {
-                _navigationEvents.send(
-                    HomeNavigationEvent.NavigateToLogin,
-                )
+            } catch (_: SessionExpiredException) {
+                /*
+                 * 세션 만료 화면 이동은 앱의 공통 세션 관찰이 처리합니다.
+                 * updatingDibsSpotIds는 finally에서 정리합니다.
+                 */
             } catch (exception: Exception) {
                 _uiState.update {
                     it.copy(
-                        errorMessage =
-                            exception.toHomeErrorMessage(
-                                fallbackMessage =
-                                    "찜 상태를 변경하지 못했습니다.",
-                            ),
+                        errorMessage = exception.toHomeErrorMessage(fallbackMessage = "찜 상태를 변경하지 못했습니다."),
                     )
                 }
             } finally {
                 _uiState.update {
                     it.copy(
-                        updatingDibsSpotIds =
-                            it.updatingDibsSpotIds - spotId,
+                        updatingDibsSpotIds = it.updatingDibsSpotIds - spotId,
                     )
                 }
             }
@@ -335,8 +270,7 @@ class HomeViewModel @Inject constructor(
         homeLoadJob?.cancel()
         regionLoadJob?.cancel()
 
-        val requestedRegion =
-            _uiState.value.selectedRegion
+        val requestedRegion = _uiState.value.selectedRegion
 
         _uiState.update {
             it.copy(
@@ -346,131 +280,99 @@ class HomeViewModel @Inject constructor(
             )
         }
 
-        homeLoadJob =
-            viewModelScope.launch {
-                try {
-                    val currentUserId =
-                        authRepository.getCurrentUserId()
-                            ?: throw SessionExpiredException()
+        homeLoadJob = viewModelScope.launch {
+            try {
+                val currentUserId = authRepository.getCurrentUserId() ?: throw SessionExpiredException()
 
-                    /*
-                     * supervisorScope와 개별 Result를 사용하여
-                     * 한 요청의 실패가 다른 요청을 취소하지 않게 합니다.
-                     */
-                    val (travelsResult, travelSpotsResult) =
-                        supervisorScope {
-                            val travelsDeferred =
-                                async {
-                                    runHomeRequest {
-                                        travelRepository.getPlannedTravels().travels
-                                    }
-                                }
-
-                            val travelSpotsDeferred =
-                                async {
-                                    runHomeRequest {
-                                        travelSpotRepository
-                                            .getPopularTravelSpots(
-                                                region = requestedRegion,
-                                            )
-                                    }
-                                }
-
-                            travelsDeferred.await() to
-                                travelSpotsDeferred.await()
+                /*
+                 * supervisorScope와 개별 Result를 사용하여
+                 * 한 요청의 실패가 다른 요청을 취소하지 않게 합니다.
+                 */
+                val (travelsResult, travelSpotsResult) = supervisorScope {
+                    val travelsDeferred = async {
+                        runHomeRequest {
+                            travelRepository.getPlannedTravels().travels
                         }
-
-                    val travelFailure =
-                        travelsResult.exceptionOrNull()
-                    val travelSpotFailure =
-                        travelSpotsResult.exceptionOrNull()
-
-                    /*
-                     * 어느 요청에서든 세션 만료가 확인되면
-                     * 일부 데이터를 표시하지 않고 로그인으로 이동합니다.
-                     */
-                    val sessionExpiredException =
-                        listOfNotNull(
-                            travelFailure,
-                            travelSpotFailure,
-                        ).filterIsInstance<SessionExpiredException>()
-                            .firstOrNull()
-
-                    if (sessionExpiredException != null) {
-                        throw sessionExpiredException
                     }
 
-                    val loadedTravels =
-                        travelsResult.getOrNull()
-                    val loadedTravelSpots =
-                        travelSpotsResult.getOrNull()
-
-                    /*
-                     * 인기 관광지 요청이 성공한 경우에만
-                     * 현재 지역의 원본 캐시를 교체합니다.
-                     */
-                    if (loadedTravelSpots != null) {
-                        allPopularTravelSpots =
-                            loadedTravelSpots
+                    val travelSpotsDeferred = async {
+                        runHomeRequest {
+                            travelSpotRepository.getPopularTravelSpots(region = requestedRegion)
+                        }
                     }
 
-                    _uiState.update { current ->
-                        current.copy(
-                            currentUserId = currentUserId,
+                    travelsDeferred.await() to travelSpotsDeferred.await()
+                }
 
-                            /*
-                             * 실패한 영역은 기존 데이터를 유지하고
-                             * 성공한 영역만 새로운 응답으로 교체합니다.
-                             */
-                            travels =
-                                loadedTravels
-                                    ?: current.travels,
-                            popularTravelSpots =
-                                loadedTravelSpots
-                                    ?.filterBy(
-                                        category =
-                                            current.selectedCategory,
-                                    )
-                                    ?: current.popularTravelSpots,
-                            isLoading = false,
-                            isRefreshing = false,
-                            errorMessage =
-                                homeLoadErrorMessage(
-                                    travelFailure =
-                                        travelFailure,
-                                    travelSpotFailure =
-                                        travelSpotFailure,
-                                ),
-                        )
-                    }
-                } catch (exception: CancellationException) {
-                    throw exception
-                } catch (exception: SessionExpiredException) {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            isRefreshing = false,
-                            errorMessage = null,
-                        )
-                    }
+                val travelFailure = travelsResult.exceptionOrNull()
+                val travelSpotFailure = travelSpotsResult.exceptionOrNull()
 
-                    _navigationEvents.send(
-                        HomeNavigationEvent.NavigateToLogin,
+                /*
+                 * 어느 요청에서든 세션 만료가 확인되면
+                 * 일부 데이터를 표시하지 않고 로그인으로 이동합니다.
+                 */
+                val sessionExpiredException = listOfNotNull(travelFailure, travelSpotFailure)
+                    .filterIsInstance<SessionExpiredException>()
+                    .firstOrNull()
+
+                if (sessionExpiredException != null) {
+                    throw sessionExpiredException
+                }
+
+                val loadedTravels = travelsResult.getOrNull()
+                val loadedTravelSpots = travelSpotsResult.getOrNull()
+
+                /*
+                 * 인기 관광지 요청이 성공한 경우에만
+                 * 현재 지역의 원본 캐시를 교체합니다.
+                 */
+                if (loadedTravelSpots != null) {
+                    allPopularTravelSpots =
+                        loadedTravelSpots
+                }
+
+                _uiState.update { current ->
+                    current.copy(
+                        currentUserId = currentUserId,
+                        /*
+                         * 실패한 영역은 기존 데이터를 유지하고
+                         * 성공한 영역만 새로운 응답으로 교체합니다.
+                         */
+                        travels = loadedTravels ?: current.travels,
+                        popularTravelSpots = loadedTravelSpots?.filterBy(category = current.selectedCategory)
+                            ?: current.popularTravelSpots,
+                        isLoading = false,
+                        isRefreshing = false,
+                        errorMessage = homeLoadErrorMessage(
+                            travelFailure = travelFailure,
+                            travelSpotFailure = travelSpotFailure,
+                        ),
                     )
-                } catch (exception: Exception) {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            isRefreshing = false,
-                            errorMessage =
-                                exception.toHomeErrorMessage(
-                                    fallbackMessage =
-                                        "홈 정보를 불러오지 못했습니다.",
-                                ),
-                        )
-                    }
+                }
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (_: SessionExpiredException) {
+                /*
+                 * ApiCallExecutor 또는 인증 정보 변경이 세션 상태를 갱신하고,
+                 * 앱의 공통 세션 관찰이 로그인 화면 이동을 처리합니다.
+                 */
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        errorMessage = null,
+                    )
+                }
+            } catch (exception: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        errorMessage = exception.toHomeErrorMessage(fallbackMessage = "홈 정보를 불러오지 못했습니다."),
+                    )
                 }
             }
+        }
     }
 }
 
@@ -483,9 +385,7 @@ private suspend fun <T> runHomeRequest(
     request: suspend () -> T,
 ): Result<T> =
     try {
-        Result.success(
-            request(),
-        )
+        Result.success(request())
     } catch (exception: CancellationException) {
         throw exception
     } catch (exception: Exception) {
@@ -499,11 +399,7 @@ private fun homeLoadErrorMessage(
     travelFailure: Throwable?,
     travelSpotFailure: Throwable?,
 ): String? {
-    val failures =
-        listOfNotNull(
-            travelFailure,
-            travelSpotFailure,
-        )
+    val failures = listOfNotNull(travelFailure, travelSpotFailure)
 
     if (failures.isEmpty()) {
         return null
@@ -511,27 +407,22 @@ private fun homeLoadErrorMessage(
 
     val fallbackMessage =
         when {
-            travelFailure != null &&
-                travelSpotFailure != null ->
-                "홈 정보를 불러오지 못했습니다."
+            travelFailure != null && travelSpotFailure != null -> "홈 정보를 불러오지 못했습니다."
 
-            travelFailure != null ->
-                "여행 목록을 불러오지 못했습니다."
+            travelFailure != null -> "여행 목록을 불러오지 못했습니다."
 
-            else ->
-                "인기 여행지를 불러오지 못했습니다."
+            else -> "인기 여행지를 불러오지 못했습니다."
         }
 
     /*
      * 연결 또는 시간 초과 오류가 포함돼 있다면
      * 사용자가 원인을 이해할 수 있도록 해당 오류를 우선 안내합니다.
      */
-    val representativeFailure =
-        failures.firstOrNull { failure ->
-            failure is NetworkConnectionException
-        } ?: failures.firstOrNull { failure ->
-            failure is NetworkTimeoutException
-        } ?: failures.first()
+    val representativeFailure = failures.firstOrNull { failure ->
+        failure is NetworkConnectionException
+    } ?: failures.firstOrNull { failure ->
+        failure is NetworkTimeoutException
+    } ?: failures.first()
 
     return representativeFailure.toHomeErrorMessage(
         fallbackMessage = fallbackMessage,
@@ -541,12 +432,8 @@ private fun homeLoadErrorMessage(
 /**
  * 인기 관광지 전체 목록에서 선택한 카테고리만 반환합니다.
  */
-private fun List<TravelSpot>.filterBy(
-    category: TravelSpotCategory,
-): List<TravelSpot> =
-    filter { spot ->
-        spot.category == category
-    }
+private fun List<TravelSpot>.filterBy(category: TravelSpotCategory): List<TravelSpot> =
+    filter { spot -> spot.category == category }
 
 /**
  * 내부 예외 정보를 노출하지 않고 사용자용 안내 문구로 변환합니다.

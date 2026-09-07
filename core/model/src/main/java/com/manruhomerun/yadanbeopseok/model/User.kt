@@ -59,12 +59,11 @@ enum class Gender(
 }
 
 /**
- * 앱 내부에서 사용하는 여행 취향 모델입니다.
+ * 현재 로그인한 사용자의 여행 취향 모델입니다.
  *
  * 사용자의 거주 지역, 여행 스타일과 복수의 선호 여행 지역을 관리합니다.
  */
 data class TravelPreference(
-    val userId: String,
     val travelStyleScore: TravelStyleScore,
     val residenceRegion: ProfileRegion,
     val preferredTravelRegions: List<ProfileRegion>,
@@ -74,6 +73,10 @@ data class TravelPreference(
     init {
         require(residenceRegion.isAvailableForResidence) {
             "Residence region is not available: ${residenceRegion.code}"
+        }
+
+        require(preferredTravelRegions.isNotEmpty()) {
+            "At least one preferred travel region is required."
         }
 
         require(

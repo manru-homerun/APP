@@ -39,7 +39,9 @@ import com.manruhomerun.yadanbeopseok.model.Travel
 /**
  * 여행 이름이 없거나 공백이면 지역명을 사용해 화면 표시용 제목을 반환합니다.
  */
-fun Travel.displayTitle(): String = name?.takeIf { it.isNotBlank() } ?: "${region.displayName} 원정 여행"
+fun Travel.displayTitle(): String =
+    name?.takeIf { it.isNotBlank() }
+        ?: "${region.displayName} 원정 여행"
 
 /**
  * 여행 상세 및 일정 편집 화면 상단에 표시하는 여행 정보 헤더입니다.
@@ -50,6 +52,7 @@ fun Travel.displayTitle(): String = name?.takeIf { it.isNotBlank() } ?: "${regio
  * @param onRenameClick 이름 변경 버튼을 눌렀을 때 실행합니다.
  * null이거나 현재 사용자가 방장이 아니면 버튼을 표시하지 않습니다.
  * @param enabled 이름 변경 버튼의 활성화 여부입니다.
+ * @param trailingContent 화면별로 헤더 오른쪽에 추가할 콘텐츠입니다.
  */
 @Composable
 fun YadanTravelHeader(
@@ -58,6 +61,7 @@ fun YadanTravelHeader(
     modifier: Modifier = Modifier,
     onRenameClick: (() -> Unit)? = null,
     enabled: Boolean = true,
+    trailingContent: (@Composable () -> Unit)? = null,
 ) {
     YadanTravelHeader(
         title = travel.displayTitle(),
@@ -66,11 +70,20 @@ fun YadanTravelHeader(
         modifier = modifier,
         onRenameClick = onRenameClick,
         enabled = enabled,
+        trailingContent = trailingContent,
     )
 }
 
 /**
  * 저장 전 추천 여행처럼 완성된 [Travel]이 없는 화면에서 사용하는 여행 헤더입니다.
+ *
+ * @param title 화면에 표시할 여행 이름입니다.
+ * @param dateText 화면에 표시할 여행 기간입니다.
+ * @param isLeader 현재 사용자가 방장인지 나타냅니다.
+ * @param modifier 헤더의 크기와 배치를 지정합니다.
+ * @param onRenameClick 이름 변경 버튼을 눌렀을 때 실행합니다.
+ * @param enabled 이름 변경 버튼의 활성화 여부입니다.
+ * @param trailingContent 화면별로 헤더 오른쪽에 추가할 콘텐츠입니다.
  */
 @Composable
 fun YadanTravelHeader(
@@ -80,6 +93,7 @@ fun YadanTravelHeader(
     modifier: Modifier = Modifier,
     onRenameClick: (() -> Unit)? = null,
     enabled: Boolean = true,
+    trailingContent: (@Composable () -> Unit)? = null,
 ) {
     YadanTravelHeaderContent(
         title = title,
@@ -88,6 +102,7 @@ fun YadanTravelHeader(
         modifier = modifier,
         onRenameClick = onRenameClick,
         enabled = enabled,
+        trailingContent = trailingContent,
     )
 }
 
@@ -99,35 +114,32 @@ private fun YadanTravelHeaderContent(
     modifier: Modifier = Modifier,
     onRenameClick: (() -> Unit)? = null,
     enabled: Boolean = true,
+    trailingContent: (@Composable () -> Unit)? = null,
 ) {
     val roleText = if (isLeader) "방장" else "동행자"
-    val subtitle =
-        dateText
-            ?.takeIf { text -> text.isNotBlank() }
-            ?.let { text -> "$text · $roleText" }
-            ?: roleText
+    val subtitle = dateText
+        ?.takeIf { it.isNotBlank() }
+        ?.let { "$it · $roleText" }
+        ?: roleText
 
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        colors =
-            CardDefaults.cardColors(
-                containerColor = Color.Transparent,
-            ),
-        elevation =
-            CardDefaults.cardElevation(
-                defaultElevation = 6.dp,
-            ),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.Transparent,
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 6.dp,
+        ),
     ) {
         Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(YadanPrimaryGradient)
-                    .padding(
-                        horizontal = 16.dp,
-                        vertical = 15.dp,
-                    ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(YadanPrimaryGradient)
+                .padding(
+                    horizontal = 16.dp,
+                    vertical = 15.dp,
+                ),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -136,10 +148,9 @@ private fun YadanTravelHeaderContent(
             ) {
                 Text(
                     text = title,
-                    style =
-                        YadanTypography.headlineSmall.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                        ),
+                    style = YadanTypography.headlineSmall.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                    ),
                     color = YadanOnPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -148,13 +159,16 @@ private fun YadanTravelHeaderContent(
                 Text(
                     text = subtitle,
                     modifier = Modifier.padding(top = 6.dp),
-                    style =
-                        YadanTypography.labelMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                        ),
+                    style = YadanTypography.labelMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                    ),
                     color = YadanOnPrimary.copy(alpha = 0.9f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
+
+            trailingContent?.invoke()
 
             if (isLeader && onRenameClick != null) {
                 Button(
@@ -162,21 +176,21 @@ private fun YadanTravelHeaderContent(
                     modifier = Modifier.heightIn(min = 40.dp),
                     enabled = enabled,
                     shape = MaterialTheme.shapes.small,
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = YadanOnPrimary,
-                            contentColor = YadanPrimaryInk,
-                            disabledContainerColor =
-                                YadanOnPrimary.copy(alpha = 0.55f),
-                            disabledContentColor =
-                                YadanPrimaryInk.copy(alpha = 0.55f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = YadanOnPrimary,
+                        contentColor = YadanPrimaryInk,
+                        disabledContainerColor = YadanOnPrimary.copy(
+                            alpha = 0.55f,
                         ),
+                        disabledContentColor = YadanPrimaryInk.copy(
+                            alpha = 0.55f,
+                        ),
+                    ),
                     elevation = null,
-                    contentPadding =
-                        PaddingValues(
-                            horizontal = 10.dp,
-                            vertical = 0.dp,
-                        ),
+                    contentPadding = PaddingValues(
+                        horizontal = 10.dp,
+                        vertical = 0.dp,
+                    ),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Edit,
@@ -188,10 +202,9 @@ private fun YadanTravelHeaderContent(
 
                     Text(
                         text = "이름 변경",
-                        style =
-                            YadanTypography.labelSmall.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                            ),
+                        style = YadanTypography.labelSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                        ),
                         maxLines = 1,
                     )
                 }
@@ -210,11 +223,10 @@ private fun YadanTravelHeaderContent(
 private fun YadanTravelHeaderPreview() {
     YadanbeopseokTheme {
         Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(YadanBackground)
-                    .padding(20.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(YadanBackground)
+                .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             YadanTravelHeaderContent(

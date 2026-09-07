@@ -65,3 +65,11 @@ data class TravelVerificationNavKey(
 data class TravelStickerPhotoNavKey(
     val travelId: String,
 ) : NavKey
+
+/**
+ * 완료된 여행의 D·01b 지난 여행 상세 화면으로 이동합니다.
+ *
+ * @property travelId 조회할 완료 여행의 고유 식별자
+ */
+@Serializable
+data class TravelRecordDetailNavKey(val travelId: String) : NavKey

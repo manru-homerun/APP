@@ -16,7 +16,10 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -41,6 +44,7 @@ import com.manruhomerun.yadanbeopseok.model.TravelDay
 import com.manruhomerun.yadanbeopseok.model.TravelPlace
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
+import com.manruhomerun.yadanbeopseok.travel.component.TravelNameEditDialog
 import com.manruhomerun.yadanbeopseok.travel.component.TravelScheduleContent
 import com.manruhomerun.yadanbeopseok.travel.util.toDisplayDay
 import com.manruhomerun.yadanbeopseok.travel.util.toTravelDateRangeText
@@ -231,6 +235,49 @@ private fun TravelCourseResultSavingPreview() {
             onEditScheduleClick = {},
             onSaveClick = {},
         )
+    }
+}
+
+@Preview(
+    name = "B07 여행 이름 변경",
+    showBackground = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 390,
+    heightDp = 844,
+)
+@Composable
+private fun TravelCourseResultRenamePreview() {
+    var travelName by remember { mutableStateOf("부산 사직 직관 여행") }
+    var isDialogVisible by remember { mutableStateOf(true) }
+
+    YadanbeopseokTheme {
+        TravelCourseResultScreen(
+            course = previewTravelCourse(),
+            game = previewBaseballGame(),
+            travelName = travelName,
+            startDate = LocalDate(2026, 5, 22),
+            endDate = LocalDate(2026, 5, 23),
+            isSaving = false,
+            onBackClick = {},
+            onRenameClick = {
+                isDialogVisible = true
+            },
+            onEditScheduleClick = {},
+            onSaveClick = {},
+        )
+
+        if (isDialogVisible) {
+            TravelNameEditDialog(
+                currentName = travelName,
+                onDismiss = {
+                    isDialogVisible = false
+                },
+                onConfirm = { changedName ->
+                    travelName = changedName
+                    isDialogVisible = false
+                },
+            )
+        }
     }
 }
 

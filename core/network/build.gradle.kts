@@ -31,18 +31,45 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
 }
 
-val backendUrl = providers.fileContents(
-    isolated.rootProject.projectDirectory.file("local.properties")
-).asText.map { text ->
-    val properties = Properties()
-    properties.load(StringReader(text))
-    properties["BACKEND_URL"]
-}.orElse("http://example.com")
+val localBackendUrl =
+    providers
+        .fileContents(
+            isolated.rootProject.projectDirectory.file("local.properties"),
+        )
+        .asText
+        .map { text ->
+            val properties = Properties()
+            properties.load(StringReader(text))
+
+            properties.getProperty("BACKEND_URL")
+                ?: error("BACKEND_URL is missing in local.properties.")
+        }
+
+val backendUrl =
+    providers
+        .gradleProperty("BACKEND_URL")
+        .orElse(providers.environmentVariable("BACKEND_URL"))
+        .orElse(localBackendUrl)
+        .orElse(
+            providers.provider<String> {
+                error(
+                    "BACKEND_URL must be set via a Gradle property, " +
+                        "environment variable, or local.properties.",
+                )
+            },
+        )
 
 androidComponents {
-    onVariants {
-        it.buildConfigFields!!.put("BACKEND_URL", backendUrl.map { value ->
-            BuildConfigField(type = "String", value = """"$value"""", comment = null)
-        })
+    onVariants { variant ->
+        variant.buildConfigFields!!.put(
+            "BACKEND_URL",
+            backendUrl.map { value ->
+                BuildConfigField(
+                    type = "String",
+                    value = "\"$value\"",
+                    comment = null,
+                )
+            },
+        )
     }
 }

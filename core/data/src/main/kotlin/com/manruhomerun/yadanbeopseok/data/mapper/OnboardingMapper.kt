@@ -40,7 +40,7 @@ private fun OnboardingAgreementsParams.toRequestDto():
  * enum의 name을 직접 전송하지 않고 명시적으로 변환하여
  * 앱 내부 enum 이름이 변경되더라도 서버 요청값을 유지합니다.
  */
-private fun Gender.toRequestCode(): String =
+internal fun Gender.toRequestCode(): String =
     when (this) {
         Gender.MALE -> "MALE"
         Gender.FEMALE -> "FEMALE"

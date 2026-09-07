@@ -101,8 +101,10 @@ dependencies {
     implementation(projects.feature.home)
     implementation(projects.feature.travel)
     implementation(projects.feature.record)
+    implementation(projects.feature.mypage)
     implementation(projects.core.data)
     implementation(projects.core.designsystem)
+
 
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.lifecycle.viewModel.navigation3)

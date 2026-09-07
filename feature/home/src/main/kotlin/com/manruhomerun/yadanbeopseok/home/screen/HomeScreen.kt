@@ -104,10 +104,9 @@ fun HomeScreen(
     val displayedTravels = uiState.displayedTravels
 
     Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(YadanBackground),
+        modifier = modifier
+            .fillMaxSize()
+            .background(YadanBackground),
     ) {
         HomeHeader(
             hasUnreadNotifications = uiState.hasUnreadNotifications,
@@ -236,6 +235,7 @@ private fun HomeHeader(
             Box {
                 YadanIconButton(
                     onClick = onNotificationClick,
+                    enabled = false,
                 ) {
                     Icon(
                         imageVector = Icons.Default.Notifications,

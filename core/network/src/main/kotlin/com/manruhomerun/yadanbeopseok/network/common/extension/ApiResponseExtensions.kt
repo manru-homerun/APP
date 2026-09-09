@@ -1,6 +1,6 @@
 package com.manruhomerun.yadanbeopseok.network.common.extension
 
-import com.manruhomerun.yadanbeopseok.common.error.InvalidResponseException
+import com.manruhomerun.yadanbeopseok.common.InvalidResponseException
 import com.manruhomerun.yadanbeopseok.network.common.dto.ApiResponseDto
 
 /**

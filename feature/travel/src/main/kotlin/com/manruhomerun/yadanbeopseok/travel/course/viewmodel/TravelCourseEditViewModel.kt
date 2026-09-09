@@ -2,7 +2,7 @@ package com.manruhomerun.yadanbeopseok.travel.course.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.manruhomerun.yadanbeopseok.common.error.SessionExpiredException
+import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.repository.BaseballRepository
 import com.manruhomerun.yadanbeopseok.data.repository.CreateTravelParams
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRepository

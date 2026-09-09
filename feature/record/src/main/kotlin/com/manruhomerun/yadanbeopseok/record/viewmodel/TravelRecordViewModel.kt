@@ -2,22 +2,19 @@ package com.manruhomerun.yadanbeopseok.record.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.manruhomerun.yadanbeopseok.common.error.ApiException
-import com.manruhomerun.yadanbeopseok.common.error.InvalidResponseException
-import com.manruhomerun.yadanbeopseok.common.error.NetworkConnectionException
-import com.manruhomerun.yadanbeopseok.common.error.NetworkTimeoutException
-import com.manruhomerun.yadanbeopseok.common.error.SessionExpiredException
+import com.manruhomerun.yadanbeopseok.common.ApiException
+import com.manruhomerun.yadanbeopseok.common.InvalidResponseException
+import com.manruhomerun.yadanbeopseok.common.NetworkConnectionException
+import com.manruhomerun.yadanbeopseok.common.NetworkTimeoutException
+import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 

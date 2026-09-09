@@ -1,6 +1,7 @@
 package com.manruhomerun.yadanbeopseok.data.repository.impl
 
-import com.manruhomerun.yadanbeopseok.common.error.SessionExpiredException
+import com.kakao.sdk.auth.TokenManagerProvider
+import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.mapper.toAuthTokens
 import com.manruhomerun.yadanbeopseok.data.mapper.toLoginResult
 import com.manruhomerun.yadanbeopseok.data.repository.AuthRepository
@@ -168,13 +169,10 @@ internal class AuthRepositoryImpl @Inject constructor(
     }
 
     /**
-     * 백엔드에 로그아웃을 요청하고 야단법석 인증 정보를 삭제합니다.
+     * 백엔드에 로그아웃을 요청하고 로컬 인증 정보를 삭제합니다.
      *
-     * 서버에서 현재 기기의 FCM 토큰 비활성화를 처리할 수 있도록
-     * 카카오 액세스 토큰과 기기 정보를 함께 전달합니다.
-     *
-     * 서버 요청의 성공 여부와 관계없이 로컬 인증 정보를 삭제합니다.
-     * 서버 요청에는 삭제 전의 access token이 Authorization 헤더로 사용됩니다.
+     * 서버 요청의 성공 여부와 관계없이 카카오 SDK 토큰과
+     * 야단법석 인증 정보를 모두 삭제합니다.
      */
     override suspend fun logout(
         kakaoAccessToken: String,
@@ -184,28 +182,26 @@ internal class AuthRepositoryImpl @Inject constructor(
         try {
             val response = apiCallExecutor.execute {
                 authApi.logout(
-                    request =
-                        LogoutRequestDto(
-                            providerAccessToken = kakaoAccessToken,
-                            deviceType = ANDROID_DEVICE_TYPE,
-                            deviceId = deviceId?.takeIf { it.isNotBlank() },
-                            fcmToken = fcmToken?.takeIf { it.isNotBlank() },
-                        ),
+                    request = LogoutRequestDto(
+                        providerAccessToken = kakaoAccessToken,
+                        deviceType = ANDROID_DEVICE_TYPE,
+                        deviceId = deviceId?.takeIf { it.isNotBlank() },
+                        fcmToken = fcmToken?.takeIf { it.isNotBlank() },
+                    ),
                 )
             }
 
             response.requireSuccess()
         } finally {
-            withContext(NonCancellable) {
-                authTokenDataSource.clearAuthTokens()
-            }
+            clearLocalSessions()
         }
     }
 
     /**
      * 백엔드에 회원 탈퇴를 요청합니다.
      *
-     * 서버에서 탈퇴 처리가 완료된 경우에만 로컬 인증 정보를 삭제합니다.
+     * 서버에서 탈퇴 처리가 완료된 경우에만 카카오 SDK 토큰과
+     * 야단법석 인증 정보를 모두 삭제합니다.
      */
     override suspend fun withdraw() {
         val response = apiCallExecutor.execute {
@@ -213,14 +209,27 @@ internal class AuthRepositoryImpl @Inject constructor(
         }
 
         response.requireSuccess()
-        authTokenDataSource.clearAuthTokens()
+        clearLocalSessions()
+    }
+
+    /**
+     * 화면 전환이나 코루틴 취소의 영향을 받지 않고
+     * 카카오 SDK와 야단법석의 로컬 인증 정보를 삭제합니다.
+     */
+    private suspend fun clearLocalSessions() {
+        withContext(NonCancellable) {
+            try {
+                TokenManagerProvider.instance.manager.clear()
+            } finally {
+                authTokenDataSource.clearAuthTokens()
+            }
+        }
     }
 
     /**
      * 현재 Unix epoch 시간(초)을 반환합니다.
      */
-    private fun currentEpochSeconds(): Long =
-        Instant.now().epochSecond
+    private fun currentEpochSeconds(): Long = Instant.now().epochSecond
 }
 
 /**

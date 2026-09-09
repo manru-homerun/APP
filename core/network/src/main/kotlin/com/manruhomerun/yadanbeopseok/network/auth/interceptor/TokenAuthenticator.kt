@@ -1,6 +1,6 @@
 package com.manruhomerun.yadanbeopseok.network.auth.interceptor
 
-import com.manruhomerun.yadanbeopseok.common.error.AppException
+import com.manruhomerun.yadanbeopseok.common.AppException
 import com.manruhomerun.yadanbeopseok.network.auth.token.AuthSessionProvider
 import com.manruhomerun.yadanbeopseok.network.auth.token.TokenRefreshHandler
 import dagger.Lazy

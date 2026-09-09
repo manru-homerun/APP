@@ -1,6 +1,6 @@
 package com.manruhomerun.yadanbeopseok.data.mapper
 
-import com.manruhomerun.yadanbeopseok.common.error.InvalidResponseException
+import com.manruhomerun.yadanbeopseok.common.InvalidResponseException
 import com.manruhomerun.yadanbeopseok.data.repository.CreateTravelParams
 import com.manruhomerun.yadanbeopseok.data.repository.GenerateTravelCourseParams
 import com.manruhomerun.yadanbeopseok.model.KboTeam

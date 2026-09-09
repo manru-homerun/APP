@@ -9,14 +9,17 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -57,6 +60,8 @@ fun TermsAgreementScreen(
     onServiceTermsAgreementChange: (Boolean) -> Unit,
     onPrivacyAgreementChange: (Boolean) -> Unit,
     onAllAgreementChange: (Boolean) -> Unit,
+    onServiceTermsDetailClick: () -> Unit,
+    onPrivacyPolicyDetailClick: () -> Unit,
     onBackClick: () -> Unit,
     onContinueClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -113,12 +118,14 @@ fun TermsAgreementScreen(
                     title = "서비스 이용약관",
                     checked = isServiceTermsAgreed,
                     onCheckedChange = onServiceTermsAgreementChange,
+                    onDetailClick = onServiceTermsDetailClick,
                 )
 
                 RequiredAgreementCard(
                     title = "개인정보 수집·이용",
                     checked = isPrivacyAgreementAgreed,
                     onCheckedChange = onPrivacyAgreementChange,
+                    onDetailClick = onPrivacyPolicyDetailClick,
                 )
             }
 
@@ -218,77 +225,84 @@ private fun AllAgreementCard(
 }
 
 /**
- * 개별 필수 약관의 동의 상태를 표시하고 변경하는 카드입니다.
+ * 체크 영역은 동의 상태를 변경하고 화살표는 약관 문서를 엽니다.
  */
 @Composable
 private fun RequiredAgreementCard(
     title: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    onDetailClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     YadanCard(
-        onClick = {
-            onCheckedChange(!checked)
-        },
-        modifier =
-            modifier
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier
                 .fillMaxWidth()
-                .semantics {
-                    role = Role.Checkbox
-                    stateDescription =
-                        if (checked) {
+                .padding(
+                    horizontal = 14.dp,
+                    vertical = 7.dp,
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 40.dp)
+                    .toggleable(
+                        value = checked,
+                        role = Role.Checkbox,
+                        onValueChange = onCheckedChange,
+                    )
+                    .semantics {
+                        stateDescription = if (checked) {
                             "동의됨"
                         } else {
                             "동의 안 됨"
                         }
-                },
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = 14.dp,
-                        vertical = 15.dp,
-                    ),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            YadanCheckbox(
-                checked = checked,
-                onCheckedChange = null,
-                size = YadanCheckboxSize.SMALL,
-            )
-
-            Row(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    },
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = title,
-                    style =
-                        YadanTypography.bodyMedium.copy(
+                YadanCheckbox(
+                    checked = checked,
+                    onCheckedChange = null,
+                    size = YadanCheckboxSize.SMALL,
+                )
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = title,
+                        style = YadanTypography.bodyMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
                         ),
-                    color = YadanTextPrimary,
-                )
+                        color = YadanTextPrimary,
+                    )
 
-                YadanStatusChip(
-                    text = "필수",
-                    style = YadanStatusChipStyle.TINTED,
-                    size = YadanStatusChipSize.SMALL,
-                )
+                    YadanStatusChip(
+                        text = "필수",
+                        style = YadanStatusChipStyle.TINTED,
+                        size = YadanStatusChipSize.SMALL,
+                    )
+                }
             }
 
-            Icon(
-                imageVector =
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = YadanTextMuted,
-            )
+            IconButton(
+                onClick = onDetailClick,
+                modifier = Modifier.size(40.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = "$title 상세 보기",
+                    modifier = Modifier.size(20.dp),
+                    tint = YadanTextMuted,
+                )
+            }
         }
     }
 }
@@ -310,6 +324,8 @@ private fun TermsAgreementScreenPreview() {
             onAllAgreementChange = {},
             onBackClick = {},
             onContinueClick = {},
+            onServiceTermsDetailClick = {},
+            onPrivacyPolicyDetailClick = {},
         )
     }
 }

@@ -1,6 +1,6 @@
 package com.manruhomerun.yadanbeopseok.data.mapper
 
-import com.manruhomerun.yadanbeopseok.common.error.InvalidResponseException
+import com.manruhomerun.yadanbeopseok.common.InvalidResponseException
 import com.manruhomerun.yadanbeopseok.model.Gender
 import com.manruhomerun.yadanbeopseok.model.KboTeam
 import com.manruhomerun.yadanbeopseok.model.ProfileRegion

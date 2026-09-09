@@ -2,9 +2,9 @@ package com.manruhomerun.yadanbeopseok.travel.spot.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.manruhomerun.yadanbeopseok.common.error.NetworkConnectionException
-import com.manruhomerun.yadanbeopseok.common.error.NetworkTimeoutException
-import com.manruhomerun.yadanbeopseok.common.error.SessionExpiredException
+import com.manruhomerun.yadanbeopseok.common.NetworkConnectionException
+import com.manruhomerun.yadanbeopseok.common.NetworkTimeoutException
+import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.repository.TravelSpotRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject

@@ -2,10 +2,10 @@ package com.manruhomerun.yadanbeopseok.auth.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.manruhomerun.yadanbeopseok.common.error.ApiException
-import com.manruhomerun.yadanbeopseok.common.error.InvalidResponseException
-import com.manruhomerun.yadanbeopseok.common.error.NetworkConnectionException
-import com.manruhomerun.yadanbeopseok.common.error.NetworkTimeoutException
+import com.manruhomerun.yadanbeopseok.common.ApiException
+import com.manruhomerun.yadanbeopseok.common.InvalidResponseException
+import com.manruhomerun.yadanbeopseok.common.NetworkConnectionException
+import com.manruhomerun.yadanbeopseok.common.NetworkTimeoutException
 import com.manruhomerun.yadanbeopseok.data.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject

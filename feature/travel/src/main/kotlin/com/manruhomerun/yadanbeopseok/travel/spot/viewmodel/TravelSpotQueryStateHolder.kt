@@ -1,6 +1,6 @@
 package com.manruhomerun.yadanbeopseok.travel.spot.viewmodel
 
-import com.manruhomerun.yadanbeopseok.common.error.SessionExpiredException
+import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.repository.TravelSpotRepository
 import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelSpot

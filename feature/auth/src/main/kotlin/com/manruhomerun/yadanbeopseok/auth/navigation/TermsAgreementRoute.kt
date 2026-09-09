@@ -4,10 +4,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manruhomerun.yadanbeopseok.auth.screen.TermsAgreementScreen
 import com.manruhomerun.yadanbeopseok.auth.viewmodel.OnboardingViewModel
+import com.manruhomerun.yadanbeopseok.common.LegalDocumentUrl
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
 import com.manruhomerun.yadanbeopseok.navigation.route.BasicInfoNavKey
 
@@ -23,8 +25,8 @@ fun TermsAgreementRoute(
     modifier: Modifier = Modifier,
     viewModel: OnboardingViewModel = hiltViewModel(),
 ) {
-    val uiState by
-    viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uriHandler = LocalUriHandler.current
 
     TermsAgreementScreen(
         isServiceTermsAgreed = uiState.isServiceTermsAgreed,
@@ -32,6 +34,12 @@ fun TermsAgreementRoute(
         onServiceTermsAgreementChange = viewModel::updateServiceTermsAgreement,
         onPrivacyAgreementChange = viewModel::updatePrivacyAgreement,
         onAllAgreementChange = viewModel::updateAllAgreements,
+        onServiceTermsDetailClick = {
+            uriHandler.openUri(LegalDocumentUrl.TERMS_OF_SERVICE)
+        },
+        onPrivacyPolicyDetailClick = {
+            uriHandler.openUri(LegalDocumentUrl.PRIVACY_POLICY)
+        },
         onBackClick = navigator::navigateBack,
         onContinueClick = {
             /*

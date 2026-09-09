@@ -1,4 +1,4 @@
-package com.manruhomerun.yadanbeopseok.common.error
+package com.manruhomerun.yadanbeopseok.common
 
 /**
  * 앱 전체에서 공통으로 사용하는 예외의 최상위 타입입니다.

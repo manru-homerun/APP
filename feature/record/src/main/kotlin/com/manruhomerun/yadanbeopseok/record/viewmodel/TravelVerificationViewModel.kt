@@ -3,10 +3,10 @@ package com.manruhomerun.yadanbeopseok.record.viewmodel
 import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.manruhomerun.yadanbeopseok.common.error.InvalidResponseException
-import com.manruhomerun.yadanbeopseok.common.error.NetworkConnectionException
-import com.manruhomerun.yadanbeopseok.common.error.NetworkTimeoutException
-import com.manruhomerun.yadanbeopseok.common.error.SessionExpiredException
+import com.manruhomerun.yadanbeopseok.common.InvalidResponseException
+import com.manruhomerun.yadanbeopseok.common.NetworkConnectionException
+import com.manruhomerun.yadanbeopseok.common.NetworkTimeoutException
+import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.repository.StickerRepository
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRecordRepository
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRepository
@@ -19,10 +19,8 @@ import javax.inject.Inject
 import kotlin.time.Clock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone

@@ -11,6 +11,7 @@ dependencies {
     implementation(projects.core.data)
     implementation(projects.core.navigation)
     implementation(projects.core.ui)
+    implementation(projects.core.common)
 
     implementation(libs.kakao.sdk.user)
 

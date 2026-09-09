@@ -1,7 +1,7 @@
 package com.manruhomerun.yadanbeopseok.data.repository.impl
 
-import com.manruhomerun.yadanbeopseok.common.error.InvalidResponseException
-import com.manruhomerun.yadanbeopseok.common.error.SessionExpiredException
+import com.manruhomerun.yadanbeopseok.common.InvalidResponseException
+import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.mapper.toOnboardingRequestDto
 import com.manruhomerun.yadanbeopseok.data.repository.OnboardingRepository
 import com.manruhomerun.yadanbeopseok.data.repository.SaveOnboardingParams

@@ -2,9 +2,9 @@ package com.manruhomerun.yadanbeopseok.baseball.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.manruhomerun.yadanbeopseok.common.error.NetworkConnectionException
-import com.manruhomerun.yadanbeopseok.common.error.NetworkTimeoutException
-import com.manruhomerun.yadanbeopseok.common.error.SessionExpiredException
+import com.manruhomerun.yadanbeopseok.common.NetworkConnectionException
+import com.manruhomerun.yadanbeopseok.common.NetworkTimeoutException
+import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.repository.BaseballRepository
 import com.manruhomerun.yadanbeopseok.model.KboTeam
 import dagger.hilt.android.lifecycle.HiltViewModel

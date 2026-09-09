@@ -1,6 +1,6 @@
 package com.manruhomerun.yadanbeopseok.data.mapper
 
-import com.manruhomerun.yadanbeopseok.common.error.InvalidResponseException
+import com.manruhomerun.yadanbeopseok.common.InvalidResponseException
 import com.manruhomerun.yadanbeopseok.model.Sticker
 import com.manruhomerun.yadanbeopseok.model.StickerPack
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelStickerResponseDto

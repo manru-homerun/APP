@@ -2,7 +2,7 @@ package com.manruhomerun.yadanbeopseok.travel.creation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.manruhomerun.yadanbeopseok.common.error.SessionExpiredException
+import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.repository.BaseballRepository
 import com.manruhomerun.yadanbeopseok.data.repository.CreateTravelParams
 import com.manruhomerun.yadanbeopseok.data.repository.FriendRepository
@@ -13,7 +13,6 @@ import com.manruhomerun.yadanbeopseok.model.BaseballGame
 import com.manruhomerun.yadanbeopseok.model.KboTeam
 import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelCompanionCondition
-import com.manruhomerun.yadanbeopseok.model.TravelCourse
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
 import com.manruhomerun.yadanbeopseok.model.TravelTheme

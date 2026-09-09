@@ -9,26 +9,21 @@ import com.manruhomerun.yadanbeopseok.network.user.dto.OnboardingRequestDto
 /**
  * 앱 내부의 온보딩 입력값을 서버 요청 DTO로 변환합니다.
  */
-internal fun SaveOnboardingParams.toOnboardingRequestDto(): OnboardingRequestDto =
-    OnboardingRequestDto(
+internal fun SaveOnboardingParams.toOnboardingRequestDto(): OnboardingRequestDto = OnboardingRequestDto(
         agreements = agreements.toRequestDto(),
         nickname = nickname,
         gender = gender.toRequestCode(),
-        birthDate = birthDate.toString(),
+        birthday = birthDate.toString(),
         favoriteTeamId = favoriteTeam.serverId,
-        residenceRegionCode = residenceRegion.code,
+        residenceRegion = residenceRegion.displayName,
         travelStyleValue = travelStyleScore.value,
-        preferredRegionCodes =
-            preferredTravelRegions.map { region ->
-                region.code
-            },
+        preferredRegions = preferredTravelRegions.map { region -> region.displayName },
     )
 
 /**
  * 앱 내부의 필수 약관 동의 정보를 서버 요청 DTO로 변환합니다.
  */
-private fun OnboardingAgreementsParams.toRequestDto():
-    OnboardingAgreementsRequestDto =
+private fun OnboardingAgreementsParams.toRequestDto(): OnboardingAgreementsRequestDto =
     OnboardingAgreementsRequestDto(
         serviceTerms = serviceTerms,
         privacyPolicy = privacyPolicy,

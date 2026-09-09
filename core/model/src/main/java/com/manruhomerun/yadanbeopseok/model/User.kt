@@ -25,18 +25,6 @@ data class UserProfile(
 )
 
 /**
- * 야단법석 서비스 로그인 완료 후 앱에서 사용하는 결과입니다.
- *
- * 서버에서 발급한 access token과 refresh token은 Repository 구현체가
- * 로컬 저장소에 저장하므로 앱 내부 모델에는 포함하지 않습니다.
- */
-data class LoginResult(
-    val userId: String,
-    val isNewUser: Boolean,
-    val onboardingCompleted: Boolean,
-)
-
-/**
  * 사용자가 로그인한 외부 인증 제공자입니다.
  */
 enum class LoginProvider {

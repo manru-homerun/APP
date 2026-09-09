@@ -1,5 +1,6 @@
 package com.manruhomerun.yadanbeopseok.network.travel.dto
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -12,6 +13,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class TravelBaseballGameResponseDto(
     val id: Long,
+    @SerialName("homeTeam")
     val homeTeamId: Long,
+    @SerialName("awayTeam")
     val awayTeamId: Long,
 )

@@ -1,13 +1,11 @@
 package com.manruhomerun.yadanbeopseok.data.repository.impl
 
-import com.manruhomerun.yadanbeopseok.common.InvalidResponseException
 import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.mapper.toOnboardingRequestDto
 import com.manruhomerun.yadanbeopseok.data.repository.OnboardingRepository
 import com.manruhomerun.yadanbeopseok.data.repository.SaveOnboardingParams
 import com.manruhomerun.yadanbeopseok.datastore.AuthTokenDataSource
 import com.manruhomerun.yadanbeopseok.network.common.error.ApiCallExecutor
-import com.manruhomerun.yadanbeopseok.network.common.extension.requireData
 import com.manruhomerun.yadanbeopseok.network.user.api.UserApi
 import javax.inject.Inject
 
@@ -37,24 +35,13 @@ internal class OnboardingRepositoryImpl @Inject constructor(
     /**
      * 온보딩 정보를 서버에 저장합니다.
      *
-     * 서버가 온보딩 완료를 확인한 뒤 DataStore에 저장된
+     * 서버가 온보딩 정보를 정상적으로 저장하면 DataStore에 저장된
      * 온보딩 완료 상태를 갱신합니다.
      */
-    override suspend fun saveOnboarding(
-        params: SaveOnboardingParams,
-    ) {
-        val response =
-            apiCallExecutor.execute {
-                userApi.saveOnboarding(
-                    request = params.toOnboardingRequestDto(),
-                )
-            }
-
-        val onboardingResponse = response.requireData()
-
-        if (!onboardingResponse.onboardingCompleted) {
-            throw InvalidResponseException(
-                message = "Onboarding completion was not confirmed.",
+    override suspend fun saveOnboarding(params: SaveOnboardingParams) {
+        apiCallExecutor.execute {
+            userApi.saveOnboarding(
+                request = params.toOnboardingRequestDto(),
             )
         }
 

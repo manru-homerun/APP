@@ -3,20 +3,16 @@ package com.manruhomerun.yadanbeopseok.data.repository.impl
 import com.kakao.sdk.auth.TokenManagerProvider
 import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.mapper.toAuthTokens
-import com.manruhomerun.yadanbeopseok.data.mapper.toLoginResult
 import com.manruhomerun.yadanbeopseok.data.repository.AuthRepository
 import com.manruhomerun.yadanbeopseok.data.repository.AuthSessionState
 import com.manruhomerun.yadanbeopseok.datastore.AuthTokenDataSource
 import com.manruhomerun.yadanbeopseok.datastore.AuthTokens
-import com.manruhomerun.yadanbeopseok.model.LoginResult
 import com.manruhomerun.yadanbeopseok.network.auth.api.AuthApi
 import com.manruhomerun.yadanbeopseok.network.auth.dto.LoginRequestDto
 import com.manruhomerun.yadanbeopseok.network.auth.dto.LogoutRequestDto
 import com.manruhomerun.yadanbeopseok.network.auth.dto.TokenRefreshRequestDto
 import com.manruhomerun.yadanbeopseok.network.common.error.ApiCallExecutor
-import com.manruhomerun.yadanbeopseok.network.common.extension.requireData
 import com.manruhomerun.yadanbeopseok.network.common.extension.requireSuccess
-import java.time.Instant
 import javax.inject.Inject
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
@@ -38,74 +34,34 @@ internal class AuthRepositoryImpl @Inject constructor(
     /**
      * 카카오 액세스 토큰으로 야단법석 서비스에 로그인합니다.
      *
-     * 로그인에 성공하면 백엔드에서 발급한 access token과 refresh token을
-     * DataStore에 저장하고 화면 이동에 필요한 로그인 결과를 반환합니다.
+     * 로그인에 성공하면 백엔드에서 발급한 토큰과 온보딩 상태를
+     * DataStore에 저장합니다.
      */
     override suspend fun loginWithKakao(
         kakaoAccessToken: String,
         fcmToken: String?,
-    ): LoginResult {
-        val response = apiCallExecutor.executeLogin {
+    ) {
+        val loginResponse = apiCallExecutor.executeLogin {
             authApi.login(
-                request =
-                    LoginRequestDto(
-                        providerAccessToken = kakaoAccessToken,
-                        deviceType = ANDROID_DEVICE_TYPE,
-                        fcmToken = fcmToken?.takeIf { it.isNotBlank() },
-                    ),
+                request = LoginRequestDto(
+                    providerAccessToken = kakaoAccessToken,
+                    deviceType = ANDROID_DEVICE_TYPE,
+                    fcmToken = fcmToken?.takeIf { it.isNotBlank() },
+                ),
             )
         }
 
-        val loginResponse = response.requireData()
-
-        authTokenDataSource.saveAuthTokens(
-            authTokens =
-                loginResponse.toAuthTokens(
-                    currentEpochSeconds = currentEpochSeconds(),
-                ),
-        )
-
-        return loginResponse.toLoginResult()
+        authTokenDataSource.saveAuthTokens(loginResponse.toAuthTokens())
     }
 
     /**
-     * 저장된 서비스 토큰을 확인하여 앱 시작 시 세션을 복원합니다.
+     * 저장된 서비스 토큰과 온보딩 상태로 앱 시작 시 세션을 복원합니다.
      *
-     * access token이 유효하면 저장된 세션을 그대로 사용합니다.
-     * access token이 만료됐지만 refresh token이 유효하면 토큰을 재발급합니다.
-     * 두 토큰 모두 사용할 수 없으면 인증 정보를 삭제하고 로그아웃 상태를 반환합니다.
-     *
-     * 토큰 재발급 중 발생한 네트워크 오류는 호출자에게 전달하여
-     * 앱 시작 화면에서 다시 시도할 수 있도록 합니다.
+     * 서버 응답에 토큰 만료 시각이 없으므로 앱 시작 시 네트워크 요청을 하지 않습니다.
+     * 만료된 access token은 보호된 API가 401을 반환할 때 TokenAuthenticator가 재발급합니다.
      */
-    override suspend fun restoreSession(): AuthSessionState {
-        val storedTokens =
-            authTokenDataSource.getAuthTokens()
-                ?: return AuthSessionState.LOGGED_OUT
-
-        val currentEpochSeconds = currentEpochSeconds()
-
-        val activeTokens =
-            if (storedTokens.accessTokenExpiresAtEpochSeconds > currentEpochSeconds) {
-                storedTokens
-            } else {
-                if (storedTokens.refreshTokenExpiresAtEpochSeconds <= currentEpochSeconds) {
-                    authTokenDataSource.clearAuthTokens()
-                    return AuthSessionState.LOGGED_OUT
-                }
-
-                try {
-                    refreshAccessToken()
-                } catch (_: SessionExpiredException) {
-                    return AuthSessionState.LOGGED_OUT
-                }
-
-                authTokenDataSource.getAuthTokens()
-                    ?: return AuthSessionState.LOGGED_OUT
-            }
-
-        return activeTokens.toAuthSessionState()
-    }
+    override suspend fun restoreSession(): AuthSessionState =
+        authTokenDataSource.getAuthTokens().toAuthSessionState()
 
     /**
      * DataStore의 인증 정보 변경을 앱에서 사용하는 세션 상태로 변환합니다.
@@ -121,51 +77,24 @@ internal class AuthRepositoryImpl @Inject constructor(
             .distinctUntilChanged()
 
     /**
-     * DataStore에 저장된 현재 야단법석 사용자 ID를 조회합니다.
-     *
-     * 네트워크 요청 없이 로컬 인증 정보에서 사용자 ID를 반환합니다.
-     */
-    override suspend fun getCurrentUserId(): String? =
-        authTokenDataSource.getCurrentUserId()
-
-    /**
      * DataStore에 저장된 refresh token으로 서비스 토큰을 재발급합니다.
      *
-     * refresh token이 없으면 [SessionExpiredException]을 발생시킵니다.
-     * refresh token이 이미 만료된 경우에는 인증 정보를 삭제한 후
-     * [SessionExpiredException]을 발생시킵니다.
-     *
-     * 재발급에 성공하면 access token과 refresh token을 모두 교체합니다.
+     * 저장된 인증 정보가 없으면 [SessionExpiredException]을 발생시킵니다.
+     * 재발급에 성공하면 access token만 교체하고 기존 refresh token은 유지합니다.
      */
     override suspend fun refreshAccessToken() {
-        val storedTokens =
-            authTokenDataSource.getAuthTokens()
-                ?: throw SessionExpiredException()
+        val storedTokens = authTokenDataSource.getAuthTokens()
+            ?: throw SessionExpiredException()
 
-        if (storedTokens.refreshTokenExpiresAtEpochSeconds <= currentEpochSeconds()) {
-            authTokenDataSource.clearAuthTokens()
-            throw SessionExpiredException()
-        }
-
-        val response = apiCallExecutor.execute {
+        val refreshResponse = apiCallExecutor.execute {
             authApi.refreshToken(
-                request =
-                    TokenRefreshRequestDto(
-                        refreshToken = storedTokens.refreshToken,
-                    ),
+                request = TokenRefreshRequestDto(
+                    refreshToken = storedTokens.refreshToken,
+                ),
             )
         }
 
-        val refreshResponse = response.requireData()
-
-        authTokenDataSource.saveAuthTokens(
-            authTokens =
-                refreshResponse.toAuthTokens(
-                    userId = storedTokens.userId,
-                    onboardingCompleted = storedTokens.onboardingCompleted,
-                    currentEpochSeconds = currentEpochSeconds(),
-                ),
-        )
+        authTokenDataSource.saveAuthTokens(refreshResponse.toAuthTokens(currentTokens = storedTokens))
     }
 
     /**
@@ -225,11 +154,6 @@ internal class AuthRepositoryImpl @Inject constructor(
             }
         }
     }
-
-    /**
-     * 현재 Unix epoch 시간(초)을 반환합니다.
-     */
-    private fun currentEpochSeconds(): Long = Instant.now().epochSecond
 }
 
 /**

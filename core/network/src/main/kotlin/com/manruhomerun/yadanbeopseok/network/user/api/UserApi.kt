@@ -1,9 +1,7 @@
 package com.manruhomerun.yadanbeopseok.network.user.api
 
-import com.manruhomerun.yadanbeopseok.network.common.dto.ApiResponseDto
 import com.manruhomerun.yadanbeopseok.network.user.dto.NicknameAvailabilityResponseDto
 import com.manruhomerun.yadanbeopseok.network.user.dto.OnboardingRequestDto
-import com.manruhomerun.yadanbeopseok.network.user.dto.OnboardingResponseDto
 import com.manruhomerun.yadanbeopseok.network.user.dto.TravelPreferenceResponseDto
 import com.manruhomerun.yadanbeopseok.network.user.dto.TravelPreferenceUpdateRequestDto
 import com.manruhomerun.yadanbeopseok.network.user.dto.UserProfileResponseDto
@@ -52,7 +50,7 @@ interface UserApi {
      * @param nickname 앞뒤 공백을 제거한 확인 대상 닉네임
      * @return 닉네임 사용 가능 여부
      */
-    @GET("users/me/nickname/check")
+    @GET("users/nickname/check")
     suspend fun checkNicknameAvailability(
         @Query("nickname") nickname: String,
     ): NicknameAvailabilityResponseDto
@@ -60,9 +58,9 @@ interface UserApi {
     /**
      * 신규 사용자의 약관 동의, 기본 정보와 여행 취향을 저장하고
      * 온보딩을 완료합니다.
+     *
+     * 성공 응답 Body는 사용하지 않습니다.
      */
     @POST("users/onboarding")
-    suspend fun saveOnboarding(
-        @Body request: OnboardingRequestDto,
-    ): ApiResponseDto<OnboardingResponseDto>
+    suspend fun saveOnboarding(@Body request: OnboardingRequestDto)
 }

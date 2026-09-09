@@ -26,18 +26,17 @@ interface AuthApi {
     suspend fun login(
         @Body request: LoginRequestDto,
         @Query("provider") provider: String = KAKAO_PROVIDER,
-    ): ApiResponseDto<LoginResponseDto>
+    ): LoginResponseDto
 
     /**
      * 야단법석 refresh token으로 서비스 토큰을 재발급합니다.
      *
-     * 재발급된 access token과 refresh token은
-     * 기존 토큰을 대체하여 함께 저장해야 합니다.
+     * 재발급된 access token을 반환합니다.
      */
     @POST("auth/refresh")
     suspend fun refreshToken(
         @Body request: TokenRefreshRequestDto,
-    ): ApiResponseDto<TokenRefreshResponseDto>
+    ): TokenRefreshResponseDto
 
     /**
      * 현재 로그인한 사용자의 로그아웃을 요청합니다.

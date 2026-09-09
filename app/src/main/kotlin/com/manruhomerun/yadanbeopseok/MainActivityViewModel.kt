@@ -52,10 +52,10 @@ class MainActivityViewModel @Inject constructor(
     }
 
     /**
-     * 저장된 토큰의 만료 상태를 확인하고 최초 화면을 결정합니다.
+     * 저장된 인증 정보와 온보딩 상태로 최초 화면을 결정합니다.
      *
-     * 초기 복원이 완료된 뒤에만 세션 관찰을 시작하여,
-     * 만료된 저장 토큰이 잠시 유효한 세션으로 처리되는 것을 방지합니다.
+     * access token 만료는 이후 보호된 API의 401 응답에서 처리하므로,
+     * 앱 시작 시에는 별도의 토큰 재발급 요청을 보내지 않습니다.
      */
     fun restoreSession() {
         if (restoreSessionJob?.isActive == true) {

@@ -29,13 +29,10 @@ interface TravelApi {
     /**
      * 상태를 기준으로 현재 사용자의 여행 목록을 조회합니다.
      *
-     * 홈에서는 PLANNED를 전달하여 진행 중 여행과 예정 여행을
-     * 함께 조회합니다.
+     * 서버의 여행 상태 Enum과 동일한 [TravelQueryStatus]를 전달합니다.
      */
     @GET("travel")
-    suspend fun getTravels(
-        @Query("status") status: String,
-    ): ApiResponseDto<TravelListResponseDto>
+    suspend fun getTravels(@Query("status") status: TravelQueryStatus): TravelListResponseDto
 
     /**
      * 여행 ID에 해당하는 일차별 상세 일정을 조회합니다.
@@ -109,4 +106,13 @@ interface TravelApi {
      */
     @GET("travel/{travelId}/stickers")
     suspend fun getTravelStickerPack(@Path("travelId") travelId: String): TravelStickerResponseDto
+}
+
+/**
+ * 여행 목록 조회 API에서 사용하는 서버 여행 상태입니다.
+ */
+enum class TravelQueryStatus {
+    PLANNING,
+    IN_PROGRESS,
+    COMPLETED,
 }

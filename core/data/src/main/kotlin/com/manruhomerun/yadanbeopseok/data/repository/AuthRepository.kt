@@ -1,6 +1,5 @@
 package com.manruhomerun.yadanbeopseok.data.repository
 
-import com.manruhomerun.yadanbeopseok.model.LoginResult
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -27,19 +26,16 @@ interface AuthRepository {
     /**
      * 카카오 액세스 토큰으로 야단법석 서비스에 로그인합니다.
      *
-     * 로그인 성공 시 서버에서 받은 서비스 토큰과 사용자 ID를 로컬에 저장하고,
-     * 화면 이동에 필요한 로그인 결과를 반환합니다.
+     * 로그인 성공 시 서버에서 받은 서비스 토큰과 온보딩 상태를 로컬에 저장합니다.
      */
     suspend fun loginWithKakao(
         kakaoAccessToken: String,
         fcmToken: String?,
-    ): LoginResult
+    )
 
     /**
-     * 저장된 인증 정보와 토큰 만료 상태를 검사하여 세션을 복원합니다.
-     *
-     * access token이 만료되고 refresh token이 유효하면 토큰을 재발급합니다.
-     * 네트워크 오류처럼 재시도할 수 있는 문제는 호출자에게 전달합니다.
+     * 저장된 인증 정보로 앱 시작 시 세션 상태를 복원합니다.
+     * access token 만료는 보호된 API의 401 응답에서 처리합니다.
      */
     suspend fun restoreSession(): AuthSessionState
 
@@ -50,13 +46,6 @@ interface AuthRepository {
      * 변경된 상태를 방출합니다.
      */
     fun observeSessionState(): Flow<AuthSessionState>
-
-    /**
-     * 현재 로컬 인증 정보에 저장된 야단법석 사용자 ID를 조회합니다.
-     *
-     * 로그인하지 않았거나 저장된 인증 정보가 불완전하면 null을 반환합니다.
-     */
-    suspend fun getCurrentUserId(): String?
 
     /**
      * 저장된 야단법석 refresh token으로 서비스 토큰을 재발급합니다.

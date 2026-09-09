@@ -25,7 +25,6 @@ class AuthTokenDataSourceTest {
         val fixture = createFixture(backgroundScope)
 
         assertNull(fixture.dataSource.getAuthTokens())
-        assertNull(fixture.dataSource.getCurrentUserId())
     }
 
     @Test
@@ -37,18 +36,6 @@ class AuthTokenDataSourceTest {
         assertEquals(
             expected = INITIAL_AUTH_TOKENS,
             actual = fixture.dataSource.getAuthTokens(),
-        )
-    }
-
-    @Test
-    fun `인증 정보를 저장하면 현재 사용자 ID가 조회된다`() = runTest {
-        val fixture = createFixture(backgroundScope)
-
-        fixture.dataSource.saveAuthTokens(INITIAL_AUTH_TOKENS)
-
-        assertEquals(
-            expected = INITIAL_AUTH_TOKENS.userId,
-            actual = fixture.dataSource.getCurrentUserId(),
         )
     }
 
@@ -69,19 +56,24 @@ class AuthTokenDataSourceTest {
     fun `인증 정보를 삭제하면 인증 관련 값을 모두 삭제한다`() = runTest {
         val fixture = createFixture(backgroundScope)
         val userIdKey = stringPreferencesKey("auth_user_id")
-        val onboardingCompletedKey =
-            booleanPreferencesKey("auth_onboarding_completed")
+        val onboardingCompletedKey = booleanPreferencesKey("auth_onboarding_completed")
+        val accessTokenKey = stringPreferencesKey("auth_access_token")
+        val refreshTokenKey = stringPreferencesKey("auth_refresh_token")
 
         fixture.dataSource.saveAuthTokens(INITIAL_AUTH_TOKENS)
+        fixture.dataStore.edit { preferences ->
+            preferences[userIdKey] = "legacy-user-id"
+        }
 
         fixture.dataSource.clearAuthTokens()
 
         val preferences = fixture.dataStore.data.first()
 
         assertNull(fixture.dataSource.getAuthTokens())
-        assertNull(fixture.dataSource.getCurrentUserId())
         assertNull(preferences[userIdKey])
         assertNull(preferences[onboardingCompletedKey])
+        assertNull(preferences[accessTokenKey])
+        assertNull(preferences[refreshTokenKey])
     }
 
     @Test
@@ -94,14 +86,12 @@ class AuthTokenDataSourceTest {
         }
 
         assertNull(fixture.dataSource.getAuthTokens())
-        assertNull(fixture.dataSource.getCurrentUserId())
     }
 
     @Test
     fun `인증 정보를 삭제해도 다른 Preferences 값은 유지한다`() = runTest {
         val fixture = createFixture(backgroundScope)
-        val notificationEnabledKey =
-            booleanPreferencesKey("notification_enabled")
+        val notificationEnabledKey = booleanPreferencesKey("notification_enabled")
 
         fixture.dataStore.edit { preferences ->
             preferences[notificationEnabledKey] = true
@@ -177,24 +167,16 @@ class AuthTokenDataSourceTest {
     private companion object {
         val INITIAL_AUTH_TOKENS =
             AuthTokens(
-                userId = "1",
                 onboardingCompleted = false,
                 accessToken = "access-token-1",
                 refreshToken = "refresh-token-1",
-                tokenType = "Bearer",
-                accessTokenExpiresAtEpochSeconds = 3_600L,
-                refreshTokenExpiresAtEpochSeconds = 1_209_600L,
             )
 
         val REFRESHED_AUTH_TOKENS =
             AuthTokens(
-                userId = "1",
                 onboardingCompleted = false,
                 accessToken = "access-token-2",
-                refreshToken = "refresh-token-2",
-                tokenType = "Bearer",
-                accessTokenExpiresAtEpochSeconds = 7_200L,
-                refreshTokenExpiresAtEpochSeconds = 1_213_200L,
+                refreshToken = "refresh-token-1",
             )
     }
 }

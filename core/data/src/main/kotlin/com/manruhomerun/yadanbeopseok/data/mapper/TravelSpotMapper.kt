@@ -4,6 +4,7 @@ import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
 import com.manruhomerun.yadanbeopseok.model.TravelSpotDetail
+import com.manruhomerun.yadanbeopseok.network.travel.dto.PopularTravelSpotResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotDetailResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotResponseDto
 
@@ -26,6 +27,22 @@ internal fun TravelSpotResponseDto.toTravelSpot(
         category = category.toTravelSpotCategory(),
         imageUrl = image,
         dibs = dibs ?: defaultDibs,
+    )
+
+/**
+ * 홈 인기 관광지 응답을 앱 내부 관광지 모델로 변환합니다.
+ *
+ * 인기 관광지는 요청한 시도 단위로 조회하므로 앱의 지역에는 요청 지역을 사용합니다.
+ */
+internal fun PopularTravelSpotResponseDto.toTravelSpot(region: Region): TravelSpot =
+    TravelSpot(
+        id = id,
+        name = name,
+        address = address,
+        region = region,
+        category = category.toTravelSpotCategory(),
+        imageUrl = image,
+        dibs = dibs,
     )
 
 /**

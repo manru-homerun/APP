@@ -11,10 +11,7 @@ import com.manruhomerun.yadanbeopseok.model.TravelSummary
  * 여행 목록, 인기 관광지, 사용자의 필터 선택과 네트워크 요청 상태를 관리합니다.
  */
 data class HomeUiState(
-    /** 현재 로그인한 사용자의 ID입니다. */
-    val currentUserId: String? = null,
-
-    /** 서버의 PLANNED 조건으로 조회한 진행 중·예정 여행 목록입니다. */
+    /** 서버에서 각각 조회한 진행 중·예정 여행 목록입니다. */
     val travels: List<TravelSummary> = emptyList(),
 
     /** 현재 지역과 카테고리를 기준으로 조회한 인기 관광지 목록입니다. */
@@ -45,8 +42,7 @@ data class HomeUiState(
     /**
      * 홈의 내 원정 여행 영역에 표시할 여행 목록입니다.
      *
-     * 서버에 PLANNED 상태로 요청하므로 진행 중 여행과 예정 여행만 포함됩니다.
-     * 서버가 내려준 여행 순서를 그대로 유지합니다.
+     * 진행 중 여행을 먼저 표시하고, 각 상태 안에서는 서버가 내려준 순서를 유지합니다.
      */
     val displayedTravels: List<TravelSummary>
         get() = travels

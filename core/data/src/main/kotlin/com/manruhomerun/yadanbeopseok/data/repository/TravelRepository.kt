@@ -5,6 +5,7 @@ import com.manruhomerun.yadanbeopseok.model.Travel
 import com.manruhomerun.yadanbeopseok.model.TravelCompanionCondition
 import com.manruhomerun.yadanbeopseok.model.TravelCourse
 import com.manruhomerun.yadanbeopseok.model.TravelListPage
+import com.manruhomerun.yadanbeopseok.model.TravelSummary
 import com.manruhomerun.yadanbeopseok.model.TravelTheme
 import kotlinx.datetime.LocalDate
 
@@ -17,12 +18,10 @@ interface TravelRepository {
     /**
      * 진행 중 여행과 진행 예정 여행 목록을 함께 조회합니다.
      *
-     * 구현체는 여행 목록 API에 PLANNED 상태를 전달합니다.
-     * 각 여행의 진행 중·예정 여부는 시작일과 종료일을 기준으로
-     * 홈 계층에서 구분합니다.
+     * 구현체는 진행 중 상태와 진행 예정 상태를 각각 조회하여
+     * 진행 중 여행이 먼저 오도록 하나의 목록으로 반환합니다.
      */
-    suspend fun getPlannedTravels(): TravelListPage
-
+    suspend fun getPlannedTravels(): List<TravelSummary>
 
     /**
      * 종료된 여행 기록 목록을 조회합니다.

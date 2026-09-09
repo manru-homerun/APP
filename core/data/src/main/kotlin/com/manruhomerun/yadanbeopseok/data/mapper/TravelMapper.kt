@@ -37,12 +37,18 @@ import kotlinx.datetime.LocalDateTime
  */
 internal fun TravelListResponseDto.toTravelListPage(): TravelListPage =
     TravelListPage(
-        travels = content.map { it.toTravelSummary() },
+        travels = toTravelSummaries(),
         pageNumber = pageNumber,
         pageSize = pageSize,
         totalElements = totalElements,
         totalPages = totalPages,
     )
+
+/**
+ * 여행 목록 API 응답의 현재 페이지를 앱 내부 여행 요약 목록으로 변환합니다.
+ */
+internal fun TravelListResponseDto.toTravelSummaries(): List<TravelSummary> =
+    contents.map { response -> response.toTravelSummary() }
 
 /**
  * 여행 테마 응답 DTO를 앱 내부 여행 테마 모델로 변환합니다.
@@ -249,12 +255,12 @@ private fun TravelResponseDto.toTravelSummary(): TravelSummary {
 
     validateSpotCounts(
         spotsCount = spotsCount,
-        certificationTargetCount = certificationTargetCount,
+        certificationTargetCount = spotsCount,
         certifiedSpotsCount = certifiedSpotsCount,
     )
 
     return TravelSummary(
-        id = id.toString(),
+        id = id,
         name = name,
         startDate = parsedStartDate,
         endDate = parsedEndDate,
@@ -264,7 +270,7 @@ private fun TravelResponseDto.toTravelSummary(): TravelSummary {
         region = regionCode.toRegion(),
         isLeader = isLeader,
         spotsCount = spotsCount,
-        certificationTargetCount = certificationTargetCount,
+        certificationTargetCount = spotsCount,
         certifiedSpotsCount = certifiedSpotsCount,
         hasSticker = hasSticker,
     )

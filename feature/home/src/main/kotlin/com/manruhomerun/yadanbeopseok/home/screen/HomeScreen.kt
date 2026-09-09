@@ -714,8 +714,6 @@ private val HOME_TRAVEL_SPOT_CATEGORIES =
         TravelSpotCategory.CULTURE,
     )
 
-private const val PREVIEW_USER_ID = "preview-user"
-
 private class HomeUiStatePreviewProvider :
     PreviewParameterProvider<HomeUiState> {
     private val activeTravel =
@@ -759,7 +757,6 @@ private class HomeUiStatePreviewProvider :
     override val values: Sequence<HomeUiState> =
         sequenceOf(
             HomeUiState(
-                currentUserId = PREVIEW_USER_ID,
                 travels =
                     listOf(
                         activeTravel,
@@ -771,7 +768,6 @@ private class HomeUiStatePreviewProvider :
                 isLoading = false,
             ),
             HomeUiState(
-                currentUserId = PREVIEW_USER_ID,
                 travels =
                     listOf(
                         upcomingTravel,
@@ -781,13 +777,11 @@ private class HomeUiStatePreviewProvider :
                 isLoading = false,
             ),
             HomeUiState(
-                currentUserId = PREVIEW_USER_ID,
                 travels = listOf(guestTravel),
                 popularTravelSpots = previewPopularSpots(),
                 isLoading = false,
             ),
             HomeUiState(
-                currentUserId = PREVIEW_USER_ID,
                 popularTravelSpots = previewPopularSpots(),
                 isLoading = false,
             ),

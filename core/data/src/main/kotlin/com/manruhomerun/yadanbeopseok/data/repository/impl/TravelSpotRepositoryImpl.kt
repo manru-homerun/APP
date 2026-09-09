@@ -24,8 +24,8 @@ internal class TravelSpotRepositoryImpl @Inject constructor(
             travelSpotApi.getPopularTravelSpots(region = region)
         }
 
-        return response.requireData().content.map { dto ->
-            dto.toTravelSpot()
+        return response.contents.map { dto ->
+            dto.toTravelSpot(region = region)
         }
     }
 

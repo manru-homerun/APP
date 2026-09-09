@@ -2,9 +2,9 @@ package com.manruhomerun.yadanbeopseok.network.travel.api
 
 import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.network.common.dto.ApiResponseDto
+import com.manruhomerun.yadanbeopseok.network.travel.dto.PopularTravelSpotListResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotDetailResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotDibsRequestDto
-import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotListResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotSearchResponseDto
 import retrofit2.http.Body
@@ -90,8 +90,8 @@ interface TravelSpotApi {
     /**
      * 홈 화면에 표시할 지역별 인기 관광지를 조회합니다.
      */
-    @GET("travel/spots/popular")
+    @GET("travel/popular-spots")
     suspend fun getPopularTravelSpots(
-        @Query("regionCode") region: Region,
-    ): ApiResponseDto<TravelSpotListResponseDto>
+        @Query("region") region: Region,
+    ): PopularTravelSpotListResponseDto
 }

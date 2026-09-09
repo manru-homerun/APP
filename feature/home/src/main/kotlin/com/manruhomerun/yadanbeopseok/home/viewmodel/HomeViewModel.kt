@@ -7,7 +7,6 @@ import com.manruhomerun.yadanbeopseok.common.InvalidResponseException
 import com.manruhomerun.yadanbeopseok.common.NetworkConnectionException
 import com.manruhomerun.yadanbeopseok.common.NetworkTimeoutException
 import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
-import com.manruhomerun.yadanbeopseok.data.repository.AuthRepository
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRepository
 import com.manruhomerun.yadanbeopseok.data.repository.TravelSpotRepository
 import com.manruhomerun.yadanbeopseok.model.Region
@@ -33,7 +32,6 @@ import kotlinx.coroutines.supervisorScope
  */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val authRepository: AuthRepository,
     private val travelRepository: TravelRepository,
     private val travelSpotRepository: TravelSpotRepository,
 ) : ViewModel() {
@@ -47,13 +45,12 @@ class HomeViewModel @Inject constructor(
      */
     private var allPopularTravelSpots: List<TravelSpot> = emptyList()
 
+    private var hasCompletedInitialLoad = false
     private var homeLoadJob: Job? = null
     private var regionLoadJob: Job? = null
 
     init {
-        loadHome(
-            isInitialLoad = true,
-        )
+        loadHome(isInitialLoad = true)
     }
 
     /**
@@ -66,9 +63,7 @@ class HomeViewModel @Inject constructor(
             return
         }
 
-        loadHome(
-            isInitialLoad = currentState.currentUserId == null,
-        )
+        loadHome(isInitialLoad = !hasCompletedInitialLoad)
     }
 
     /**
@@ -259,14 +254,12 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
-     * 현재 사용자, 여행 목록과 인기 관광지를 함께 조회합니다.
+     * 여행 목록과 인기 관광지를 함께 조회합니다.
      *
      * 두 요청은 병렬로 실행하지만 결과는 독립적으로 처리합니다.
      * 하나의 요청이 실패해도 다른 요청의 성공 결과는 화면에 반영합니다.
      */
-    private fun loadHome(
-        isInitialLoad: Boolean,
-    ) {
+    private fun loadHome(isInitialLoad: Boolean) {
         homeLoadJob?.cancel()
         regionLoadJob?.cancel()
 
@@ -282,8 +275,6 @@ class HomeViewModel @Inject constructor(
 
         homeLoadJob = viewModelScope.launch {
             try {
-                val currentUserId = authRepository.getCurrentUserId() ?: throw SessionExpiredException()
-
                 /*
                  * supervisorScope와 개별 Result를 사용하여
                  * 한 요청의 실패가 다른 요청을 취소하지 않게 합니다.
@@ -291,7 +282,7 @@ class HomeViewModel @Inject constructor(
                 val (travelsResult, travelSpotsResult) = supervisorScope {
                     val travelsDeferred = async {
                         runHomeRequest {
-                            travelRepository.getPlannedTravels().travels
+                            travelRepository.getPlannedTravels()
                         }
                     }
 
@@ -327,13 +318,13 @@ class HomeViewModel @Inject constructor(
                  * 현재 지역의 원본 캐시를 교체합니다.
                  */
                 if (loadedTravelSpots != null) {
-                    allPopularTravelSpots =
-                        loadedTravelSpots
+                    allPopularTravelSpots = loadedTravelSpots
                 }
+
+                hasCompletedInitialLoad = true
 
                 _uiState.update { current ->
                     current.copy(
-                        currentUserId = currentUserId,
                         /*
                          * 실패한 영역은 기존 데이터를 유지하고
                          * 성공한 영역만 새로운 응답으로 교체합니다.

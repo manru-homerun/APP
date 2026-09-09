@@ -1,12 +1,13 @@
 package com.manruhomerun.yadanbeopseok.network.travel.dto
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
  * 관광지 목록 API에서 공통으로 사용하는 개별 관광지 응답 DTO입니다.
  *
- * 인기 관광지, 사용자 맞춤 추천 관광지, 관광지 검색 및
- * 찜 목록에서 동일한 응답 구조를 재사용합니다.
+ * 사용자 맞춤 추천 관광지, 관광지 검색 및 찜 목록에서
+ * 동일한 응답 구조를 재사용합니다.
  *
  * @property id 관광지 고유 식별자이며 찜 요청의 contentId와 같은 값
  * @property name 관광지 이름
@@ -28,16 +29,28 @@ data class TravelSpotResponseDto(
 )
 
 /**
- * 관광지 목록 API에서 공통으로 사용하는 응답 데이터 DTO입니다.
+ * 홈 인기 관광지 API의 개별 관광지 응답 DTO입니다.
  *
- * 인기 관광지, 사용자 맞춤 추천 관광지 및 관광지 검색 API에서
- * 동일한 목록 구조를 재사용합니다.
- *
- * @property content 응답에 포함된 관광지 목록
+ * 다른 관광지 목록 API와 필드명과 타입이 달라 별도 DTO로 수신합니다.
  */
 @Serializable
-data class TravelSpotListResponseDto(
-    val content: List<TravelSpotResponseDto>,
+data class PopularTravelSpotResponseDto(
+    val id: String,
+    @SerialName("title")
+    val name: String,
+    val address: String? = null,
+    val category: String,
+    val image: String? = null,
+    val regionCode: Int? = null,
+    val dibs: Boolean,
+)
+
+/**
+ * 홈 인기 관광지 API의 목록 응답 DTO입니다.
+ */
+@Serializable
+data class PopularTravelSpotListResponseDto(
+    val contents: List<PopularTravelSpotResponseDto>,
 )
 
 /**

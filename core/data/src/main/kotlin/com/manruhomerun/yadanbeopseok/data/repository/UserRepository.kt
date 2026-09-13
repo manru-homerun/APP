@@ -9,6 +9,11 @@ import com.manruhomerun.yadanbeopseok.model.UserProfile
  */
 interface UserRepository {
     /**
+     * 앞뒤 공백을 제거한 닉네임의 사용 가능 여부를 확인합니다.
+     */
+    suspend fun isNicknameAvailable(nickname: String): Boolean
+
+    /**
      * 현재 로그인한 사용자의 프로필을 조회합니다.
      */
     suspend fun getMyProfile(): UserProfile

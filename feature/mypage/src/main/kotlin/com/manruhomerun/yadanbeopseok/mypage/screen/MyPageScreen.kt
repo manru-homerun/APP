@@ -235,7 +235,7 @@ private fun MyPageContent(
             YadanProfileCard(
                 user = userProfile,
                 onClick = onProfileClick,
-                enabled = false,
+                enabled = contentEnabled,
             )
         }
 
@@ -342,7 +342,7 @@ private fun MyPageTravelMenu(
             title = "내 여행 취향",
             supportingText = travelPreferenceSummary,
             onClick = onTravelPreferenceClick,
-            enabled = false,
+            enabled = enabled,
             leadingContent = {
                 Icon(
                     imageVector = Icons.Default.Tune,

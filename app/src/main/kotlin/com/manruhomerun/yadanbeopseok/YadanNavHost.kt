@@ -8,10 +8,15 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.manruhomerun.yadanbeopseok.auth.navigation.authEntryProvider
 import com.manruhomerun.yadanbeopseok.baseball.navigation.baseballEntryProvider
+import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanBackwardTransition
+import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanFadeTransition
+import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanForwardTransition
 import com.manruhomerun.yadanbeopseok.home.navigation.homeEntryProvider
 import com.manruhomerun.yadanbeopseok.mypage.navigation.myPageEntryProvider
 import com.manruhomerun.yadanbeopseok.navigation.YadanNavigationState
 import com.manruhomerun.yadanbeopseok.navigation.rememberSharedViewModelStoreNavEntryDecorator
+import com.manruhomerun.yadanbeopseok.navigation.route.LoginNavKey
+import com.manruhomerun.yadanbeopseok.navigation.route.TopLevelNavKey
 import com.manruhomerun.yadanbeopseok.record.navigation.recordEntryProvider
 import com.manruhomerun.yadanbeopseok.travel.navigation.travelEntryProvider
 
@@ -24,12 +29,34 @@ import com.manruhomerun.yadanbeopseok.travel.navigation.travelEntryProvider
 @Composable
 fun YadanNavHost(
     navigationState: YadanNavigationState,
+    onTopLevelBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     NavDisplay(
         backStack = navigationState.backStack,
-        onBack = navigationState::navigateBack,
+        onBack = {
+            if (navigationState.currentKey is TopLevelNavKey) {
+                onTopLevelBack()
+            } else {
+                navigationState.navigateBack()
+            }
+        },
         modifier = modifier.fillMaxSize(),
+        transitionSpec = {
+            val targetKey = navigationState.currentKey
+
+            if (targetKey is TopLevelNavKey || targetKey is LoginNavKey) {
+                yadanFadeTransition()
+            } else {
+                yadanForwardTransition()
+            }
+        },
+        popTransitionSpec = {
+            yadanBackwardTransition()
+        },
+        predictivePopTransitionSpec = {
+            yadanBackwardTransition()
+        },
         entryDecorators =
             listOf(
                 /*

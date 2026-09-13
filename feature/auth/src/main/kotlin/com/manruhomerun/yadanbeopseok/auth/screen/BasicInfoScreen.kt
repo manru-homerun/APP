@@ -71,6 +71,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.Gender
+import com.manruhomerun.yadanbeopseok.model.NICKNAME_MAX_LENGTH
 import kotlin.time.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -79,7 +80,6 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 import kotlinx.datetime.number
 import kotlinx.datetime.todayIn
-import com.manruhomerun.yadanbeopseok.auth.viewmodel.NICKNAME_MAX_LENGTH
 
 /**
  * 신규 회원이 닉네임, 성별 및 생년월일을 입력하는 화면입니다.

@@ -19,7 +19,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.kakao.sdk.auth.TokenManagerProvider
 import com.manruhomerun.yadanbeopseok.mypage.screen.MyPageScreen
 import com.manruhomerun.yadanbeopseok.mypage.viewmodel.MyPageViewModel
 
@@ -81,11 +80,7 @@ fun MyPageRoute(
             onFriendsClick = onFriendsClick,
             onTermsClick = onTermsClick,
             onPrivacyPolicyClick = onPrivacyPolicyClick,
-            onLogoutClick = {
-                viewModel.logout(
-                    kakaoAccessToken = getKakaoAccessToken(),
-                )
-            },
+            onLogoutClick = viewModel::logout,
             onWithdrawalClick = viewModel::withdraw,
             modifier = Modifier.fillMaxSize(),
         )
@@ -101,14 +96,4 @@ fun MyPageRoute(
                 ),
         )
     }
-}
-
-/**
- * 카카오 SDK가 로컬에 저장한 현재 액세스 토큰을 반환합니다.
- */
-private fun getKakaoAccessToken(): String {
-    return TokenManagerProvider.instance.manager
-        .getToken()
-        ?.accessToken
-        .orEmpty()
 }

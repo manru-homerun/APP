@@ -13,8 +13,6 @@ dependencies {
     implementation(projects.core.ui)
     implementation(projects.core.common)
 
-    implementation(libs.kakao.sdk.user)
-
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

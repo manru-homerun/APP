@@ -26,6 +26,7 @@ import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Museum
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Park
+import androidx.compose.material.icons.outlined.Route
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.ShoppingBag
 import androidx.compose.material.icons.outlined.SportsBaseball
@@ -335,6 +336,8 @@ internal fun TravelSpotCategory.placeholderIcon(): ImageVector =
         TravelSpotCategory.HISTORY -> Icons.Outlined.AccountBalance
         TravelSpotCategory.LEISURE -> Icons.AutoMirrored.Outlined.DirectionsBike
         TravelSpotCategory.NATURE -> Icons.Outlined.Park
+        TravelSpotCategory.TOURIST_ATTRACTION -> Icons.Outlined.Park
+        TravelSpotCategory.TRAVEL_COURSE -> Icons.Outlined.Route
         TravelSpotCategory.SHOPPING -> Icons.Outlined.ShoppingBag
         TravelSpotCategory.CULTURE -> Icons.Outlined.Museum
         TravelSpotCategory.STADIUM -> Icons.Outlined.SportsBaseball

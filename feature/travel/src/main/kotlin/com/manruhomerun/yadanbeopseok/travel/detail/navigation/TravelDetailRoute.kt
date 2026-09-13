@@ -1,6 +1,7 @@
 package com.manruhomerun.yadanbeopseok.travel.detail.navigation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,6 +30,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanBackwardTransition
+import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanFadeTransition
+import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanForwardTransition
 import com.manruhomerun.yadanbeopseok.model.TravelPlace
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
 import com.manruhomerun.yadanbeopseok.navigation.route.HomeNavKey
@@ -80,6 +84,11 @@ fun TravelDetailRoute(
     val travel = uiState.travel
     val baseballGame = uiState.baseballGame
     val canOpenShare = travel != null && baseballGame != null
+    val currentPage = when {
+        isEditing -> TravelDetailPage.EDIT
+        isShareVisible && canOpenShare -> TravelDetailPage.SHARE
+        else -> TravelDetailPage.DETAIL
+    }
 
     fun exitEdit() {
         editViewModel.reset()
@@ -143,9 +152,9 @@ fun TravelDetailRoute(
     }
 
     /**
-    * 방문 인증 화면에서 돌아오면 여행을 다시 조회하여
-    * 인증 진행률과 관광지별 인증 상태를 갱신합니다.
-    */
+     * 방문 인증 화면에서 돌아오면 여행을 다시 조회하여
+     * 인증 진행률과 관광지별 인증 상태를 갱신합니다.
+     */
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refreshTravel()
     }
@@ -163,66 +172,81 @@ fun TravelDetailRoute(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        when {
-            isEditing -> {
-                TravelCourseEditRoute(
-                    viewModel = editViewModel,
-                    onExitRequest = ::exitEdit,
-                    onHomeClick = {
-                        navigator.navigateToTopLevel(HomeNavKey)
-                    },
-                    onTravelSpotClick = { travelSpot ->
-                        navigator.navigate(
-                            TravelSpotDetailNavKey(travelSpot.id),
-                        )
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-
-            isShareVisible && travel != null && baseballGame != null -> {
-                TravelShareScreen(
-                    travel = travel,
-                    baseballGame = baseballGame,
-                    onBackClick = ::closeShare,
-                    onSaveImageClick = ::saveAndSharePoster,
-                    posterModifier = Modifier.drawWithContent {
-                        posterGraphicsLayer.record {
-                            this@drawWithContent.drawContent()
-                        }
-
-                        drawLayer(posterGraphicsLayer)
-                    },
-                    isSaving = isSavingPoster,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-
-            else -> {
-                /*
-                 * C01이나 C03을 다녀온 뒤에도 C04의 선택 일차와
-                 * 스크롤 상태를 그대로 복원합니다.
-                 */
-                detailStateHolder.SaveableStateProvider(key = "travel_detail") {
-                    TravelDetailScreen(
-                        uiState = uiState,
-                        onBackClick = navigator::navigateBack,
-                        onDaySelected = viewModel::selectDay,
-                        onVerifyClick = onVerifyClick,
-                        onRetryClick = viewModel::retry,
-                        onRenameClick = onRenameClick,
-                        onEditScheduleClick = {
-                            editViewModel.initializeExistingTravel(travelId)
+        AnimatedContent(
+            targetState = currentPage,
+            transitionSpec = {
+                when {
+                    initialState == TravelDetailPage.DETAIL -> yadanForwardTransition()
+                    targetState == TravelDetailPage.DETAIL -> yadanBackwardTransition()
+                    else -> yadanFadeTransition()
+                }
+            },
+            modifier = Modifier.fillMaxSize(),
+            label = "travel_detail_screen",
+        ) { page ->
+            when (page) {
+                TravelDetailPage.EDIT -> {
+                    TravelCourseEditRoute(
+                        viewModel = editViewModel,
+                        onExitRequest = ::exitEdit,
+                        onHomeClick = {
+                            navigator.navigateToTopLevel(HomeNavKey)
                         },
-                        onShareImageClick = if (canOpenShare) {
-                            {
-                                isShareVisible = true
-                            }
-                        } else {
-                            null
+                        onTravelSpotClick = { travelSpot ->
+                            navigator.navigate(
+                                TravelSpotDetailNavKey(travelSpot.id),
+                            )
                         },
                         modifier = Modifier.fillMaxSize(),
                     )
+                }
+
+                TravelDetailPage.SHARE -> {
+                    if (travel != null && baseballGame != null) {
+                        TravelShareScreen(
+                            travel = travel,
+                            baseballGame = baseballGame,
+                            onBackClick = ::closeShare,
+                            onSaveImageClick = ::saveAndSharePoster,
+                            posterModifier = Modifier.drawWithContent {
+                                posterGraphicsLayer.record {
+                                    this@drawWithContent.drawContent()
+                                }
+
+                                drawLayer(posterGraphicsLayer)
+                            },
+                            isSaving = isSavingPoster,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                }
+
+                TravelDetailPage.DETAIL -> {
+                    /*
+                     * C01이나 C03을 다녀온 뒤에도 C04의 선택 일차와
+                     * 스크롤 상태를 그대로 복원합니다.
+                     */
+                    detailStateHolder.SaveableStateProvider(key = "travel_detail") {
+                        TravelDetailScreen(
+                            uiState = uiState,
+                            onBackClick = navigator::navigateBack,
+                            onDaySelected = viewModel::selectDay,
+                            onVerifyClick = onVerifyClick,
+                            onRetryClick = viewModel::retry,
+                            onRenameClick = onRenameClick,
+                            onEditScheduleClick = {
+                                editViewModel.initializeExistingTravel(travelId)
+                            },
+                            onShareImageClick = if (canOpenShare) {
+                                {
+                                    isShareVisible = true
+                                }
+                            } else {
+                                null
+                            },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                 }
             }
         }
@@ -238,4 +262,10 @@ fun TravelDetailRoute(
                 ),
         )
     }
+}
+
+private enum class TravelDetailPage {
+    DETAIL,
+    EDIT,
+    SHARE,
 }

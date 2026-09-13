@@ -17,7 +17,7 @@ internal fun TravelSpotResponseDto.toTravelSpot(
     defaultDibs: Boolean = false,
 ): TravelSpot =
     TravelSpot(
-        id = id.toString(),
+        id = id,
         name = name,
         address = address,
         region =
@@ -86,10 +86,21 @@ internal fun TravelSpotDetailResponseDto.toTravelSpotDetail(
 internal fun String.toTravelSpotCategory(): TravelSpotCategory {
     val normalizedCategory = trim()
 
-    return TravelSpotCategory.entries.firstOrNull { category ->
-        category.name.equals(
-            other = normalizedCategory,
-            ignoreCase = true,
-        ) || category.displayName == normalizedCategory
-    } ?: TravelSpotCategory.UNKNOWN
+    return when (normalizedCategory.uppercase()) {
+        "TOURIST_ATTRACTION" -> TravelSpotCategory.TOURIST_ATTRACTION
+        "CULTURAL_FACILITY" -> TravelSpotCategory.CULTURE
+        "FESTIVAL_PERFORMANCE_EVENT" -> TravelSpotCategory.FESTIVAL
+        "TRAVEL_COURSE" -> TravelSpotCategory.TRAVEL_COURSE
+        "LEPORTS" -> TravelSpotCategory.LEISURE
+        "ACCOMMODATION" -> TravelSpotCategory.ACCOMMODATION
+        "SHOPPING" -> TravelSpotCategory.SHOPPING
+        "RESTAURANT" -> TravelSpotCategory.FOOD
+        else ->
+            TravelSpotCategory.entries.firstOrNull { category ->
+                category.name.equals(
+                    other = normalizedCategory,
+                    ignoreCase = true,
+                ) || category.displayName == normalizedCategory
+            } ?: TravelSpotCategory.UNKNOWN
+    }
 }

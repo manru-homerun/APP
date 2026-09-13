@@ -46,7 +46,7 @@ interface TravelApi {
      * 여행 만들기에서 선택할 수 있는 여행 테마 목록을 조회합니다.
      */
     @GET("travel/themes")
-    suspend fun getTravelThemes(): ApiResponseDto<List<TravelThemeResponseDto>>
+    suspend fun getTravelThemes(): List<TravelThemeResponseDto>
 
     /**
      * 선택한 경기, 날짜, 테마, 동행자와 관광지를 바탕으로

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -93,12 +94,8 @@ fun YadanMainHeader(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(
-                    start = HEADER_HORIZONTAL_PADDING,
-                    top = HEADER_TOP_PADDING,
-                    end = HEADER_HORIZONTAL_PADDING,
-                    bottom = HEADER_BOTTOM_PADDING,
-                ),
+                .height(HEADER_HEIGHT)
+                .padding(horizontal = HEADER_HORIZONTAL_PADDING),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         /*
@@ -155,8 +152,7 @@ fun YadanMainHeader(
  * HTML의 apphead에서 사용하는 내부 여백입니다.
  */
 private val HEADER_HORIZONTAL_PADDING = 16.dp
-private val HEADER_TOP_PADDING = 6.dp
-private val HEADER_BOTTOM_PADDING = 8.dp
+private val HEADER_HEIGHT = 56.dp
 
 @Preview(
     name = "Yadan main headers",

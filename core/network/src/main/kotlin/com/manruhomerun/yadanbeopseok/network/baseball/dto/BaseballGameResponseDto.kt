@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class BaseballGameResponseDto(
-    val gameId: String,
+    val gameId: Long,
     val dateTime: String,
     val awayTeam: BaseballTeamResponseDto,
     val homeTeam: BaseballTeamResponseDto,
@@ -27,7 +27,7 @@ data class BaseballGameResponseDto(
  */
 @Serializable
 data class BaseballGameScheduleItemResponseDto(
-    val gameId: String,
+    val gameId: Long,
     val dateTime: String,
     val awayTeam: BaseballTeamResponseDto,
     val homeTeam: BaseballTeamResponseDto,

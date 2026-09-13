@@ -2,7 +2,7 @@ package com.manruhomerun.yadanbeopseok.home.viewmodel
 
 import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
-import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
+import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
 import com.manruhomerun.yadanbeopseok.model.TravelSummary
 
 /**
@@ -21,8 +21,7 @@ data class HomeUiState(
     val selectedRegion: Region = Region.BUSAN,
 
     /** 홈 관광지 추천에 적용할 카테고리입니다. */
-    val selectedCategory: TravelSpotCategory =
-        TravelSpotCategory.ACCOMMODATION,
+    val selectedCategory: TravelSpotFilterCategory = TravelSpotFilterCategory.ACCOMMODATION,
 
     /** 읽지 않은 알림이 있는지 나타냅니다. */
     val hasUnreadNotifications: Boolean = false,
@@ -35,6 +34,9 @@ data class HomeUiState(
 
     /** 찜 상태 변경 요청이 진행 중인 관광지 ID 목록입니다. */
     val updatingDibsSpotIds: Set<String> = emptySet(),
+
+    /** 인기 관광지 조회에 실패했을 때 해당 영역에 표시할 안내 문구입니다. */
+    val travelSpotErrorMessage: String? = null,
 
     /** 홈 데이터 조회 또는 변경 중 발생한 사용자 안내 문구입니다. */
     val errorMessage: String? = null,

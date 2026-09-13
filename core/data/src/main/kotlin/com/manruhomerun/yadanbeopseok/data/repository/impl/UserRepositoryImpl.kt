@@ -20,6 +20,17 @@ internal class UserRepositoryImpl @Inject constructor(
     private val apiCallExecutor: ApiCallExecutor,
 ) : UserRepository {
     /**
+     * 서버를 통해 닉네임의 사용 가능 여부를 확인합니다.
+     */
+    override suspend fun isNicknameAvailable(nickname: String): Boolean {
+        val normalizedNickname = nickname.trim()
+
+        return apiCallExecutor.execute {
+            userApi.checkNicknameAvailability(nickname = normalizedNickname)
+        }.available
+    }
+
+    /**
      * 현재 로그인한 사용자의 프로필을 조회합니다.
      */
     override suspend fun getMyProfile(): UserProfile {

@@ -2,6 +2,8 @@ package com.manruhomerun.yadanbeopseok.auth.viewmodel
 
 import com.manruhomerun.yadanbeopseok.model.Gender
 import com.manruhomerun.yadanbeopseok.model.KboTeam
+import com.manruhomerun.yadanbeopseok.model.NICKNAME_MAX_LENGTH
+import com.manruhomerun.yadanbeopseok.model.NICKNAME_MIN_LENGTH
 import com.manruhomerun.yadanbeopseok.model.ProfileRegion
 import com.manruhomerun.yadanbeopseok.model.TravelStyleScore
 import kotlinx.datetime.DateTimeUnit
@@ -174,8 +176,5 @@ internal fun LocalDate?.toBirthDateInputState(
         else -> BirthDateInputState.VALID
     }
 }
-
-internal const val NICKNAME_MIN_LENGTH = 2
-internal const val NICKNAME_MAX_LENGTH = 12
 
 private const val MINIMUM_SIGN_UP_AGE = 14

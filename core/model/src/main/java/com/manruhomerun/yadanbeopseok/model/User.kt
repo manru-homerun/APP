@@ -3,6 +3,12 @@ package com.manruhomerun.yadanbeopseok.model
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 
+/** 야단법석에서 허용하는 닉네임의 최소 길이입니다. */
+const val NICKNAME_MIN_LENGTH = 2
+
+/** 야단법석에서 허용하는 닉네임의 최대 길이입니다. */
+const val NICKNAME_MAX_LENGTH = 12
+
 /**
  * 앱 내부에서 사용하는 사용자 프로필 모델입니다.
  *

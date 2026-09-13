@@ -10,6 +10,7 @@ import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.repository.OnboardingAgreementsParams
 import com.manruhomerun.yadanbeopseok.data.repository.OnboardingRepository
 import com.manruhomerun.yadanbeopseok.data.repository.SaveOnboardingParams
+import com.manruhomerun.yadanbeopseok.data.repository.UserRepository
 import com.manruhomerun.yadanbeopseok.model.Gender
 import com.manruhomerun.yadanbeopseok.model.KboTeam
 import com.manruhomerun.yadanbeopseok.model.ProfileRegion
@@ -40,6 +41,7 @@ import kotlinx.datetime.todayIn
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     private val onboardingRepository: OnboardingRepository,
+    private val userRepository: UserRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(OnboardingUiState())
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
@@ -125,7 +127,7 @@ class OnboardingViewModel @Inject constructor(
 
                 try {
                     val isAvailable =
-                        onboardingRepository.isNicknameAvailable(
+                        userRepository.isNicknameAvailable(
                             nickname = normalizedNickname,
                         )
 

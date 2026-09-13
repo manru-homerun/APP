@@ -90,7 +90,7 @@ internal class TravelRepositoryImpl @Inject constructor(
             travelApi.getTravelThemes()
         }
 
-        return response.requireData().map { dto ->
+        return response.map { dto ->
             dto.toTravelTheme()
         }
     }

@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -29,10 +28,12 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextSecondary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
+import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
 import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotSelectionTab
 import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotSelectionUiState
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotAction
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotCard
+import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotCategoryFilters
 
 /**
  * B06과 C01b/C01c에서 사용하는 관광지 조회·선택 본문입니다.
@@ -52,6 +53,7 @@ internal fun LazyListScope.travelSpotSelectionContent(
     onSearch: () -> Unit,
     onTabSelected: (TravelSpotSelectionTab) -> Unit,
     onCategorySelected: (TravelSpotCategory?) -> Unit,
+    onDibsCategorySelected: (TravelSpotFilterCategory) -> Unit,
     onTravelSpotClick: (TravelSpot) -> Unit,
     onTravelSpotToggle: (TravelSpot) -> Unit,
     onRetryClick: () -> Unit,
@@ -98,6 +100,17 @@ internal fun LazyListScope.travelSpotSelectionContent(
                 modifier = Modifier.padding(top = 4.dp),
                 enabled = !uiState.isLoading,
             )
+        }
+
+        if (uiState.selectedTab == TravelSpotSelectionTab.DIBS) {
+            item(key = "dibs_category_filters") {
+                YadanTravelSpotCategoryFilters(
+                    selectedCategory = uiState.selectedDibsCategory,
+                    onCategorySelected = onDibsCategorySelected,
+                    modifier = Modifier.padding(top = 4.dp),
+                    enabled = !uiState.isLoading,
+                )
+            }
         }
     }
 
@@ -146,12 +159,6 @@ private fun TravelSpotCategoryFilters(
     selectedCategory: TravelSpotCategory?,
     onCategorySelected: (TravelSpotCategory?) -> Unit,
 ) {
-    val categories = remember {
-        TravelSpotCategory.entries.filterNot {
-            it == TravelSpotCategory.STADIUM || it == TravelSpotCategory.UNKNOWN
-        }
-    }
-
     LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
         item(key = "category_all") {
             YadanFilterChip(
@@ -161,7 +168,7 @@ private fun TravelSpotCategoryFilters(
             )
         }
 
-        items(items = categories, key = { it.name }) { category ->
+        items(items = SEARCH_FILTER_CATEGORIES, key = { it.name }) { category ->
             YadanFilterChip(
                 text = category.displayName,
                 selected = selectedCategory == category,
@@ -170,6 +177,17 @@ private fun TravelSpotCategoryFilters(
         }
     }
 }
+
+private val SEARCH_FILTER_CATEGORIES = listOf(
+    TravelSpotCategory.ACCOMMODATION,
+    TravelSpotCategory.FESTIVAL,
+    TravelSpotCategory.FOOD,
+    TravelSpotCategory.LEISURE,
+    TravelSpotCategory.TOURIST_ATTRACTION,
+    TravelSpotCategory.SHOPPING,
+    TravelSpotCategory.CULTURE,
+    TravelSpotCategory.TRAVEL_COURSE,
+)
 
 /** 로딩, 조회 오류와 빈 목록을 기존 B06의 표시 우선순위로 처리합니다. */
 @Composable

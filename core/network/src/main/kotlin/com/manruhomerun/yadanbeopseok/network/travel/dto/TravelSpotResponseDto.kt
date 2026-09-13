@@ -19,7 +19,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class TravelSpotResponseDto(
-    val id: Long,
+    val id: String,
     val name: String,
     val address: String? = null,
     val category: String,
@@ -54,18 +54,19 @@ data class PopularTravelSpotListResponseDto(
 )
 
 /**
- * 관광지 검색 API의 페이지 응답 DTO입니다.
+ * 관광지 목록 API의 페이지 응답 DTO입니다.
  *
- * 검색 결과의 개별 관광지는 기존 [TravelSpotResponseDto]를 재사용합니다.
+ * 관광지 검색과 찜 목록이 같은 페이지 구조를 사용하며,
+ * 개별 관광지는 기존 [TravelSpotResponseDto]를 재사용합니다.
  *
- * @property contents 현재 페이지의 관광지 검색 결과
+ * @property contents 현재 페이지의 관광지 목록
  * @property pageNumber 현재 페이지 번호
  * @property pageSize 한 페이지에 포함되는 관광지 수
  * @property totalElements 전체 검색 결과 수
  * @property totalPages 전체 페이지 수
  */
 @Serializable
-data class TravelSpotSearchResponseDto(
+data class TravelSpotPageResponseDto(
     val contents: List<TravelSpotResponseDto>,
     val pageNumber: Int,
     val pageSize: Int,

@@ -160,7 +160,7 @@ fun YadanButton(
         contentPadding =
             PaddingValues(
                 horizontal = 20.dp,
-                vertical = 16.dp,
+                vertical = 14.dp,
             ),
     ) {
         val hasLeadingContent = isLoading || leadingIcon != null
@@ -220,7 +220,7 @@ fun YadanButton(
     }
 }
 
-private val BUTTON_MIN_HEIGHT = 56.dp
+private val BUTTON_MIN_HEIGHT = 52.dp
 private val BUTTON_CORNER_RADIUS = 16.dp
 private val ICON_SIZE = 20.dp
 private val ICON_SPACING = 8.dp

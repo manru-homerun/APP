@@ -5,6 +5,7 @@ import com.manruhomerun.yadanbeopseok.data.repository.TravelSpotRepository
 import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
+import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
 import com.manruhomerun.yadanbeopseok.travel.util.toTravelErrorMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -87,6 +88,8 @@ internal class TravelSpotQueryStateHolder(
             return
         }
 
+        val region = currentRegion ?: return
+
         if (state.isSearchLoading) return
 
         cancelQuery()
@@ -101,7 +104,12 @@ internal class TravelSpotQueryStateHolder(
 
         launchSpotQuery(
             fallbackMessage = "관광지를 검색하지 못했습니다.",
-            request = { repository.searchTravelSpots(searchKeyword) },
+            request = {
+                repository.searchTravelSpots(
+                    searchKeyword = searchKeyword,
+                    region = region,
+                )
+            },
             onSuccess = { spots ->
                 _uiState.update { it.copy(searchResults = spots) }
             },
@@ -120,6 +128,27 @@ internal class TravelSpotQueryStateHolder(
         if (category == TravelSpotCategory.STADIUM || category == TravelSpotCategory.UNKNOWN) return
 
         _uiState.update { it.copy(selectedCategory = category) }
+    }
+
+    /** 찜 탭의 서버 카테고리를 변경하고 해당 목록을 다시 조회합니다. */
+    fun selectTravelSpotDibsCategory(category: TravelSpotFilterCategory) {
+        val state = _uiState.value
+
+        if (state.isSearchMode || state.selectedTab != TravelSpotSelectionTab.DIBS) return
+        if (state.selectedDibsCategory == category) return
+
+        cancelQuery()
+        loadedTabs.remove(TravelSpotSelectionTab.DIBS)
+
+        _uiState.update {
+            it.copy(
+                selectedDibsCategory = category,
+                dibsSpots = emptyList(),
+                errorMessage = null,
+            )
+        }
+
+        loadSelectedTab()
     }
 
     /**
@@ -160,6 +189,7 @@ internal class TravelSpotQueryStateHolder(
         val region = currentRegion ?: return
         val state = _uiState.value
         val tab = state.selectedTab
+        val dibsCategory = state.selectedDibsCategory
 
         if (state.isSearchMode || queryJob?.isActive == true) return
         if (!forceRefresh && tab in loadedTabs) return
@@ -183,15 +213,24 @@ internal class TravelSpotQueryStateHolder(
             request = {
                 when (tab) {
                     TravelSpotSelectionTab.SUGGESTED -> repository.getSuggestedTravelSpots(region)
-                    TravelSpotSelectionTab.DIBS -> repository.getTravelSpotDibs(region)
+                    TravelSpotSelectionTab.DIBS -> repository.getTravelSpotDibs(
+                        region = region,
+                        category = dibsCategory,
+                    )
                 }
             },
             onSuccess = { spots ->
-                loadedTabs.add(tab)
-                _uiState.update {
-                    when (tab) {
-                        TravelSpotSelectionTab.SUGGESTED -> it.copy(suggestedSpots = spots)
-                        TravelSpotSelectionTab.DIBS -> it.copy(dibsSpots = spots)
+                val hasCurrentDibsCategory = tab != TravelSpotSelectionTab.DIBS ||
+                    _uiState.value.selectedDibsCategory == dibsCategory
+                val isCurrentRequest = currentRegion == region && hasCurrentDibsCategory
+
+                if (isCurrentRequest) {
+                    loadedTabs.add(tab)
+                    _uiState.update {
+                        when (tab) {
+                            TravelSpotSelectionTab.SUGGESTED -> it.copy(suggestedSpots = spots)
+                            TravelSpotSelectionTab.DIBS -> it.copy(dibsSpots = spots)
+                        }
                     }
                 }
             },

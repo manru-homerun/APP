@@ -22,8 +22,8 @@ data class TravelCreationUiState(
     /** B·02에서 선택한 동행 조건 목록입니다. */
     val selectedCompanionConditions: Set<TravelCompanionCondition> = emptySet(),
 
-    /** B·03에서 선택한 여행 테마 목록입니다. */
-    val selectedThemes: List<TravelTheme> = emptyList(),
+    /** B·03에서 선택한 하나의 여행 테마입니다. */
+    val selectedTheme: TravelTheme? = null,
 
     /** B·04에서 선택한 동행자 목록입니다. */
     val selectedCompanions: List<UserProfile> = emptyList(),

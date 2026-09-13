@@ -16,52 +16,49 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.manruhomerun.yadanbeopseok.mypage.screen.TravelSpotDibsScreen
-import com.manruhomerun.yadanbeopseok.mypage.viewmodel.TravelSpotDibsViewModel
+import com.manruhomerun.yadanbeopseok.mypage.screen.ProfileEditScreen
+import com.manruhomerun.yadanbeopseok.mypage.viewmodel.ProfileEditEvent
+import com.manruhomerun.yadanbeopseok.mypage.viewmodel.ProfileEditViewModel
 
-/**
- * H·04 찜한 관광지 화면과 [TravelSpotDibsViewModel]을 연결합니다.
- *
- * 관광지 상세 화면에서 돌아오면 찜 목록을 다시 조회하여
- * 상세 화면에서 변경된 찜 상태를 목록에 반영합니다.
- */
+/** H·02 프로필 수정 화면과 [ProfileEditViewModel]을 연결합니다. */
 @Composable
-fun TravelSpotDibsRoute(
+fun ProfileEditRoute(
     onBackClick: () -> Unit,
-    onTravelSpotClick: (String) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: TravelSpotDibsViewModel = hiltViewModel(),
+    viewModel: ProfileEditViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.refresh()
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            when (event) {
+                ProfileEditEvent.Saved -> onBackClick()
+            }
+        }
     }
 
     LaunchedEffect(
         uiState.errorMessage,
-        uiState.dibsSpots.isNotEmpty(),
+        uiState.profile,
     ) {
         val errorMessage = uiState.errorMessage ?: return@LaunchedEffect
-        if (uiState.dibsSpots.isEmpty()) return@LaunchedEffect
+        if (uiState.profile == null) return@LaunchedEffect
 
         snackbarHostState.showSnackbar(errorMessage)
         viewModel.clearErrorMessage()
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        TravelSpotDibsScreen(
+        ProfileEditScreen(
             uiState = uiState,
             onBackClick = onBackClick,
-            onRegionSelected = viewModel::selectRegion,
-            onCategorySelected = viewModel::selectCategory,
-            onTravelSpotClick = onTravelSpotClick,
-            onDibsClick = viewModel::deleteDibs,
             onRetryClick = viewModel::retry,
+            onNicknameChange = viewModel::updateNickname,
+            onNicknameCheckRetry = viewModel::retryNicknameAvailabilityCheck,
+            onTeamSelected = viewModel::selectTeam,
+            onSaveClick = viewModel::saveProfile,
             modifier = Modifier.fillMaxSize(),
         )
 

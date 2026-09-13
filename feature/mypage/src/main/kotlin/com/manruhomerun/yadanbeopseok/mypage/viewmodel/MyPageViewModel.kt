@@ -11,6 +11,7 @@ import com.manruhomerun.yadanbeopseok.model.TravelPreference
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +33,7 @@ class MyPageViewModel @Inject constructor(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MyPageUiState())
     val uiState: StateFlow<MyPageUiState> = _uiState.asStateFlow()
+    private var loadMyPageJob: Job? = null
 
     init {
         loadMyPage()
@@ -42,7 +44,7 @@ class MyPageViewModel @Inject constructor(
      */
     fun retry() {
         val currentState = _uiState.value
-        if (currentState.isLoading || currentState.isProcessing) return
+        if (loadMyPageJob?.isActive == true || currentState.isProcessing) return
 
         loadMyPage()
     }
@@ -50,12 +52,12 @@ class MyPageViewModel @Inject constructor(
     /**
      * 백엔드 로그아웃을 요청하고 로컬 인증 정보를 삭제합니다.
      */
-    fun logout(kakaoAccessToken: String) {
+    fun logout() {
         if (!beginAction(MyPageAction.LOGOUT)) return
 
         viewModelScope.launch {
             try {
-                authRepository.logout(kakaoAccessToken = kakaoAccessToken)
+                authRepository.logout()
             } catch (exception: CancellationException) {
                 throw exception
             } catch (_: Exception) {
@@ -105,36 +107,65 @@ class MyPageViewModel @Inject constructor(
     }
 
     /**
-     * 사용자 프로필과 여행 취향을 동시에 조회합니다.
+     * 사용자 프로필과 여행 취향을 동시에 조회하고 성공한 결과를 각각 반영합니다.
      */
     private fun loadMyPage() {
         _uiState.update { currentState ->
             currentState.copy(
-                isLoading = true,
+                isLoading = currentState.userProfile == null,
                 errorMessage = null,
             )
         }
 
-        viewModelScope.launch {
+        loadMyPageJob = viewModelScope.launch {
             try {
-                val (userProfile, travelPreference) =
-                    coroutineScope {
-                        val profileDeferred = async {
+                val (profileResult, preferenceResult) = coroutineScope {
+                    val profileDeferred = async {
+                        runRepositoryRequest {
                             userRepository.getMyProfile()
                         }
-                        val preferenceDeferred = async {
+                    }
+                    val preferenceDeferred = async {
+                        runRepositoryRequest {
                             userRepository.getMyTravelPreference()
                         }
-
-                        profileDeferred.await() to preferenceDeferred.await()
                     }
 
+                    profileDeferred.await() to preferenceDeferred.await()
+                }
+
+                val loadedProfile = profileResult.getOrNull()
+                val loadedPreferenceSummary = preferenceResult.getOrNull()?.toSummary()
+                val profileError = profileResult.exceptionOrNull()
+                val preferenceError = preferenceResult.exceptionOrNull()
+
                 _uiState.update { currentState ->
+                    val resolvedProfile = loadedProfile ?: currentState.userProfile
+                    val resolvedPreferenceSummary = loadedPreferenceSummary ?: currentState.travelPreferenceSummary
+                    val errorMessage = when {
+                        profileError != null && resolvedProfile == null ->
+                            profileError.toSafeErrorMessage(
+                                defaultMessage = "마이페이지 정보를 불러오지 못했습니다. 다시 시도해주세요.",
+                            )
+
+                        profileError != null ->
+                            profileError.toSafeErrorMessage(
+                                defaultMessage = "프로필 정보를 새로 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
+                            )
+
+                        preferenceError != null ->
+                            preferenceError.toSafeErrorMessage(
+                                defaultMessage = "여행 취향 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
+                            )
+
+                        else -> null
+                    }
+
                     currentState.copy(
-                        userProfile = userProfile,
-                        travelPreferenceSummary = travelPreference.toSummary(),
+                        userProfile = resolvedProfile,
+                        travelPreferenceSummary = resolvedPreferenceSummary,
                         isLoading = false,
-                        errorMessage = null,
+                        errorMessage = errorMessage,
                     )
                 }
             } catch (exception: CancellationException) {
@@ -144,13 +175,14 @@ class MyPageViewModel @Inject constructor(
                     currentState.copy(isLoading = false)
                 }
             } catch (exception: Exception) {
+                val errorMessage = exception.toSafeErrorMessage(
+                    defaultMessage = "마이페이지 정보를 불러오지 못했습니다. 다시 시도해주세요.",
+                )
+
                 _uiState.update { currentState ->
                     currentState.copy(
                         isLoading = false,
-                        errorMessage =
-                            exception.toSafeErrorMessage(
-                                defaultMessage = "마이페이지 정보를 불러오지 못했습니다. 다시 시도해주세요.",
-                            ),
+                        errorMessage = errorMessage,
                     )
                 }
             }
@@ -198,6 +230,21 @@ class MyPageViewModel @Inject constructor(
 }
 
 /**
+ * 조회 요청의 일반 실패만 결과로 반환하고 취소와 세션 만료는 호출자에게 전달합니다.
+ */
+private suspend fun <T> runRepositoryRequest(block: suspend () -> T): Result<T> {
+    return try {
+        Result.success(block())
+    } catch (exception: CancellationException) {
+        throw exception
+    } catch (exception: SessionExpiredException) {
+        throw exception
+    } catch (exception: Exception) {
+        Result.failure(exception)
+    }
+}
+
+/**
  * H·01에 표시할 여행 취향 요약 문구를 만듭니다.
  */
 private fun TravelPreference.toSummary(): String {
@@ -216,7 +263,7 @@ private fun TravelPreference.toSummary(): String {
 /**
  * 내부 예외 정보를 노출하지 않는 사용자용 문구로 변환합니다.
  */
-private fun Exception.toSafeErrorMessage(defaultMessage: String): String =
+private fun Throwable.toSafeErrorMessage(defaultMessage: String): String =
     when (this) {
         is NetworkConnectionException ->
             "인터넷 연결을 확인한 후 다시 시도해주세요."

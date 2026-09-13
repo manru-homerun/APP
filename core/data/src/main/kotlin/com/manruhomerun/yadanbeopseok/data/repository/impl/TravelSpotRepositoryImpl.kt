@@ -6,10 +6,11 @@ import com.manruhomerun.yadanbeopseok.data.repository.TravelSpotRepository
 import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotDetail
+import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
 import com.manruhomerun.yadanbeopseok.network.common.error.ApiCallExecutor
 import com.manruhomerun.yadanbeopseok.network.common.extension.requireData
 import com.manruhomerun.yadanbeopseok.network.travel.api.TravelSpotApi
-import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotDibsRequestDto
+import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotPageResponseDto
 import javax.inject.Inject
 
 /**
@@ -19,9 +20,15 @@ internal class TravelSpotRepositoryImpl @Inject constructor(
     private val travelSpotApi: TravelSpotApi,
     private val apiCallExecutor: ApiCallExecutor,
 ) : TravelSpotRepository {
-    override suspend fun getPopularTravelSpots(region: Region): List<TravelSpot> {
+    override suspend fun getPopularTravelSpots(
+        region: Region,
+        category: TravelSpotFilterCategory,
+    ): List<TravelSpot> {
         val response = apiCallExecutor.execute {
-            travelSpotApi.getPopularTravelSpots(region = region)
+            travelSpotApi.getPopularTravelSpots(
+                region = region,
+                category = category,
+            )
         }
 
         return response.contents.map { dto ->
@@ -39,12 +46,15 @@ internal class TravelSpotRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun searchTravelSpots(searchKeyword: String): List<TravelSpot> {
+    override suspend fun searchTravelSpots(searchKeyword: String, region: Region): List<TravelSpot> {
         val response = apiCallExecutor.execute {
-            travelSpotApi.searchTravelSpots(searchKeyword = searchKeyword)
+            travelSpotApi.searchTravelSpots(
+                searchKeyword = searchKeyword,
+                region = region,
+            )
         }
 
-        return response.requireData().contents.map { dto ->
+        return response.contents.map { dto ->
             dto.toTravelSpot()
         }
     }
@@ -65,31 +75,60 @@ internal class TravelSpotRepositoryImpl @Inject constructor(
         )
     }
 
-    override suspend fun getTravelSpotDibs(region: Region?): List<TravelSpot> {
-        val response = apiCallExecutor.execute {
-            travelSpotApi.getTravelSpotDibs(region = region)
+    override suspend fun getTravelSpotDibs(
+        region: Region,
+        category: TravelSpotFilterCategory,
+    ): List<TravelSpot> {
+        val firstPage = getTravelSpotDibsPage(
+            region = region,
+            category = category,
+            pageNumber = FIRST_PAGE_NUMBER,
+        )
+
+        val remainingPageNumbers = (FIRST_PAGE_NUMBER + 1)..firstPage.totalPages
+        val remainingSpots = if (firstPage.totalPages > FIRST_PAGE_NUMBER) {
+            remainingPageNumbers.flatMap { pageNumber ->
+                getTravelSpotDibsPage(
+                    region = region,
+                    category = category,
+                    pageNumber = pageNumber,
+                ).contents
+            }
+        } else {
+            emptyList()
         }
 
-        return response.requireData().map { dto ->
-            dto.toTravelSpot(defaultDibs = true)
-        }
+        return (firstPage.contents + remainingSpots)
+            .distinctBy { dto -> dto.id }
+            .map { dto -> dto.toTravelSpot(defaultDibs = true) }
     }
 
     override suspend fun addTravelSpotDibs(spotId: String) {
-        val request = TravelSpotDibsRequestDto(contentId = spotId.toContentId())
-
         apiCallExecutor.execute {
-            travelSpotApi.addTravelSpotDibs(request = request)
+            travelSpotApi.addTravelSpotDibs(contentId = spotId)
         }
     }
 
     override suspend fun deleteTravelSpotDibs(spotId: String) {
-        val request = TravelSpotDibsRequestDto(contentId = spotId.toContentId())
-
         apiCallExecutor.execute {
-            travelSpotApi.deleteTravelSpotDibs(request = request)
+            travelSpotApi.deleteTravelSpotDibs(contentId = spotId)
         }
     }
+
+    /** 찜 목록의 한 페이지를 서버에서 조회합니다. */
+    private suspend fun getTravelSpotDibsPage(
+        region: Region,
+        category: TravelSpotFilterCategory,
+        pageNumber: Int,
+    ): TravelSpotPageResponseDto =
+        apiCallExecutor.execute {
+            travelSpotApi.getTravelSpotDibs(
+                region = region,
+                category = category,
+                pageNumber = pageNumber,
+                pageSize = DIBS_PAGE_SIZE,
+            )
+        }
 }
 
 /**
@@ -100,3 +139,6 @@ private fun String.toContentId(): Long =
         ?: throw IllegalArgumentException(
             "Travel spot ID must be numeric.",
         )
+
+private const val FIRST_PAGE_NUMBER = 1
+private const val DIBS_PAGE_SIZE = 10

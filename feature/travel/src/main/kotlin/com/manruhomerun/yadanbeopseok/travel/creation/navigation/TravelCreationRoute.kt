@@ -1,6 +1,7 @@
 package com.manruhomerun.yadanbeopseok.travel.creation.navigation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -42,12 +43,17 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
+import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanBackwardTransition
+import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanEmphasizedTransition
+import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanFadeTransition
+import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanForwardTransition
 import com.manruhomerun.yadanbeopseok.model.KboTeam
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
 import com.manruhomerun.yadanbeopseok.navigation.route.HomeNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.TravelSpotDetailNavKey
 import com.manruhomerun.yadanbeopseok.travel.component.TravelNameEditDialog
 import com.manruhomerun.yadanbeopseok.travel.course.navigation.TravelCourseEditRoute
+import com.manruhomerun.yadanbeopseok.travel.course.screen.TravelCourseSavedScreen
 import com.manruhomerun.yadanbeopseok.travel.course.viewmodel.TravelCourseEditViewModel
 import com.manruhomerun.yadanbeopseok.travel.creation.screen.TravelCompanionConditionScreen
 import com.manruhomerun.yadanbeopseok.travel.creation.screen.TravelCompanionSelectionScreen
@@ -60,7 +66,6 @@ import com.manruhomerun.yadanbeopseok.travel.creation.screen.TravelSpotSelection
 import com.manruhomerun.yadanbeopseok.travel.creation.screen.TravelThemeSelectionScreen
 import com.manruhomerun.yadanbeopseok.travel.creation.viewmodel.TravelCreationEvent
 import com.manruhomerun.yadanbeopseok.travel.creation.viewmodel.TravelCreationViewModel
-import com.manruhomerun.yadanbeopseok.travel.course.screen.TravelCourseSavedScreen
 import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
@@ -293,170 +298,217 @@ fun TravelCreationRoute(
         viewModel.clearErrorMessage()
     }
 
+    val currentPage = when {
+        isSaved -> TravelCreationPage.SAVED
+        isEditing && uiState.isSaving -> TravelCreationPage.EDIT_SAVING
+        isEditing -> TravelCreationPage.EDIT
+        uiState.isGenerating -> TravelCreationPage.GENERATING
+        generatedCourse != null &&
+            selectedGame != null &&
+            selectedStartDate != null &&
+            selectedEndDate != null -> TravelCreationPage.RESULT
+
+        else -> currentStep.toTravelCreationPage()
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
-        when {
+        AnimatedContent(
+            targetState = currentPage,
+            transitionSpec = {
+                when {
+                    targetState == TravelCreationPage.SAVED -> {
+                        yadanEmphasizedTransition()
+                    }
 
-            isSaved -> {
-                TravelCourseSavedScreen(
-                    travelName = uiState.travelName,
-                    travelSpotCount = generatedTravelSpotCount,
-                    companionCount = uiState.selectedCompanions.size,
-                    startDate = selectedStartDate,
-                    currentDate = currentDate,
-                    onHomeClick = ::finishAtHome,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+                    initialState.usesFadeTransition || targetState.usesFadeTransition -> {
+                        yadanFadeTransition()
+                    }
 
-            isEditing && uiState.isSaving -> {
-                TravelRequestLoadingOverlay(
-                    message = "원래 여행 일정을 저장하고 있어요",
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+                    targetState.order > initialState.order -> {
+                        yadanForwardTransition()
+                    }
 
-            isEditing -> {
-                // 원본 저장 실패로 편집 화면을 다시 표시해도 스크롤 상태를 복원합니다.
-                editStateHolder.SaveableStateProvider(key = "course_edit_flow") {
-                    TravelCourseEditRoute(
-                        viewModel = editViewModel,
-                        onExitRequest = {
-                            shouldShowSavedScreenAfterSave = false
+                    else -> {
+                        yadanBackwardTransition()
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopStart,
+            label = "travel_creation_screen",
+        ) { page ->
+            when (page) {
+                TravelCreationPage.SAVED -> {
+                    TravelCourseSavedScreen(
+                        travelName = uiState.travelName,
+                        travelSpotCount = generatedTravelSpotCount,
+                        companionCount = uiState.selectedCompanions.size,
+                        startDate = selectedStartDate,
+                        currentDate = currentDate,
+                        onHomeClick = ::finishAtHome,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+
+                TravelCreationPage.EDIT_SAVING -> {
+                    TravelRequestLoadingOverlay(
+                        message = "원래 여행 일정을 저장하고 있어요",
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+
+                TravelCreationPage.EDIT -> {
+                    // 원본 저장 실패로 편집 화면을 다시 표시해도 스크롤 상태를 복원합니다.
+                    editStateHolder.SaveableStateProvider(key = "course_edit_flow") {
+                        TravelCourseEditRoute(
+                            viewModel = editViewModel,
+                            onExitRequest = {
+                                shouldShowSavedScreenAfterSave = false
+                                viewModel.saveTravel()
+                            },
+                            onHomeClick = ::finishAtHome,
+                            onTravelSpotClick = { travelSpot ->
+                                navigator.navigate(TravelSpotDetailNavKey(travelSpot.id))
+                            },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                }
+
+                TravelCreationPage.GENERATING -> {
+                    TravelCourseGeneratingScreen(
+                        regionName = selectedGame?.stadium?.region?.displayName.orEmpty(),
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+
+                TravelCreationPage.RESULT -> {
+                    val course = generatedCourse
+                    val game = selectedGame
+                    val startDate = selectedStartDate
+                    val endDate = selectedEndDate
+
+                    if (course == null || game == null || startDate == null || endDate == null) {
+                        return@AnimatedContent
+                    }
+
+                    TravelCourseResultScreen(
+                        course = course,
+                        game = game,
+                        travelName = uiState.travelName,
+                        startDate = startDate,
+                        endDate = endDate,
+                        isSaving = uiState.isSaving,
+                        onBackClick = ::navigateBackWithinCreation,
+                        onRenameClick = {
+                            isNameEditDialogVisible = true
+                        },
+                        onEditScheduleClick = {
+                            val params = viewModel.getCurrentCreateTravelParams()
+                            if (params != null && !viewModel.uiState.value.isSaving) {
+                                viewModel.clearErrorMessage()
+                                editViewModel.initializeNewTravel(params, selectedGame)
+                            }
+                        },
+                        onSaveClick = {
+                            shouldShowSavedScreenAfterSave = true
                             viewModel.saveTravel()
                         },
-                        onHomeClick = ::finishAtHome,
-                        onTravelSpotClick = { travelSpot ->
-                            navigator.navigate(TravelSpotDetailNavKey(travelSpot.id))
+                        modifier = Modifier.fillMaxSize(),
+                        errorMessage = uiState.errorMessage,
+                    )
+                }
+
+                TravelCreationPage.GAME_SELECTION -> {
+                    TravelGameSelectionScreen(
+                        uiState = gameSelectionUiState,
+                        onCloseClick = ::closeCreation,
+                        onTeamSelected = viewModel::selectScheduleTeam,
+                        onGameSelected = viewModel::selectGameSummary,
+                        onNextClick = viewModel::confirmSelectedGame,
+                        onRetryClick = viewModel::retryGameSchedule,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+
+                TravelCreationPage.COMPANION_CONDITION -> {
+                    TravelCompanionConditionScreen(
+                        selectedConditions = uiState.selectedCompanionConditions,
+                        isNextEnabled = selectedGame != null && !isDirectGameLoading,
+                        onConditionClick = viewModel::toggleCompanionCondition,
+                        onBackClick = ::navigateBackWithinCreation,
+                        onNextClick = {
+                            currentStep = TravelCreationStep.THEME_SELECTION
                         },
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
-            }
 
-            uiState.isGenerating -> {
-                TravelCourseGeneratingScreen(
-                    regionName = selectedGame?.stadium?.region?.displayName.orEmpty(),
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+                TravelCreationPage.THEME_SELECTION -> {
+                    TravelThemeSelectionScreen(
+                        uiState = themeSelectionUiState,
+                        selectedTheme = uiState.selectedTheme,
+                        onThemeClick = viewModel::selectTheme,
+                        onBackClick = ::navigateBackWithinCreation,
+                        onNextClick = {
+                            currentStep = TravelCreationStep.COMPANION_SELECTION
+                        },
+                        onRetryClick = viewModel::retryThemeSelection,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
 
-            generatedCourse != null &&
-                selectedGame != null &&
-                selectedStartDate != null &&
-                selectedEndDate != null -> {
-                TravelCourseResultScreen(
-                    course = generatedCourse,
-                    game = selectedGame,
-                    travelName = uiState.travelName,
-                    startDate = selectedStartDate,
-                    endDate = selectedEndDate,
-                    isSaving = uiState.isSaving,
-                    onBackClick = ::navigateBackWithinCreation,
-                    onRenameClick = {
-                        isNameEditDialogVisible = true
-                    },
-                    onEditScheduleClick = {
-                        val params = viewModel.getCurrentCreateTravelParams()
-                        if (params != null && !viewModel.uiState.value.isSaving) {
-                            viewModel.clearErrorMessage()
-                            editViewModel.initializeNewTravel(params, selectedGame)
-                        }
-                    },
-                    onSaveClick = {
-                        shouldShowSavedScreenAfterSave = true
-                        viewModel.saveTravel()
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                    errorMessage = uiState.errorMessage,
-                )
-            }
+                TravelCreationPage.COMPANION_SELECTION -> {
+                    TravelCompanionSelectionScreen(
+                        uiState = companionSelectionUiState,
+                        selectedCompanions = uiState.selectedCompanions,
+                        onCompanionClick = viewModel::toggleCompanion,
+                        onBackClick = ::navigateBackWithinCreation,
+                        onNextClick = {
+                            currentStep = TravelCreationStep.DATE_SELECTION
+                        },
+                        onRetryClick = viewModel::retryCompanionSelection,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
 
-            currentStep == TravelCreationStep.GAME_SELECTION -> {
-                TravelGameSelectionScreen(
-                    uiState = gameSelectionUiState,
-                    onCloseClick = ::closeCreation,
-                    onTeamSelected = viewModel::selectScheduleTeam,
-                    onGameSelected = viewModel::selectGameSummary,
-                    onNextClick = viewModel::confirmSelectedGame,
-                    onRetryClick = viewModel::retryGameSchedule,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+                TravelCreationPage.DATE_SELECTION -> {
+                    if (selectedGame != null) {
+                        TravelDateSelectionScreen(
+                            selectedGame = selectedGame,
+                            startDate = selectedStartDate,
+                            endDate = selectedEndDate,
+                            onDateRangeSelected = viewModel::selectDateRange,
+                            onBackClick = ::navigateBackWithinCreation,
+                            onNextClick = {
+                                currentStep = TravelCreationStep.SPOT_SELECTION
+                            },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                }
 
-            currentStep == TravelCreationStep.COMPANION_CONDITION -> {
-                TravelCompanionConditionScreen(
-                    selectedConditions = uiState.selectedCompanionConditions,
-                    isNextEnabled = selectedGame != null && !isDirectGameLoading,
-                    onConditionClick = viewModel::toggleCompanionCondition,
-                    onBackClick = ::navigateBackWithinCreation,
-                    onNextClick = {
-                        currentStep = TravelCreationStep.THEME_SELECTION
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-
-            currentStep == TravelCreationStep.THEME_SELECTION -> {
-                TravelThemeSelectionScreen(
-                    uiState = themeSelectionUiState,
-                    selectedThemes = uiState.selectedThemes,
-                    onThemeClick = viewModel::toggleTheme,
-                    onBackClick = ::navigateBackWithinCreation,
-                    onNextClick = {
-                        currentStep = TravelCreationStep.COMPANION_SELECTION
-                    },
-                    onRetryClick = viewModel::retryThemeSelection,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-
-            currentStep == TravelCreationStep.COMPANION_SELECTION -> {
-                TravelCompanionSelectionScreen(
-                    uiState = companionSelectionUiState,
-                    selectedCompanions = uiState.selectedCompanions,
-                    onCompanionClick = viewModel::toggleCompanion,
-                    onBackClick = ::navigateBackWithinCreation,
-                    onNextClick = {
-                        currentStep = TravelCreationStep.DATE_SELECTION
-                    },
-                    onRetryClick = viewModel::retryCompanionSelection,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-
-            currentStep == TravelCreationStep.DATE_SELECTION && selectedGame != null -> {
-                TravelDateSelectionScreen(
-                    selectedGame = selectedGame,
-                    startDate = selectedStartDate,
-                    endDate = selectedEndDate,
-                    onDateRangeSelected = viewModel::selectDateRange,
-                    onBackClick = ::navigateBackWithinCreation,
-                    onNextClick = {
-                        currentStep = TravelCreationStep.SPOT_SELECTION
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-
-            currentStep == TravelCreationStep.SPOT_SELECTION -> {
-                TravelSpotSelectionScreen(
-                    uiState = spotSelectionUiState,
-                    selectedTravelSpots = uiState.selectedTravelSpots,
-                    onSearchQueryChange = viewModel::updateTravelSpotSearchQuery,
-                    onSearch = viewModel::searchTravelSpots,
-                    onSearchDoneClick = viewModel::clearTravelSpotSearch,
-                    onTabSelected = viewModel::selectTravelSpotTab,
-                    onCategorySelected = viewModel::selectTravelSpotCategory,
-                    onTravelSpotClick = { travelSpot ->
-                        shouldRefreshTravelSpotSelection = true
-                        navigator.navigate(TravelSpotDetailNavKey(travelSpot.id))
-                    },
-                    onTravelSpotToggle = viewModel::toggleTravelSpot,
-                    onBackClick = ::navigateBackWithinCreation,
-                    onGenerateClick = viewModel::generateTravelCourse,
-                    onRetryClick = viewModel::retryTravelSpotSelection,
-                    modifier = Modifier.fillMaxSize(),
-                )
+                TravelCreationPage.SPOT_SELECTION -> {
+                    TravelSpotSelectionScreen(
+                        uiState = spotSelectionUiState,
+                        selectedTravelSpots = uiState.selectedTravelSpots,
+                        onSearchQueryChange = viewModel::updateTravelSpotSearchQuery,
+                        onSearch = viewModel::searchTravelSpots,
+                        onSearchDoneClick = viewModel::clearTravelSpotSearch,
+                        onTabSelected = viewModel::selectTravelSpotTab,
+                        onCategorySelected = viewModel::selectTravelSpotCategory,
+                        onDibsCategorySelected = viewModel::selectTravelSpotDibsCategory,
+                        onTravelSpotClick = { travelSpot ->
+                            shouldRefreshTravelSpotSelection = true
+                            navigator.navigate(TravelSpotDetailNavKey(travelSpot.id))
+                        },
+                        onTravelSpotToggle = viewModel::toggleTravelSpot,
+                        onBackClick = ::navigateBackWithinCreation,
+                        onGenerateClick = viewModel::generateTravelCourse,
+                        onRetryClick = viewModel::retryTravelSpotSelection,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
         }
 
@@ -487,14 +539,36 @@ fun TravelCreationRoute(
     }
 }
 
+/** 여행 만들기 Route 안에서 실제로 교체되는 전체 화면입니다. */
+private enum class TravelCreationPage(val order: Int, val usesFadeTransition: Boolean = false) {
+    GAME_SELECTION(order = 0),
+    COMPANION_CONDITION(order = 1),
+    THEME_SELECTION(order = 2),
+    COMPANION_SELECTION(order = 3),
+    DATE_SELECTION(order = 4),
+    SPOT_SELECTION(order = 5),
+    GENERATING(order = 6, usesFadeTransition = true),
+    RESULT(order = 7),
+    EDIT(order = 8),
+    EDIT_SAVING(order = 9, usesFadeTransition = true),
+    SAVED(order = 10),
+}
+
+/** 여행 만들기 입력 단계를 화면 전환에 사용하는 상태로 변환합니다. */
+private fun TravelCreationStep.toTravelCreationPage(): TravelCreationPage = when (this) {
+    TravelCreationStep.GAME_SELECTION -> TravelCreationPage.GAME_SELECTION
+    TravelCreationStep.COMPANION_CONDITION -> TravelCreationPage.COMPANION_CONDITION
+    TravelCreationStep.THEME_SELECTION -> TravelCreationPage.THEME_SELECTION
+    TravelCreationStep.COMPANION_SELECTION -> TravelCreationPage.COMPANION_SELECTION
+    TravelCreationStep.DATE_SELECTION -> TravelCreationPage.DATE_SELECTION
+    TravelCreationStep.SPOT_SELECTION -> TravelCreationPage.SPOT_SELECTION
+}
+
 /**
  * 경기 상세 조회 또는 원본 일정 저장 중 표시하는 공통 대기 UI입니다.
  */
 @Composable
-private fun TravelRequestLoadingOverlay(
-    modifier: Modifier = Modifier,
-    message: String = "경기 정보를 확인하고 있어요",
-) {
+private fun TravelRequestLoadingOverlay(modifier: Modifier = Modifier, message: String = "경기 정보를 확인하고 있어요") {
     val interactionSource = remember { MutableInteractionSource() }
 
     Box(

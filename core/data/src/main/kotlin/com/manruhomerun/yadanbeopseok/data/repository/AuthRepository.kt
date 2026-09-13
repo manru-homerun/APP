@@ -54,19 +54,8 @@ interface AuthRepository {
 
     /**
      * 백엔드에 로그아웃을 요청하고 저장된 인증 정보를 삭제합니다.
-     *
-     * 카카오 액세스 토큰과 기기 정보를 백엔드에 전달하여
-     * 현재 기기의 FCM 토큰을 비활성화합니다.
-     *
-     * @param kakaoAccessToken Kakao SDK에서 발급받은 카카오 액세스 토큰
-     * @param deviceId 로그아웃하는 기기의 식별자
-     * @param fcmToken 비활성화할 기기의 FCM 토큰
      */
-    suspend fun logout(
-        kakaoAccessToken: String,
-        deviceId: String? = null,
-        fcmToken: String? = null,
-    )
+    suspend fun logout()
 
     /**
      * 현재 로그인한 사용자의 회원 탈퇴를 요청합니다.

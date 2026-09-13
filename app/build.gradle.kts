@@ -44,7 +44,7 @@ android {
 
     defaultConfig {
         applicationId = "com.manruhomerun.yadanbeopseok"
-        versionCode = 1
+        versionCode = 2
         versionName = "1.0"
 
         manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] =
@@ -72,6 +72,7 @@ dependencies {
 
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtimeCompose)

@@ -27,6 +27,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
+import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
 import com.manruhomerun.yadanbeopseok.travel.component.travelSpotSelectionContent
 import com.manruhomerun.yadanbeopseok.travel.course.viewmodel.TravelCourseSpotSelectionUiState
 import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotSelectionTab
@@ -49,6 +50,7 @@ fun TravelCourseSpotSelectionScreen(
     onSearch: () -> Unit,
     onTabSelected: (TravelSpotSelectionTab) -> Unit,
     onCategorySelected: (TravelSpotCategory?) -> Unit,
+    onDibsCategorySelected: (TravelSpotFilterCategory) -> Unit,
     onTravelSpotClick: (TravelSpot) -> Unit,
     onTravelSpotToggle: (TravelSpot) -> Unit,
     onBackClick: () -> Unit,
@@ -98,6 +100,7 @@ fun TravelCourseSpotSelectionScreen(
                 onSearch = onSearch,
                 onTabSelected = onTabSelected,
                 onCategorySelected = onCategorySelected,
+                onDibsCategorySelected = onDibsCategorySelected,
                 onTravelSpotClick = onTravelSpotClick,
                 onTravelSpotToggle = onTravelSpotToggle,
                 onRetryClick = onRetryClick,
@@ -172,6 +175,7 @@ private fun TravelCourseSpotDibsPreview() {
     TravelCourseSpotSelectionPreview(
         selectionState = TravelSpotSelectionUiState(
             selectedTab = TravelSpotSelectionTab.DIBS,
+            selectedDibsCategory = TravelSpotFilterCategory.SHOPPING,
             dibsSpots = previewCourseSpots.filter { it.dibs },
         ),
     )
@@ -256,6 +260,7 @@ private fun TravelCourseSpotSelectionPreview(
             onSearch = {},
             onTabSelected = {},
             onCategorySelected = {},
+            onDibsCategorySelected = {},
             onTravelSpotClick = {},
             onTravelSpotToggle = {},
             onBackClick = {},

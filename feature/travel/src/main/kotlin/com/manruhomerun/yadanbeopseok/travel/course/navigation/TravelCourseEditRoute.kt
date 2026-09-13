@@ -1,7 +1,7 @@
 package com.manruhomerun.yadanbeopseok.travel.course.navigation
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Box
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -15,6 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanBackwardTransition
+import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanEmphasizedTransition
+import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanFadeTransition
+import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanForwardTransition
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.travel.component.TravelNameEditDialog
 import com.manruhomerun.yadanbeopseok.travel.course.screen.TravelCourseEditScreen
@@ -131,9 +135,38 @@ fun TravelCourseEditRoute(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
-        when {
-            isSaved -> {
+    val currentPage = when {
+        isSaved -> TravelCourseEditPage.SAVED
+        spotSelectionUiState.isActive -> TravelCourseEditPage.SPOT_SELECTION
+        else -> TravelCourseEditPage.EDIT
+    }
+
+    AnimatedContent(
+        targetState = currentPage,
+        transitionSpec = {
+            when {
+                targetState == TravelCourseEditPage.SAVED -> {
+                    yadanEmphasizedTransition()
+                }
+
+                targetState == TravelCourseEditPage.SPOT_SELECTION -> {
+                    yadanForwardTransition()
+                }
+
+                initialState == TravelCourseEditPage.SPOT_SELECTION -> {
+                    yadanBackwardTransition()
+                }
+
+                else -> {
+                    yadanFadeTransition()
+                }
+            }
+        },
+        modifier = modifier.fillMaxSize(),
+        label = "travel_course_edit_screen",
+    ) { page ->
+        when (page) {
+            TravelCourseEditPage.SAVED -> {
                 TravelCourseSavedScreen(
                     travelName = uiState.travelName,
                     travelSpotCount = uiState.travelSpotCount,
@@ -145,7 +178,7 @@ fun TravelCourseEditRoute(
                 )
             }
 
-            spotSelectionUiState.isActive -> {
+            TravelCourseEditPage.SPOT_SELECTION -> {
                 TravelCourseSpotSelectionScreen(
                     uiState = spotSelectionUiState,
                     disabledSpotIds = disabledSpotIds,
@@ -153,6 +186,7 @@ fun TravelCourseEditRoute(
                     onSearch = viewModel::searchTravelSpots,
                     onTabSelected = viewModel::selectTravelSpotTab,
                     onCategorySelected = viewModel::selectTravelSpotCategory,
+                    onDibsCategorySelected = viewModel::selectTravelSpotDibsCategory,
                     onTravelSpotClick = { travelSpot ->
                         shouldRefreshTravelSpotSelection = true
                         onTravelSpotClick(travelSpot)
@@ -165,7 +199,7 @@ fun TravelCourseEditRoute(
                 )
             }
 
-            else -> {
+            TravelCourseEditPage.EDIT -> {
                 // 관광지 선택 화면을 다녀와도 C01의 스크롤 상태를 유지합니다.
                 screenStateHolder.SaveableStateProvider(key = "course_edit") {
                     TravelCourseEditScreen(
@@ -204,4 +238,11 @@ fun TravelCourseEditRoute(
             },
         )
     }
+}
+
+/** 여행 일정 편집 Route 안에서 교체되는 화면입니다. */
+private enum class TravelCourseEditPage {
+    EDIT,
+    SPOT_SELECTION,
+    SAVED,
 }

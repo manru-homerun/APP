@@ -42,6 +42,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
+import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
 import com.manruhomerun.yadanbeopseok.travel.component.travelSpotSelectionContent
 import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotSelectionTab
 import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotSelectionUiState
@@ -65,6 +66,7 @@ fun TravelSpotSelectionScreen(
     onSearchDoneClick: () -> Unit,
     onTabSelected: (TravelSpotSelectionTab) -> Unit,
     onCategorySelected: (TravelSpotCategory?) -> Unit,
+    onDibsCategorySelected: (TravelSpotFilterCategory) -> Unit,
     onTravelSpotClick: (TravelSpot) -> Unit,
     onTravelSpotToggle: (TravelSpot) -> Unit,
     onBackClick: () -> Unit,
@@ -112,6 +114,7 @@ fun TravelSpotSelectionScreen(
             onSearch = onSearch,
             onTabSelected = onTabSelected,
             onCategorySelected = onCategorySelected,
+            onDibsCategorySelected = onDibsCategorySelected,
             onTravelSpotClick = onTravelSpotClick,
             onTravelSpotToggle = onTravelSpotToggle,
             onRetryClick = onRetryClick,
@@ -378,6 +381,7 @@ private fun TravelSpotSelectionPreview(
             onSearchDoneClick = {},
             onTabSelected = {},
             onCategorySelected = {},
+            onDibsCategorySelected = {},
             onTravelSpotClick = {},
             onTravelSpotToggle = {},
             onBackClick = {},

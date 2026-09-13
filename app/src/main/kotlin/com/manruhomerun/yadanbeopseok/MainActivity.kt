@@ -1,10 +1,16 @@
 package com.manruhomerun.yadanbeopseok
 
+import android.graphics.Color
 import android.os.Bundle
+import android.os.SystemClock
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,22 +19,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanButton
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
-import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
@@ -36,6 +43,7 @@ import com.manruhomerun.yadanbeopseok.navigation.rememberYadanNavigationState
 import com.manruhomerun.yadanbeopseok.navigation.route.HomeNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.LoginNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.TermsAgreementNavKey
+import com.manruhomerun.yadanbeopseok.navigation.route.TopLevelNavKey
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -53,6 +61,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.component.YadanBottomNavigati
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanBottomNavigationCenterAction
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanBottomNavigationItem
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanSurface
+import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanFadeTransition
 import com.manruhomerun.yadanbeopseok.navigation.route.GameScheduleNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.MyPageNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.TravelCreationNavKey
@@ -66,8 +75,20 @@ class MainActivity : ComponentActivity() {
     private val viewModel: MainActivityViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
+
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        splashScreen.setKeepOnScreenCondition {
+            viewModel.startupState.value == AppStartupState.Checking
+        }
+
+        enableEdgeToEdge(
+            statusBarStyle =
+                SystemBarStyle.light(
+                    scrim = Color.TRANSPARENT,
+                    darkScrim = Color.TRANSPARENT,
+                ),
+        )
 
         setContent {
             val startupState by viewModel.startupState.collectAsStateWithLifecycle()
@@ -75,16 +96,24 @@ class MainActivity : ComponentActivity() {
             YadanbeopseokTheme {
                 val initialNavKey = startupState.toInitialNavKey()
 
-                if (initialNavKey == null) {
-                    AppStartupScreen(
-                        state = startupState,
-                        onRetry = viewModel::restoreSession,
-                    )
-                } else {
-                    key(initialNavKey) {
-                        YadanbeopseokApp(
-                            initialNavKey = initialNavKey,
+                AnimatedContent(
+                    targetState = initialNavKey,
+                    transitionSpec = { yadanFadeTransition() },
+                    modifier = Modifier.fillMaxSize(),
+                    label = "app_startup_screen",
+                ) { currentInitialNavKey ->
+                    if (currentInitialNavKey == null) {
+                        AppStartupScreen(
+                            state = startupState,
+                            onRetry = viewModel::restoreSession,
                         )
+                    } else {
+                        key(currentInitialNavKey) {
+                            YadanbeopseokApp(
+                                initialNavKey = currentInitialNavKey,
+                                onExit = ::finish,
+                            )
+                        }
                     }
                 }
             }
@@ -99,9 +128,37 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun YadanbeopseokApp(
     initialNavKey: NavKey,
+    onExit: () -> Unit,
 ) {
     val navigationState = rememberYadanNavigationState(initialKey = initialNavKey)
     val selectedDestination = navigationState.currentTopLevelKey
+    val context = LocalContext.current.applicationContext
+    val currentKey = navigationState.currentKey
+    val isTopLevelDestination = currentKey is TopLevelNavKey
+    var lastBackPressedAt by remember(currentKey) { mutableLongStateOf(0L) }
+
+    val onTopLevelBack: () -> Unit = {
+        val currentTime = SystemClock.elapsedRealtime()
+        val elapsedSinceLastBackPress = currentTime - lastBackPressedAt
+        val isSecondBackPress = lastBackPressedAt != 0L &&
+            elapsedSinceLastBackPress <= EXIT_CONFIRMATION_INTERVAL_MILLIS
+
+        if (isSecondBackPress) {
+            onExit()
+        } else {
+            lastBackPressedAt = currentTime
+            Toast.makeText(
+                context,
+                R.string.exit_confirmation_message,
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+
+    BackHandler(
+        enabled = isTopLevelDestination && !navigationState.canNavigateBack,
+        onBack = onTopLevelBack,
+    )
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -202,12 +259,16 @@ private fun YadanbeopseokApp(
     ) { innerPadding ->
         YadanNavHost(
             navigationState = navigationState,
+            onTopLevelBack = onTopLevelBack,
             modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
         )
     }
 }
+
+private const val EXIT_CONFIRMATION_INTERVAL_MILLIS = 2_000L
+
 /**
  * 세션 확인 중이거나 확인에 실패했을 때 표시할 화면입니다.
  */
@@ -224,15 +285,7 @@ private fun AppStartupScreen(
         contentAlignment = Alignment.Center,
     ) {
         when (state) {
-            AppStartupState.Checking -> {
-                CircularProgressIndicator(
-                    modifier =
-                        Modifier.semantics {
-                            contentDescription = "로그인 정보 확인 중"
-                        },
-                    color = YadanPrimary,
-                )
-            }
+            AppStartupState.Checking -> Unit
 
             AppStartupState.Error -> {
                 Column(

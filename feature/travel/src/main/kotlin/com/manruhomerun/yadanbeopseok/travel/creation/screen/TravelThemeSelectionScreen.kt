@@ -66,7 +66,7 @@ import com.manruhomerun.yadanbeopseok.travel.creation.viewmodel.toTravelThemeIte
 @Composable
 fun TravelThemeSelectionScreen(
     uiState: TravelThemeSelectionUiState,
-    selectedThemes: List<TravelTheme>,
+    selectedTheme: TravelTheme?,
     onThemeClick: (TravelTheme) -> Unit,
     onBackClick: () -> Unit,
     onNextClick: () -> Unit,
@@ -79,12 +79,12 @@ fun TravelThemeSelectionScreen(
         }
     }
 
-    val isNextEnabled = selectedThemes.isNotEmpty() && !uiState.isLoading
+    val isNextEnabled = selectedTheme != null && !uiState.isLoading
 
     TravelCreationScaffold(
         currentStep = TravelCreationStep.THEME_SELECTION,
         title = "이번 여행, 어떤 테마인가요?",
-        description = "주요 동기에 맞춰 코스 분위기가 달라져요. 1개에서 3개까지 골라주세요.",
+        description = "주요 동기에 맞춰 코스 분위기가 달라져요. 한 가지 테마를 골라주세요.",
         onNavigationClick = onBackClick,
         modifier = modifier,
         bottomBar = {
@@ -114,7 +114,7 @@ fun TravelThemeSelectionScreen(
             YadanSectionHeader(
                 title = "여행 테마",
                 trailingContent = {
-                    YadanSectionMetaText(text = "1~3개 선택")
+                    YadanSectionMetaText(text = "1개 선택")
                 },
             )
         }
@@ -152,9 +152,7 @@ fun TravelThemeSelectionScreen(
                                 key(item.theme.id) {
                                     ThemeSelectionCard(
                                         item = item,
-                                        selected = selectedThemes.any { theme ->
-                                            theme.id == item.theme.id
-                                        },
+                                        selected = selectedTheme?.id == item.theme.id,
                                         onClick = {
                                             onThemeClick(item.theme)
                                         },
@@ -354,7 +352,7 @@ private fun TravelThemeSelectionScreenPreview() {
     YadanbeopseokTheme {
         TravelThemeSelectionScreen(
             uiState = TravelThemeSelectionUiState(themes = themes),
-            selectedThemes = listOf(themes[2]),
+            selectedTheme = themes[2],
             onThemeClick = {},
             onBackClick = {},
             onNextClick = {},

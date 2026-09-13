@@ -14,32 +14,22 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stadium
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -54,7 +44,6 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanButton
-import com.manruhomerun.yadanbeopseok.designsystem.component.YadanFilterChip
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanIconButton
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanMainHeader
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanMainHeaderStyle
@@ -76,9 +65,12 @@ import com.manruhomerun.yadanbeopseok.model.KboTeam
 import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
+import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
 import com.manruhomerun.yadanbeopseok.model.TravelSummary
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelCard
+import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelRegionDropdown
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotCard
+import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotCategoryFilters
 import kotlinx.datetime.LocalDate
 
 /**
@@ -95,13 +87,14 @@ fun HomeScreen(
     onTravelClick: (String) -> Unit,
     onGameScheduleClick: () -> Unit,
     onRegionSelected: (Region) -> Unit,
-    onCategorySelected: (TravelSpotCategory) -> Unit,
+    onCategorySelected: (TravelSpotFilterCategory) -> Unit,
     onRefreshClick: () -> Unit,
     onTravelSpotClick: (String) -> Unit,
     onDibsClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val displayedTravels = uiState.displayedTravels
+    val isPopularSpotLoading = (uiState.isLoading || uiState.isRefreshing) && uiState.popularTravelSpots.isEmpty()
 
     Column(
         modifier = modifier
@@ -167,10 +160,11 @@ fun HomeScreen(
             }
 
             item {
-                HomeCategoryFilters(
+                YadanTravelSpotCategoryFilters(
                     selectedCategory = uiState.selectedCategory,
-                    enabled = !uiState.isRefreshing,
                     onCategorySelected = onCategorySelected,
+                    enabled = !uiState.isRefreshing,
+                    contentPadding = PaddingValues(horizontal = 20.dp),
                 )
             }
 
@@ -179,9 +173,18 @@ fun HomeScreen(
             }
 
             when {
-                uiState.isLoading && uiState.popularTravelSpots.isEmpty() -> {
+                isPopularSpotLoading -> {
                     item {
                         HomeLoadingContent()
+                    }
+                }
+
+                uiState.travelSpotErrorMessage != null -> {
+                    item {
+                        HomeSpotErrorContent(
+                            message = uiState.travelSpotErrorMessage,
+                            onRetryClick = onRefreshClick,
+                        )
                     }
                 }
 
@@ -506,10 +509,6 @@ private fun HomeRecommendationHeader(
     onRegionSelected: (Region) -> Unit,
     onRefreshClick: () -> Unit,
 ) {
-    var expanded by rememberSaveable {
-        mutableStateOf(false)
-    }
-
     Row(
         modifier =
             Modifier
@@ -517,69 +516,11 @@ private fun HomeRecommendationHeader(
                 .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box {
-            TextButton(
-                onClick = {
-                    expanded = true
-                },
-                contentPadding = PaddingValues(horizontal = 0.dp),
-                colors =
-                    ButtonDefaults.textButtonColors(
-                        contentColor = YadanTextPrimary,
-                    ),
-            ) {
-                Text(
-                    text = selectedRegion.displayName,
-                    style =
-                        YadanTypography.titleSmall.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                        ),
-                )
-
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
-
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = {
-                    expanded = false
-                },
-                modifier = Modifier.widthIn(min = 140.dp),
-                shape = YadanShapes.medium,
-                containerColor = YadanSurface,
-            ) {
-                Region.entries.forEach { region ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = region.displayName,
-                                style = YadanTypography.bodyMedium,
-                            )
-                        },
-                        onClick = {
-                            expanded = false
-                            onRegionSelected(region)
-                        },
-                        trailingIcon =
-                            if (region == selectedRegion) {
-                                {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = null,
-                                        tint = YadanPrimary,
-                                    )
-                                }
-                            } else {
-                                null
-                            },
-                    )
-                }
-            }
-        }
+        YadanTravelRegionDropdown(
+            selectedRegion = selectedRegion,
+            onRegionSelected = onRegionSelected,
+            enabled = !isRefreshing,
+        )
 
         Spacer(modifier = Modifier.weight(1f))
 
@@ -619,35 +560,6 @@ private fun HomeRecommendationHeader(
     }
 }
 
-/**
- * 홈에서 제공하는 관광지 카테고리를 가로 필터로 표시합니다.
- */
-@Composable
-private fun HomeCategoryFilters(
-    selectedCategory: TravelSpotCategory,
-    enabled: Boolean,
-    onCategorySelected: (TravelSpotCategory) -> Unit,
-) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(7.dp),
-    ) {
-        items(
-            items = HOME_TRAVEL_SPOT_CATEGORIES,
-            key = { category -> category.name },
-        ) { category ->
-            YadanFilterChip(
-                text = category.displayName,
-                selected = category == selectedCategory,
-                onClick = {
-                    onCategorySelected(category)
-                },
-                enabled = enabled,
-            )
-        }
-    }
-}
-
 @Composable
 private fun HomeTravelLoadingContent() {
     Box(
@@ -679,6 +591,36 @@ private fun HomeLoadingContent() {
 }
 
 @Composable
+private fun HomeSpotErrorContent(
+    message: String,
+    onRetryClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp)
+            .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = message,
+            style = YadanTypography.bodyMedium,
+            color = YadanTextMuted,
+            textAlign = TextAlign.Center,
+        )
+
+        TextButton(onClick = onRetryClick) {
+            Text(
+                text = "다시 시도",
+                style = YadanTypography.labelMedium,
+                color = YadanPrimary,
+            )
+        }
+    }
+}
+
+@Composable
 private fun HomeEmptySpotContent() {
     Box(
         modifier =
@@ -689,30 +631,13 @@ private fun HomeEmptySpotContent() {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "조건에 맞는 추천 여행지가 없습니다.",
+            text = "조건에 맞는 인기 관광지가 없습니다.",
             style = YadanTypography.bodyMedium,
             color = YadanTextMuted,
             textAlign = TextAlign.Center,
         )
     }
 }
-
-/*
- * 홈에서는 API가 지원하는 관광 카테고리만 노출합니다.
- * 야구장과 알 수 없는 카테고리는 필터에서 제외합니다.
- */
-private val HOME_TRAVEL_SPOT_CATEGORIES =
-    listOf(
-        TravelSpotCategory.ACCOMMODATION,
-        TravelSpotCategory.FESTIVAL,
-        TravelSpotCategory.EXPERIENCE,
-        TravelSpotCategory.FOOD,
-        TravelSpotCategory.HISTORY,
-        TravelSpotCategory.LEISURE,
-        TravelSpotCategory.NATURE,
-        TravelSpotCategory.SHOPPING,
-        TravelSpotCategory.CULTURE,
-    )
 
 private class HomeUiStatePreviewProvider :
     PreviewParameterProvider<HomeUiState> {

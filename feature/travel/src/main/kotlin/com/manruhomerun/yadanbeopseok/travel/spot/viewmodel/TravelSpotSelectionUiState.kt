@@ -2,6 +2,7 @@ package com.manruhomerun.yadanbeopseok.travel.spot.viewmodel
 
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
+import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
 
 /**
  * 관광지 목록에서 선택할 수 있는 조회 유형입니다.
@@ -36,6 +37,9 @@ data class TravelSpotSelectionUiState(
 
     /** 검색 결과에 적용할 카테고리이며 null이면 전체를 표시합니다. */
     val selectedCategory: TravelSpotCategory? = null,
+
+    /** 찜 탭을 서버에서 조회할 때 사용하는 필수 카테고리입니다. */
+    val selectedDibsCategory: TravelSpotFilterCategory = TravelSpotFilterCategory.ACCOMMODATION,
 
     /** 맞춤 추천 관광지를 불러오고 있는지 나타냅니다. */
     val isSuggestedSpotsLoading: Boolean = false,

@@ -12,6 +12,7 @@ import com.manruhomerun.yadanbeopseok.model.Travel
 import com.manruhomerun.yadanbeopseok.model.TravelCourse
 import com.manruhomerun.yadanbeopseok.model.TravelPlace
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
+import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
 import com.manruhomerun.yadanbeopseok.model.TravelStatus
 import com.manruhomerun.yadanbeopseok.travel.util.TravelCourseTimelineItem
 import com.manruhomerun.yadanbeopseok.travel.util.toTimelineItems
@@ -233,6 +234,8 @@ class TravelCourseEditViewModel @Inject constructor(
     fun searchTravelSpots() = spotQuery.searchTravelSpots()
     fun clearTravelSpotSearch() = spotQuery.clearTravelSpotSearch()
     fun selectTravelSpotCategory(category: TravelSpotCategory?) = spotQuery.selectTravelSpotCategory(category)
+    fun selectTravelSpotDibsCategory(category: TravelSpotFilterCategory) =
+        spotQuery.selectTravelSpotDibsCategory(category)
 
     /** 관광지 상세에서 C01b/C01c로 돌아오면 현재 목록을 갱신합니다. */
     fun refreshTravelSpotSelection() = spotQuery.refreshTravelSpotSelection()

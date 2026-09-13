@@ -7,13 +7,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPillShape
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +25,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOutline
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPillShape
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanSurface
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextMuted
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
@@ -90,52 +88,36 @@ fun YadanFilterChip(
             DISABLED_ALPHA
         }
 
-    /*
-     * Material Surface는 기본적으로 최소 48dp의 레이아웃 영역을
-     * 확보합니다. 필터 칩은 HTML의 약 32px 높이를 그대로 사용해야
-     * 하므로 이 컴포넌트 안에서만 최소 레이아웃 크기를 해제합니다.
-     *
-     * 시스템의 터치 입력 영역 확장은 별도로 적용되므로
-     * 보이는 크기만 HTML 디자인에 맞게 유지됩니다.
-     */
-    CompositionLocalProvider(
-        LocalMinimumInteractiveComponentSize provides 0.dp,
+    Surface(
+        selected = selected,
+        onClick = onClick,
+        modifier = modifier
+            .alpha(chipAlpha)
+            .semantics {
+                role = Role.Checkbox
+            },
+        enabled = enabled,
+        shape = YadanPillShape,
+        color = containerColor,
+        contentColor = contentColor,
+        border = BorderStroke(
+            width = FILTER_CHIP_BORDER_WIDTH,
+            color = borderColor,
+        ),
     ) {
-        Surface(
-            selected = selected,
-            onClick = onClick,
-            modifier =
-                modifier
-                    .alpha(chipAlpha)
-                    .semantics {
-                        role = Role.Checkbox
-                    },
-            enabled = enabled,
-            shape = YadanPillShape,
-            color = containerColor,
-            contentColor = contentColor,
-            border =
-                BorderStroke(
-                    width = FILTER_CHIP_BORDER_WIDTH,
-                    color = borderColor,
-                ),
-        ) {
-            Text(
-                text = text,
-                modifier =
-                    Modifier.padding(
-                        horizontal = FILTER_CHIP_HORIZONTAL_PADDING,
-                        vertical = FILTER_CHIP_VERTICAL_PADDING,
-                    ),
-                style =
-                    MaterialTheme.typography.bodySmall.copy(
-                        // HTML의 font-weight: 700에 대응합니다.
-                        fontWeight = FontWeight.Bold,
-                    ),
-                maxLines = 1,
-                softWrap = false,
-            )
-        }
+        Text(
+            text = text,
+            modifier = Modifier.padding(
+                horizontal = FILTER_CHIP_HORIZONTAL_PADDING,
+                vertical = FILTER_CHIP_VERTICAL_PADDING,
+            ),
+            style = MaterialTheme.typography.labelMedium.copy(
+                // HTML의 font-weight: 700에 대응합니다.
+                fontWeight = FontWeight.Bold,
+            ),
+            maxLines = 1,
+            softWrap = false,
+        )
     }
 }
 

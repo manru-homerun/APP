@@ -16,6 +16,18 @@ data object NotificationNavKey : NavKey
 data object TravelSpotDibsNavKey : NavKey
 
 /**
+ * H·02 프로필 수정 화면으로 이동할 때 사용하는 NavKey입니다.
+ */
+@Serializable
+data object ProfileEditNavKey : NavKey
+
+/**
+ * H·03 여행 취향 수정 화면으로 이동할 때 사용하는 NavKey입니다.
+ */
+@Serializable
+data object TravelPreferenceEditNavKey : NavKey
+
+/**
  * 선택한 여행의 상세 일정 화면으로 이동할 때 사용하는 NavKey입니다.
  *
  * @property travelId 조회할 여행의 고유 식별자

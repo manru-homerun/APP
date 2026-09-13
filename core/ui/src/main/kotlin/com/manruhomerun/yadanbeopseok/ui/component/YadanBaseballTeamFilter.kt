@@ -1,8 +1,6 @@
 package com.manruhomerun.yadanbeopseok.ui.component
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -12,13 +10,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanFilterChip
-import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
-import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanDivider
-import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanShapes
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.KboTeam
 
@@ -43,12 +37,8 @@ fun YadanBaseballTeamFilter(
     val teams = KboTeam.entries.sortedBy { team -> team.serverId }
 
     LazyRow(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(YadanShapes.medium)
-            .background(YadanDivider),
-        contentPadding = PaddingValues(3.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
     ) {
         items(
             items = teams,
@@ -84,7 +74,6 @@ private fun YadanBaseballTeamFilterPreview() {
             onTeamSelected = { team ->
                 selectedTeam = team
             },
-            modifier = Modifier.background(YadanBackground),
         )
     }
 }

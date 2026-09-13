@@ -6,7 +6,8 @@ import com.manruhomerun.yadanbeopseok.common.NetworkConnectionException
 import com.manruhomerun.yadanbeopseok.common.NetworkTimeoutException
 import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.repository.TravelSpotRepository
-import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
+import com.manruhomerun.yadanbeopseok.model.Region
+import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -18,7 +19,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * H·04 찜한 관광지 목록과 카테고리 필터를 관리합니다.
+ * H·04 찜한 관광지 목록과 지역·카테고리 필터를 관리합니다.
  */
 @HiltViewModel
 class TravelSpotDibsViewModel @Inject constructor(
@@ -34,21 +35,33 @@ class TravelSpotDibsViewModel @Inject constructor(
     }
 
     /**
-     * 화면에 표시할 관광지 카테고리를 변경합니다.
-     *
-     * null은 전체 카테고리를 의미합니다.
+     * 찜한 관광지를 조회할 지역을 변경합니다.
      */
-    fun selectCategory(category: TravelSpotCategory?) {
+    fun selectRegion(region: Region) {
+        val currentState = _uiState.value
+
+        if (currentState.isLoading) return
+        if (currentState.selectedRegion == region) return
+
+        _uiState.update {
+            it.copy(selectedRegion = region)
+        }
+
+        loadDibsSpots(clearCurrentSpots = true)
+    }
+
+    /** 찜한 관광지를 조회할 카테고리를 변경합니다. */
+    fun selectCategory(category: TravelSpotFilterCategory) {
         val currentState = _uiState.value
 
         if (currentState.isLoading) return
         if (currentState.selectedCategory == category) return
-        if (category == TravelSpotCategory.STADIUM) return
-        if (category == TravelSpotCategory.UNKNOWN) return
 
         _uiState.update {
             it.copy(selectedCategory = category)
         }
+
+        loadDibsSpots(clearCurrentSpots = true)
     }
 
     /**
@@ -81,6 +94,9 @@ class TravelSpotDibsViewModel @Inject constructor(
         if (spotId in currentState.updatingDibsSpotIds) return
         if (currentState.dibsSpots.none { travelSpot -> travelSpot.id == spotId }) return
 
+        val requestedRegion = currentState.selectedRegion
+        val requestedCategory = currentState.selectedCategory
+
         _uiState.update {
             it.copy(
                 updatingDibsSpotIds = it.updatingDibsSpotIds + spotId,
@@ -92,12 +108,14 @@ class TravelSpotDibsViewModel @Inject constructor(
             try {
                 travelSpotRepository.deleteTravelSpotDibs(spotId)
 
-                _uiState.update { state ->
-                    state.copy(
-                        dibsSpots = state.dibsSpots.filterNot { travelSpot ->
-                            travelSpot.id == spotId
-                        },
-                    )
+                if (_uiState.value.matchesFilter(requestedRegion, requestedCategory)) {
+                    _uiState.update { state ->
+                        state.copy(
+                            dibsSpots = state.dibsSpots.filterNot { travelSpot ->
+                                travelSpot.id == spotId
+                            },
+                        )
+                    }
                 }
             } catch (exception: CancellationException) {
                 throw exception
@@ -107,12 +125,14 @@ class TravelSpotDibsViewModel @Inject constructor(
                  * 앱의 공통 세션 관찰이 처리합니다.
                  */
             } catch (exception: Exception) {
-                _uiState.update {
-                    it.copy(
-                        errorMessage = exception.toTravelSpotDibsErrorMessage(
-                            defaultMessage = "찜을 취소하지 못했습니다. 잠시 후 다시 시도해주세요.",
-                        ),
-                    )
+                if (_uiState.value.matchesFilter(requestedRegion, requestedCategory)) {
+                    _uiState.update {
+                        it.copy(
+                            errorMessage = exception.toTravelSpotDibsErrorMessage(
+                                defaultMessage = "찜을 취소하지 못했습니다. 잠시 후 다시 시도해주세요.",
+                            ),
+                        )
+                    }
                 }
             } finally {
                 _uiState.update {
@@ -134,13 +154,17 @@ class TravelSpotDibsViewModel @Inject constructor(
     }
 
     /**
-     * 지역 제한 없이 현재 사용자가 찜한 전체 관광지를 조회합니다.
+     * 현재 선택한 지역과 카테고리의 찜한 관광지를 조회합니다.
      */
-    private fun loadDibsSpots() {
+    private fun loadDibsSpots(clearCurrentSpots: Boolean = false) {
         loadJob?.cancel()
+
+        val requestedRegion = _uiState.value.selectedRegion
+        val requestedCategory = _uiState.value.selectedCategory
 
         _uiState.update {
             it.copy(
+                dibsSpots = if (clearCurrentSpots) emptyList() else it.dibsSpots,
                 isLoading = true,
                 errorMessage = null,
             )
@@ -148,37 +172,52 @@ class TravelSpotDibsViewModel @Inject constructor(
 
         loadJob = viewModelScope.launch {
             try {
-                val dibsSpots = travelSpotRepository.getTravelSpotDibs(region = null)
+                val dibsSpots = travelSpotRepository.getTravelSpotDibs(
+                    region = requestedRegion,
+                    category = requestedCategory,
+                )
 
-                _uiState.update {
-                    it.copy(
-                        dibsSpots = dibsSpots,
-                        isLoading = false,
-                        errorMessage = null,
-                    )
+                if (_uiState.value.matchesFilter(requestedRegion, requestedCategory)) {
+                    _uiState.update {
+                        it.copy(
+                            dibsSpots = dibsSpots,
+                            isLoading = false,
+                            errorMessage = null,
+                        )
+                    }
                 }
             } catch (exception: CancellationException) {
                 throw exception
             } catch (_: SessionExpiredException) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = null,
-                    )
+                if (_uiState.value.matchesFilter(requestedRegion, requestedCategory)) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = null,
+                        )
+                    }
                 }
             } catch (exception: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = exception.toTravelSpotDibsErrorMessage(
-                            defaultMessage = "찜한 관광지를 불러오지 못했습니다. 다시 시도해주세요.",
-                        ),
-                    )
+                if (_uiState.value.matchesFilter(requestedRegion, requestedCategory)) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = exception.toTravelSpotDibsErrorMessage(
+                                defaultMessage = "찜한 관광지를 불러오지 못했습니다. 다시 시도해주세요.",
+                            ),
+                        )
+                    }
                 }
             }
         }
     }
 }
+
+/** 현재 찜 목록 응답이 속한 필터 조합인지 확인합니다. */
+private fun TravelSpotDibsUiState.matchesFilter(
+    region: Region,
+    category: TravelSpotFilterCategory,
+): Boolean = selectedRegion == region && selectedCategory == category
 
 /**
  * 내부 예외 정보를 노출하지 않는 사용자용 오류 문구로 변환합니다.

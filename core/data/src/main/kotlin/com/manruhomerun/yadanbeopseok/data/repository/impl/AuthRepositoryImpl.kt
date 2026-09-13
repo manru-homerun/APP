@@ -1,6 +1,7 @@
 package com.manruhomerun.yadanbeopseok.data.repository.impl
 
 import com.kakao.sdk.auth.TokenManagerProvider
+import com.kakao.sdk.user.UserApiClient
 import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.mapper.toAuthTokens
 import com.manruhomerun.yadanbeopseok.data.repository.AuthRepository
@@ -9,11 +10,11 @@ import com.manruhomerun.yadanbeopseok.datastore.AuthTokenDataSource
 import com.manruhomerun.yadanbeopseok.datastore.AuthTokens
 import com.manruhomerun.yadanbeopseok.network.auth.api.AuthApi
 import com.manruhomerun.yadanbeopseok.network.auth.dto.LoginRequestDto
-import com.manruhomerun.yadanbeopseok.network.auth.dto.LogoutRequestDto
 import com.manruhomerun.yadanbeopseok.network.auth.dto.TokenRefreshRequestDto
 import com.manruhomerun.yadanbeopseok.network.common.error.ApiCallExecutor
-import com.manruhomerun.yadanbeopseok.network.common.extension.requireSuccess
 import javax.inject.Inject
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -103,24 +104,11 @@ internal class AuthRepositoryImpl @Inject constructor(
      * 서버 요청의 성공 여부와 관계없이 카카오 SDK 토큰과
      * 야단법석 인증 정보를 모두 삭제합니다.
      */
-    override suspend fun logout(
-        kakaoAccessToken: String,
-        deviceId: String?,
-        fcmToken: String?,
-    ) {
+    override suspend fun logout() {
         try {
-            val response = apiCallExecutor.execute {
-                authApi.logout(
-                    request = LogoutRequestDto(
-                        providerAccessToken = kakaoAccessToken,
-                        deviceType = ANDROID_DEVICE_TYPE,
-                        deviceId = deviceId?.takeIf { it.isNotBlank() },
-                        fcmToken = fcmToken?.takeIf { it.isNotBlank() },
-                    ),
-                )
+            apiCallExecutor.execute {
+                authApi.logout()
             }
-
-            response.requireSuccess()
         } finally {
             clearLocalSessions()
         }
@@ -133,24 +121,40 @@ internal class AuthRepositoryImpl @Inject constructor(
      * 야단법석 인증 정보를 모두 삭제합니다.
      */
     override suspend fun withdraw() {
-        val response = apiCallExecutor.execute {
+        apiCallExecutor.execute {
             authApi.withdraw()
         }
 
-        response.requireSuccess()
         clearLocalSessions()
     }
 
     /**
      * 화면 전환이나 코루틴 취소의 영향을 받지 않고
-     * 카카오 SDK와 야단법석의 로컬 인증 정보를 삭제합니다.
+     * 카카오 로그아웃을 요청하고 카카오 SDK와 야단법석의
+     * 로컬 인증 정보를 삭제합니다.
      */
     private suspend fun clearLocalSessions() {
         withContext(NonCancellable) {
             try {
-                TokenManagerProvider.instance.manager.clear()
+                logoutFromKakao()
             } finally {
-                authTokenDataSource.clearAuthTokens()
+                try {
+                    TokenManagerProvider.instance.manager.clear()
+                } finally {
+                    authTokenDataSource.clearAuthTokens()
+                }
+            }
+        }
+    }
+
+    /**
+     * 카카오 SDK의 콜백 기반 로그아웃을 코루틴에서 기다릴 수 있도록 변환합니다.
+     * 카카오 SDK는 요청 결과와 관계없이 자체 토큰을 삭제합니다.
+     */
+    private suspend fun logoutFromKakao() {
+        suspendCoroutine<Unit> { continuation ->
+            UserApiClient.instance.logout {
+                continuation.resume(Unit)
             }
         }
     }

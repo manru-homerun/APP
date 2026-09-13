@@ -19,7 +19,7 @@ import kotlinx.datetime.LocalDateTime
  */
 internal fun BaseballGameResponseDto.toBaseballGame(): BaseballGame =
     BaseballGame(
-        id = gameId,
+        id = gameId.toString(),
         stadium = stadium.toBaseballStadium(),
         homeTeam = homeTeam.teamId.toKboTeam("homeTeam.teamId"),
         awayTeam = awayTeam.teamId.toKboTeam("awayTeam.teamId"),
@@ -46,7 +46,7 @@ internal fun BaseballGameScheduleResponseDto.toBaseballGameSummaries(): List<Bas
  */
 private fun BaseballGameScheduleItemResponseDto.toBaseballGameSummary(): BaseballGameSummary =
     BaseballGameSummary(
-        id = gameId,
+        id = gameId.toString(),
         stadium = stadium.toBaseballStadiumSummary(),
         homeTeam = homeTeam.teamId.toKboTeam("homeTeam.teamId"),
         awayTeam = awayTeam.teamId.toKboTeam("awayTeam.teamId"),
@@ -98,11 +98,10 @@ private fun String.toBaseballGameType(): BaseballGameType =
     } ?: BaseballGameType.UNKNOWN
 
 /**
- * 서버의 구장 지역 enum 문자열을 앱 내부 지역으로 변환합니다.
+ * 서버의 구장 지역 코드를 앱 내부 지역으로 변환합니다.
  */
 private fun String.toBaseballRegion(): Region =
-    Region.entries.firstOrNull { region ->
-        region.name == this
-    } ?: throw InvalidResponseException(
-        message = "Unsupported baseball stadium regionCode: $this",
-    )
+    Region.findByLegalDongCode(this)
+        ?: throw InvalidResponseException(
+            message = "Unsupported baseball stadium regionCode: $this",
+        )

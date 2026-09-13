@@ -15,6 +15,7 @@ import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelCompanionCondition
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
+import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
 import com.manruhomerun.yadanbeopseok.model.TravelTheme
 import com.manruhomerun.yadanbeopseok.model.UserProfile
 import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotSelectionTab
@@ -196,27 +197,18 @@ class TravelCreationViewModel @Inject constructor(
         loadTravelThemes()
     }
 
-    /** B·03 여행 테마의 선택 여부를 전환합니다. */
-    fun toggleTheme(theme: TravelTheme) {
+    /** B·03 여행 테마를 하나만 선택합니다. */
+    fun selectTheme(theme: TravelTheme) {
         _uiState.update { currentState ->
-            val selectedThemes = currentState.selectedThemes
-            val isSelected = selectedThemes.any { it.id == theme.id }
-
-            if (!isSelected && selectedThemes.size >= MAX_THEME_COUNT) {
-                return@update currentState
-            }
-
-            val updatedThemes = if (isSelected) {
-                selectedThemes.filterNot { it.id == theme.id }
+            if (currentState.selectedTheme?.id == theme.id) {
+                currentState
             } else {
-                selectedThemes + theme
+                currentState.copy(
+                    selectedTheme = theme,
+                    generatedCourse = null,
+                    errorMessage = null,
+                )
             }
-
-            currentState.copy(
-                selectedThemes = updatedThemes,
-                generatedCourse = null,
-                errorMessage = null,
-            )
         }
     }
 
@@ -295,6 +287,9 @@ class TravelCreationViewModel @Inject constructor(
     fun clearTravelSpotSearch() = spotQuery.clearTravelSpotSearch()
 
     fun selectTravelSpotCategory(category: TravelSpotCategory?) = spotQuery.selectTravelSpotCategory(category)
+
+    fun selectTravelSpotDibsCategory(category: TravelSpotFilterCategory) =
+        spotQuery.selectTravelSpotDibsCategory(category)
 
     /** 관광지 상세에서 B06으로 돌아오면 현재 목록을 갱신합니다. */
     fun refreshTravelSpotSelection() = spotQuery.refreshTravelSpotSelection()
@@ -684,10 +679,10 @@ class TravelCreationViewModel @Inject constructor(
 /** 여행 코스 생성 요청에 필요한 입력값으로 변환합니다. */
 private fun TravelCreationUiState.toGenerateTravelCourseParams(): GenerateTravelCourseParams? {
     val game = selectedGame ?: return null
+    val theme = selectedTheme ?: return null
     val resolvedStartDate = startDate ?: return null
     val resolvedEndDate = endDate ?: return null
 
-    if (selectedThemes.isEmpty() || selectedThemes.size > MAX_THEME_COUNT) return null
     if (!isValidDateRange(game, resolvedStartDate, resolvedEndDate)) return null
 
     val friendNicknames = selectedCompanions.toFriendNicknamesOrNull() ?: return null
@@ -699,7 +694,7 @@ private fun TravelCreationUiState.toGenerateTravelCourseParams(): GenerateTravel
         region = game.stadium.region,
         friendNicknames = friendNicknames,
         companionConditions = selectedCompanionConditions.toList(),
-        themeIds = selectedThemes.map { theme -> theme.id },
+        themeIds = listOf(theme.id),
         travelSpotIds = selectedTravelSpots.map { spot -> spot.id },
     )
 }
@@ -707,6 +702,7 @@ private fun TravelCreationUiState.toGenerateTravelCourseParams(): GenerateTravel
 /** 최종 여행 저장 요청에 필요한 입력값으로 변환합니다. */
 private fun TravelCreationUiState.toCreateTravelParams(): CreateTravelParams? {
     val game = selectedGame ?: return null
+    val theme = selectedTheme ?: return null
     val resolvedStartDate = startDate ?: return null
     val resolvedEndDate = endDate ?: return null
     val resolvedCourse = generatedCourse ?: return null
@@ -719,7 +715,7 @@ private fun TravelCreationUiState.toCreateTravelParams(): CreateTravelParams? {
         name = resolvedName,
         region = game.stadium.region,
         friendNicknames = friendNicknames,
-        themeIds = selectedThemes.map { it.id },
+        themeIds = listOf(theme.id),
         course = resolvedCourse,
     )
 }
@@ -751,6 +747,5 @@ private fun BaseballGame.toDefaultTravelName(): String {
     return "${stadium.region.displayName} ${stadium.name} 직관 여행"
 }
 
-private const val MAX_THEME_COUNT = 3
 internal const val MAX_COMPANION_COUNT = 2
 internal const val MAX_TRAVEL_NIGHTS = 2

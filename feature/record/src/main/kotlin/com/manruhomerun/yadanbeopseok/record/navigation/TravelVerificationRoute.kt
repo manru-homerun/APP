@@ -10,6 +10,8 @@ import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -21,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanEmphasizedTransition
+import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanFadeTransition
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
 import com.manruhomerun.yadanbeopseok.navigation.route.HomeNavKey
 import com.manruhomerun.yadanbeopseok.record.location.CurrentLocationResult
@@ -184,58 +188,83 @@ fun TravelVerificationRoute(
         }
     }
 
-    when (uiState.phase) {
-        TravelVerificationPhase.VERIFIED,
-        TravelVerificationPhase.LOADING_STICKERS -> {
-            TravelVerificationCompletedScreen(
-                uiState = uiState,
-                modifier = modifier,
-            )
-        }
+    AnimatedContent(
+        targetState = uiState.phase.toTravelVerificationPage(),
+        transitionSpec = {
+            if (targetState == TravelVerificationPage.REWARD) {
+                yadanEmphasizedTransition()
+            } else {
+                yadanFadeTransition()
+            }
+        },
+        modifier = modifier.fillMaxSize(),
+        label = "travel_verification_screen",
+    ) { page ->
+        when (page) {
+            TravelVerificationPage.COMPLETED -> {
+                TravelVerificationCompletedScreen(
+                    uiState = uiState,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
 
-        TravelVerificationPhase.REWARD -> {
-            TravelStickerRewardScreen(
-                uiState = uiState,
-                onDecoratePhotoClick = onDecoratePhotoClick,
-                onLaterClick = {
-                    navigator.navigateToTopLevel(HomeNavKey)
-                },
-                modifier = modifier,
-            )
-        }
+            TravelVerificationPage.REWARD -> {
+                TravelStickerRewardScreen(
+                    uiState = uiState,
+                    onDecoratePhotoClick = onDecoratePhotoClick,
+                    onLaterClick = {
+                        navigator.navigateToTopLevel(HomeNavKey)
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
 
-        TravelVerificationPhase.STICKER_NOT_GRANTED -> {
-            TravelVerificationScreen(
-                uiState = uiState.copy(
-                    phase = TravelVerificationPhase.ERROR,
-                    errorMessage = "획득한 스티커를 확인하지 못했습니다. 다시 시도해주세요.",
-                ),
-                onBackClick = navigator::navigateBack,
-                onVerifyClick = viewModel::verifySpot,
-                onRetryClick = viewModel::retry,
-                onRequestLocationPermission = ::requestLocationPermission,
-                onOpenLocationSettings = ::openLocationSettings,
-                modifier = modifier,
-            )
-        }
+            TravelVerificationPage.VERIFICATION -> {
+                val verificationUiState = if (
+                    uiState.phase == TravelVerificationPhase.STICKER_NOT_GRANTED
+                ) {
+                    uiState.copy(
+                        phase = TravelVerificationPhase.ERROR,
+                        errorMessage = "획득한 스티커를 확인하지 못했습니다. 다시 시도해주세요.",
+                    )
+                } else {
+                    uiState
+                }
 
-        else -> {
-            TravelVerificationScreen(
-                uiState = uiState,
-                onBackClick = {
-                    if (!isBackBlocked) {
-                        navigator.navigateBack()
-                    }
-                },
-                onVerifyClick = viewModel::verifySpot,
-                onRetryClick = viewModel::retry,
-                onRequestLocationPermission = ::requestLocationPermission,
-                onOpenLocationSettings = ::openLocationSettings,
-                modifier = modifier,
-            )
+                TravelVerificationScreen(
+                    uiState = verificationUiState,
+                    onBackClick = {
+                        if (!isBackBlocked) {
+                            navigator.navigateBack()
+                        }
+                    },
+                    onVerifyClick = viewModel::verifySpot,
+                    onRetryClick = viewModel::retry,
+                    onRequestLocationPermission = ::requestLocationPermission,
+                    onOpenLocationSettings = ::openLocationSettings,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
     }
 }
+
+/** 방문 인증 Route 안에서 교체되는 화면입니다. */
+private enum class TravelVerificationPage {
+    VERIFICATION,
+    COMPLETED,
+    REWARD,
+}
+
+/** 세부 처리 단계를 사용자에게 표시하는 화면 단위 상태로 변환합니다. */
+private fun TravelVerificationPhase.toTravelVerificationPage(): TravelVerificationPage =
+    when (this) {
+        TravelVerificationPhase.VERIFIED,
+        TravelVerificationPhase.LOADING_STICKERS -> TravelVerificationPage.COMPLETED
+
+        TravelVerificationPhase.REWARD -> TravelVerificationPage.REWARD
+        else -> TravelVerificationPage.VERIFICATION
+    }
 
 /** Compose의 Context를 감싸고 있는 Activity를 찾아 반환합니다. */
 private tailrec fun Context.findActivity(): Activity? = when (this) {

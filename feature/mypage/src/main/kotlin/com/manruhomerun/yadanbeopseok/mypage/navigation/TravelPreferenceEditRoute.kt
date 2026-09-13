@@ -16,52 +16,49 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.manruhomerun.yadanbeopseok.mypage.screen.TravelSpotDibsScreen
-import com.manruhomerun.yadanbeopseok.mypage.viewmodel.TravelSpotDibsViewModel
+import com.manruhomerun.yadanbeopseok.mypage.screen.TravelPreferenceEditScreen
+import com.manruhomerun.yadanbeopseok.mypage.viewmodel.TravelPreferenceEditEvent
+import com.manruhomerun.yadanbeopseok.mypage.viewmodel.TravelPreferenceEditViewModel
 
-/**
- * H·04 찜한 관광지 화면과 [TravelSpotDibsViewModel]을 연결합니다.
- *
- * 관광지 상세 화면에서 돌아오면 찜 목록을 다시 조회하여
- * 상세 화면에서 변경된 찜 상태를 목록에 반영합니다.
- */
+/** H·03 취향 수정 화면과 [TravelPreferenceEditViewModel]을 연결합니다. */
 @Composable
-fun TravelSpotDibsRoute(
+fun TravelPreferenceEditRoute(
     onBackClick: () -> Unit,
-    onTravelSpotClick: (String) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: TravelSpotDibsViewModel = hiltViewModel(),
+    viewModel: TravelPreferenceEditViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.refresh()
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            when (event) {
+                TravelPreferenceEditEvent.Saved -> onBackClick()
+            }
+        }
     }
 
     LaunchedEffect(
         uiState.errorMessage,
-        uiState.dibsSpots.isNotEmpty(),
+        uiState.originalPreference,
     ) {
         val errorMessage = uiState.errorMessage ?: return@LaunchedEffect
-        if (uiState.dibsSpots.isEmpty()) return@LaunchedEffect
+        if (uiState.originalPreference == null) return@LaunchedEffect
 
         snackbarHostState.showSnackbar(errorMessage)
         viewModel.clearErrorMessage()
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        TravelSpotDibsScreen(
+        TravelPreferenceEditScreen(
             uiState = uiState,
             onBackClick = onBackClick,
-            onRegionSelected = viewModel::selectRegion,
-            onCategorySelected = viewModel::selectCategory,
-            onTravelSpotClick = onTravelSpotClick,
-            onDibsClick = viewModel::deleteDibs,
             onRetryClick = viewModel::retry,
+            onResidenceRegionSelected = viewModel::selectResidenceRegion,
+            onTravelStyleScoreChange = viewModel::updateTravelStyleScore,
+            onPreferredTravelRegionToggle = viewModel::togglePreferredTravelRegion,
+            onSaveClick = viewModel::saveTravelPreference,
             modifier = Modifier.fillMaxSize(),
         )
 

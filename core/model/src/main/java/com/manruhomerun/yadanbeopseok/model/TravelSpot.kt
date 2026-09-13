@@ -51,8 +51,28 @@ enum class TravelSpotCategory(
     HISTORY("역사"),
     LEISURE("레저"),
     NATURE("자연"),
+    TOURIST_ATTRACTION("관광지"),
+    TRAVEL_COURSE("여행코스"),
     SHOPPING("쇼핑"),
     CULTURE("문화"),
     STADIUM("직관"),
     UNKNOWN("기타"),
+}
+
+/**
+ * 인기 관광지와 찜한 관광지를 서버에 요청할 때 사용하는 필터 카테고리입니다.
+ *
+ * enum 이름은 백엔드 요청 값과 동일하며, [displayName]은 화면 필터에 표시합니다.
+ */
+enum class TravelSpotFilterCategory(
+    val displayName: String,
+) {
+    ACCOMMODATION("숙박"),
+    FESTIVAL_PERFORMANCE_EVENT("행사"),
+    RESTAURANT("음식"),
+    LEPORTS("레저"),
+    TOURIST_ATTRACTION("관광지"),
+    SHOPPING("쇼핑"),
+    CULTURAL_FACILITY("문화"),
+    TRAVEL_COURSE("여행코스"),
 }

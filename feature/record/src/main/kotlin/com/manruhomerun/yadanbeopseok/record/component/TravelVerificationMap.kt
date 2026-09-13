@@ -3,10 +3,19 @@ package com.manruhomerun.yadanbeopseok.record.component
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -17,6 +26,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -81,45 +91,53 @@ fun TravelVerificationMap(
         createLocationMarker()
     }
 
-    KakaoMapContainer(
-        initialPosition = position,
-        initialZoomLevel = LOCATION_ZOOM_LEVEL,
-        onMapReady = { kakaoMap ->
-            val labelLayer = checkNotNull(kakaoMap.labelManager?.layer)
+    Box(modifier = modifier.background(YadanPrimaryTint)) {
+        KakaoMapContainer(
+            initialPosition = position,
+            initialZoomLevel = LOCATION_ZOOM_LEVEL,
+            onMapReady = { kakaoMap ->
+                val labelLayer = checkNotNull(kakaoMap.labelManager?.layer)
 
-            val markerStyle = LabelStyle
-                .from(markerBitmap)
-                .setAnchorPoint(0.5f, 0.5f)
+                val markerStyle = LabelStyle
+                    .from(markerBitmap)
+                    .setAnchorPoint(0.5f, 0.5f)
 
-            val markerOptions = LabelOptions
-                .from(position)
-                .setStyles(markerStyle)
+                val markerOptions = LabelOptions
+                    .from(position)
+                    .setStyles(markerStyle)
 
-            marker = checkNotNull(
-                labelLayer.addLabel(markerOptions),
-            )
-            map = kakaoMap
+                marker = checkNotNull(
+                    labelLayer.addLabel(markerOptions),
+                )
+                map = kakaoMap
 
-            latestOnReady()
-        },
-        onError = {
-            map = null
-            marker = null
-            latestOnError()
-        },
-        onMapReleased = {
-            map = null
-            marker = null
-        },
-        modifier = modifier.background(YadanPrimaryTint),
-        previewContent = {
-            Text(
-                text = "현재 위치 지도",
-                color = YadanPrimaryInk,
+                latestOnReady()
+            },
+            onError = {
+                map = null
+                marker = null
+                latestOnError()
+            },
+            onMapReleased = {
+                map = null
+                marker = null
+            },
+            modifier = Modifier.matchParentSize(),
+            previewContent = {
+                Text(
+                    text = "현재 위치 지도",
+                    color = YadanPrimaryInk,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            },
+        )
+
+        if (map != null) {
+            CurrentLocationPulse(
                 modifier = Modifier.align(Alignment.Center),
             )
-        },
-    )
+        }
+    }
 
     LaunchedEffect(map, latitude, longitude) {
         val currentMap = map ?: return@LaunchedEffect
@@ -137,6 +155,48 @@ fun TravelVerificationMap(
             latestOnError()
         }
     }
+}
+
+/** 현재 위치 마커 주변에 반복되는 정확도 펄스를 표시합니다. */
+@Composable
+private fun CurrentLocationPulse(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(
+        label = "current_location_pulse",
+    )
+    val progress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = LOCATION_PULSE_DURATION_MILLIS,
+                easing = LinearOutSlowInEasing,
+            ),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "current_location_pulse_progress",
+    )
+    val scale = LOCATION_PULSE_START_SCALE +
+        (LOCATION_PULSE_END_SCALE - LOCATION_PULSE_START_SCALE) * progress
+    val alpha = LOCATION_PULSE_START_ALPHA * (1f - progress)
+
+    Box(
+        modifier = modifier
+            .size(120.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                this.alpha = alpha
+            }
+            .background(
+                color = YadanPrimary.copy(alpha = 0.15f),
+                shape = CircleShape,
+            )
+            .border(
+                width = 2.dp,
+                color = YadanPrimary.copy(alpha = 0.45f),
+                shape = CircleShape,
+            ),
+    )
 }
 
 @Preview(name = "D02 현재 위치 지도", showBackground = true, widthDp = 360)
@@ -172,3 +232,7 @@ private fun createLocationMarker(): Bitmap {
 }
 
 private const val LOCATION_ZOOM_LEVEL = 17
+private const val LOCATION_PULSE_DURATION_MILLIS = 2_400
+private const val LOCATION_PULSE_START_SCALE = 0.65f
+private const val LOCATION_PULSE_END_SCALE = 1.3f
+private const val LOCATION_PULSE_START_ALPHA = 0.9f

@@ -4,16 +4,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
@@ -25,7 +26,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanButton
-import com.manruhomerun.yadanbeopseok.designsystem.component.YadanFilterChip
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanTopAppBar
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
@@ -36,14 +36,17 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
+import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
 import com.manruhomerun.yadanbeopseok.mypage.viewmodel.TravelSpotDibsUiState
+import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelRegionDropdown
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotAction
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotCard
+import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotCategoryFilters
 
 /**
  * H·04 찜한 관광지 화면입니다.
  *
- * 카테고리 필터와 찜한 관광지 목록을 표시합니다.
+ * 지역·카테고리 필터와 찜한 관광지 목록을 표시합니다.
  * 관광지 카드를 누르면 관광지 상세 화면으로 이동하고,
  * 하트 버튼을 누르면 해당 관광지의 찜을 취소합니다.
  */
@@ -51,7 +54,8 @@ import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotCard
 fun TravelSpotDibsScreen(
     uiState: TravelSpotDibsUiState,
     onBackClick: () -> Unit,
-    onCategorySelected: (TravelSpotCategory?) -> Unit,
+    onRegionSelected: (Region) -> Unit,
+    onCategorySelected: (TravelSpotFilterCategory) -> Unit,
     onTravelSpotClick: (String) -> Unit,
     onDibsClick: (String) -> Unit,
     onRetryClick: () -> Unit,
@@ -68,8 +72,24 @@ fun TravelSpotDibsScreen(
             onNavigationClick = onBackClick,
         )
 
+        YadanTravelRegionDropdown(
+            selectedRegion = uiState.selectedRegion,
+            onRegionSelected = onRegionSelected,
+            modifier = Modifier.padding(horizontal = 18.dp),
+            enabled = !uiState.isLoading,
+        )
+
+        YadanTravelSpotCategoryFilters(
+            selectedCategory = uiState.selectedCategory,
+            onCategorySelected = onCategorySelected,
+            enabled = !uiState.isLoading,
+            contentPadding = PaddingValues(horizontal = 18.dp),
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
         when {
-            uiState.isLoading && uiState.dibsSpots.isEmpty() -> {
+            uiState.isLoading -> {
                 TravelSpotDibsLoadingContent(
                     modifier = Modifier.weight(1f),
                 )
@@ -85,8 +105,8 @@ fun TravelSpotDibsScreen(
 
             else -> {
                 TravelSpotDibsContent(
-                    uiState = uiState,
-                    onCategorySelected = onCategorySelected,
+                    travelSpots = uiState.dibsSpots,
+                    updatingDibsSpotIds = uiState.updatingDibsSpotIds,
                     onTravelSpotClick = onTravelSpotClick,
                     onDibsClick = onDibsClick,
                     modifier = Modifier.weight(1f),
@@ -97,12 +117,12 @@ fun TravelSpotDibsScreen(
 }
 
 /**
- * 카테고리 필터와 필터링된 관광지 목록을 표시합니다.
+ * 선택한 서버 필터로 조회한 찜한 관광지 목록을 표시합니다.
  */
 @Composable
 private fun TravelSpotDibsContent(
-    uiState: TravelSpotDibsUiState,
-    onCategorySelected: (TravelSpotCategory?) -> Unit,
+    travelSpots: List<TravelSpot>,
+    updatingDibsSpotIds: Set<String>,
     onTravelSpotClick: (String) -> Unit,
     onDibsClick: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -111,34 +131,22 @@ private fun TravelSpotDibsContent(
         modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(
             start = 18.dp,
-            top = 2.dp,
+            top = 0.dp,
             end = 18.dp,
             bottom = 24.dp,
         ),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item(key = "category_filters") {
-            TravelSpotDibsCategoryFilters(
-                selectedCategory = uiState.selectedCategory,
-                enabled = !uiState.isLoading,
-                onCategorySelected = onCategorySelected,
-            )
-        }
-
-        if (uiState.displayedTravelSpots.isEmpty()) {
+        if (travelSpots.isEmpty()) {
             item(key = "empty") {
-                TravelSpotDibsEmptyContent(
-                    hasCategoryFilter = uiState.selectedCategory != null,
-                )
+                TravelSpotDibsEmptyContent()
             }
         } else {
             items(
-                items = uiState.displayedTravelSpots,
+                items = travelSpots,
                 key = { travelSpot -> travelSpot.id },
             ) { travelSpot ->
-                val enabled =
-                    !uiState.isLoading &&
-                        travelSpot.id !in uiState.updatingDibsSpotIds
+                val enabled = travelSpot.id !in updatingDibsSpotIds
 
                 YadanTravelSpotCard(
                     spot = travelSpot,
@@ -152,46 +160,6 @@ private fun TravelSpotDibsContent(
                     enabled = enabled,
                 )
             }
-        }
-    }
-}
-
-/**
- * HTML의 가로 스크롤 카테고리 필터를 표시합니다.
- */
-@Composable
-private fun TravelSpotDibsCategoryFilters(
-    selectedCategory: TravelSpotCategory?,
-    enabled: Boolean,
-    onCategorySelected: (TravelSpotCategory?) -> Unit,
-) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(7.dp),
-        contentPadding = PaddingValues(end = 18.dp),
-    ) {
-        item(key = "all") {
-            YadanFilterChip(
-                text = "전체",
-                selected = selectedCategory == null,
-                onClick = {
-                    onCategorySelected(null)
-                },
-                enabled = enabled,
-            )
-        }
-
-        items(
-            items = dibsFilterCategories,
-            key = { category -> category.name },
-        ) { category ->
-            YadanFilterChip(
-                text = category.displayName,
-                selected = selectedCategory == category,
-                onClick = {
-                    onCategorySelected(category)
-                },
-                enabled = enabled,
-            )
         }
     }
 }
@@ -255,12 +223,10 @@ private fun TravelSpotDibsErrorContent(
 }
 
 /**
- * 전체 또는 선택한 카테고리에 찜한 관광지가 없음을 표시합니다.
+ * 선택한 지역과 카테고리에 찜한 관광지가 없음을 표시합니다.
  */
 @Composable
-private fun TravelSpotDibsEmptyContent(
-    hasCategoryFilter: Boolean,
-) {
+private fun TravelSpotDibsEmptyContent() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -270,11 +236,7 @@ private fun TravelSpotDibsEmptyContent(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = if (hasCategoryFilter) {
-                "선택한 카테고리에 찜한 관광지가 없습니다"
-            } else {
-                "아직 찜한 관광지가 없습니다"
-            },
+            text = "선택한 조건에 찜한 관광지가 없습니다",
             style = YadanTypography.bodyMedium.copy(
                 fontWeight = FontWeight.Bold,
             ),
@@ -284,35 +246,40 @@ private fun TravelSpotDibsEmptyContent(
     }
 }
 
-private val dibsFilterCategories = TravelSpotCategory.entries.filterNot { category ->
-    category == TravelSpotCategory.STADIUM ||
-        category == TravelSpotCategory.UNKNOWN
-}
-
 private val previewDibsSpots = listOf(
     TravelSpot(
         id = "1",
-        name = "감천문화마을",
+        name = "스테이 광안",
         region = Region.BUSAN,
-        category = TravelSpotCategory.CULTURE,
+        category = TravelSpotCategory.ACCOMMODATION,
         dibs = true,
     ),
     TravelSpot(
         id = "2",
+        name = "해운대 오션뷰 호텔",
+        region = Region.BUSAN,
+        category = TravelSpotCategory.ACCOMMODATION,
+        dibs = true,
+    ),
+    TravelSpot(
+        id = "3",
+        name = "송정 게스트하우스",
+        region = Region.BUSAN,
+        category = TravelSpotCategory.ACCOMMODATION,
+        dibs = true,
+    ),
+)
+
+private val previewRestaurantDibsSpots = listOf(
+    TravelSpot(
+        id = "4",
         name = "돼지국밥 거리",
         region = Region.BUSAN,
         category = TravelSpotCategory.FOOD,
         dibs = true,
     ),
     TravelSpot(
-        id = "3",
-        name = "광안리 해변",
-        region = Region.BUSAN,
-        category = TravelSpotCategory.NATURE,
-        dibs = true,
-    ),
-    TravelSpot(
-        id = "4",
+        id = "5",
         name = "전포 카페거리",
         region = Region.BUSAN,
         category = TravelSpotCategory.FOOD,
@@ -348,8 +315,8 @@ private fun TravelSpotDibsScreenPreview() {
 private fun TravelSpotDibsCategoryPreview() {
     TravelSpotDibsPreview(
         uiState = TravelSpotDibsUiState(
-            dibsSpots = previewDibsSpots,
-            selectedCategory = TravelSpotCategory.FOOD,
+            dibsSpots = previewRestaurantDibsSpots,
+            selectedCategory = TravelSpotFilterCategory.RESTAURANT,
             isLoading = false,
         ),
     )
@@ -410,6 +377,7 @@ private fun TravelSpotDibsPreview(
         TravelSpotDibsScreen(
             uiState = uiState,
             onBackClick = {},
+            onRegionSelected = {},
             onCategorySelected = {},
             onTravelSpotClick = {},
             onDibsClick = {},

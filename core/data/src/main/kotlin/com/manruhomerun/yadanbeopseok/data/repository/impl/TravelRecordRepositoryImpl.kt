@@ -1,14 +1,12 @@
 package com.manruhomerun.yadanbeopseok.data.repository.impl
 
-import com.manruhomerun.yadanbeopseok.data.mapper.toTravelCertification
+import com.manruhomerun.yadanbeopseok.data.mapper.toTravelVerificationResult
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRecordRepository
-import com.manruhomerun.yadanbeopseok.model.TravelCertification
+import com.manruhomerun.yadanbeopseok.model.TravelVerificationResult
 import com.manruhomerun.yadanbeopseok.network.common.error.ApiCallExecutor
-import com.manruhomerun.yadanbeopseok.network.common.extension.requireData
 import com.manruhomerun.yadanbeopseok.network.travel.api.TravelApi
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotVerifyRequestDto
 import javax.inject.Inject
-import kotlinx.datetime.LocalDateTime
 
 /**
  * 관광지 방문 인증을 요청하고 서버의 인증 결과를 반환합니다.
@@ -24,14 +22,16 @@ internal class TravelRecordRepositoryImpl @Inject constructor(
         spotId: String,
         latitude: Double,
         longitude: Double,
-        visitedAt: LocalDateTime,
-        accuracy: Double?,
-    ): TravelCertification {
+        accuracy: Double,
+        day: Int,
+        placementOrder: Int,
+    ): TravelVerificationResult {
         val request = TravelSpotVerifyRequestDto(
             latitude = latitude,
             longitude = longitude,
-            visitedAt = visitedAt.toString(),
             accuracy = accuracy,
+            day = day,
+            placementOrder = placementOrder,
         )
 
         val response = apiCallExecutor.execute {
@@ -42,6 +42,6 @@ internal class TravelRecordRepositoryImpl @Inject constructor(
             )
         }
 
-        return response.requireData().toTravelCertification()
+        return response.toTravelVerificationResult()
     }
 }

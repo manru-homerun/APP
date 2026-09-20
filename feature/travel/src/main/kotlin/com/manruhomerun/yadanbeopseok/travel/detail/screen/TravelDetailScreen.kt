@@ -12,8 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -49,6 +49,7 @@ import com.manruhomerun.yadanbeopseok.model.BaseballGameType
 import com.manruhomerun.yadanbeopseok.model.BaseballStadium
 import com.manruhomerun.yadanbeopseok.model.KboTeam
 import com.manruhomerun.yadanbeopseok.model.Region
+import com.manruhomerun.yadanbeopseok.model.STICKER_REQUIRED_VERIFIED_SPOT_COUNT
 import com.manruhomerun.yadanbeopseok.model.Travel
 import com.manruhomerun.yadanbeopseok.model.TravelBaseballGame
 import com.manruhomerun.yadanbeopseok.model.TravelDay
@@ -211,8 +212,8 @@ private fun TravelDetailContent(
             !isUpcoming -> {
                 {
                     YadanTravelProgress(
-                        certifiedPlaceCount = travel.certifiedSpotsCount,
-                        totalPlaceCount = travel.certificationTargetCount,
+                        verifiedPlaceCount = travel.verifiedSpotsCount,
+                        totalPlaceCount = STICKER_REQUIRED_VERIFIED_SPOT_COUNT,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -570,9 +571,8 @@ private fun previewTravel(
         region = Region.BUSAN,
         friends = listOf("야구팬", "원정러"),
         isLeader = isLeader,
-        themeIds = listOf("1", "3"),
-        certificationTargetCount = 3,
-        certifiedSpotsCount = 1,
+        themeId = "2",
+        verifiedSpotsCount = 1,
         days = listOf(
             TravelDay(
                 day = 1,
@@ -582,15 +582,13 @@ private fun previewTravel(
                         name = "감천문화마을",
                         category = TravelSpotCategory.CULTURE,
                         order = 1,
-                        isCertificationTarget = true,
-                        isCertified = true,
+                        isVerified = true,
                     ),
                     previewPlace(
                         id = "spot-3",
                         name = "광안리 해수욕장",
                         category = TravelSpotCategory.NATURE,
                         order = 3,
-                        isCertificationTarget = true,
                     ),
                 ),
             ),
@@ -608,7 +606,6 @@ private fun previewTravel(
                         name = "부평깡통시장",
                         category = TravelSpotCategory.FOOD,
                         order = 2,
-                        isCertificationTarget = true,
                     ),
                 ),
             ),
@@ -621,8 +618,7 @@ private fun previewPlace(
     name: String,
     category: TravelSpotCategory,
     order: Int,
-    isCertificationTarget: Boolean = false,
-    isCertified: Boolean = false,
+    isVerified: Boolean = false,
 ): TravelPlace =
     TravelPlace(
         spot = TravelSpot(
@@ -632,8 +628,7 @@ private fun previewPlace(
             category = category,
         ),
         order = order,
-        isCertificationTarget = isCertificationTarget,
-        isCertified = isCertified,
+        isVerified = isVerified,
     )
 
 private fun previewBaseballGame(): BaseballGame =

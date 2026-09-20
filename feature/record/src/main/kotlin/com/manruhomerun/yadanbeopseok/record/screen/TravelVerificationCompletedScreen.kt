@@ -39,11 +39,11 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.Region
+import com.manruhomerun.yadanbeopseok.model.STICKER_REQUIRED_VERIFIED_SPOT_COUNT
 import com.manruhomerun.yadanbeopseok.model.Travel
 import com.manruhomerun.yadanbeopseok.model.TravelBaseballGame
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
-import com.manruhomerun.yadanbeopseok.model.TravelSpotDetail
 import com.manruhomerun.yadanbeopseok.model.TravelStatus
 import com.manruhomerun.yadanbeopseok.record.viewmodel.TravelVerificationPhase
 import com.manruhomerun.yadanbeopseok.record.viewmodel.TravelVerificationUiState
@@ -53,7 +53,7 @@ import kotlinx.datetime.LocalDate
 /**
  * D02b 방문 인증 완료 화면입니다.
  *
- * 인증된 관광지와 갱신된 여행 전체 인증 진행률을 표시합니다.
+ * 인증된 관광지와 스티커 지급 기준까지의 진행률을 표시합니다.
  * 자동 전환 시점과 다음 화면 이동은 Route에서 처리합니다.
  */
 @Composable
@@ -62,18 +62,13 @@ fun TravelVerificationCompletedScreen(
     modifier: Modifier = Modifier,
 ) {
     val travel = uiState.travel
-    val certifiedCount = travel?.certifiedSpotsCount ?: 0
-    val totalCount = travel?.certificationTargetCount ?: 0
-    val remainingCount = (totalCount - certifiedCount).coerceAtLeast(0)
-    val isAllCertified = totalCount > 0 && certifiedCount == totalCount
+    val verifiedCount = travel?.verifiedSpotsCount ?: 0
+    val remainingCount = (STICKER_REQUIRED_VERIFIED_SPOT_COUNT - verifiedCount).coerceAtLeast(0)
+    val hasReachedStickerRequirement = verifiedCount >= STICKER_REQUIRED_VERIFIED_SPOT_COUNT
 
-    val spotName = uiState.certification
-        ?.spotName
+    val spotName = uiState.targetSpot
+        ?.name
         ?.takeIf(String::isNotBlank)
-        ?: uiState.targetSpot
-            ?.spot
-            ?.name
-            ?.takeIf(String::isNotBlank)
         ?: "관광지"
 
     Column(
@@ -126,9 +121,9 @@ fun TravelVerificationCompletedScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         YadanTravelProgress(
-                            certifiedPlaceCount = certifiedCount,
-                            totalPlaceCount = totalCount,
-                            label = "여행 전체 인증",
+                            verifiedPlaceCount = verifiedCount,
+                            totalPlaceCount = STICKER_REQUIRED_VERIFIED_SPOT_COUNT,
+                            label = "스티커 획득 진행",
                             modifier = Modifier.fillMaxWidth(),
                         )
 
@@ -138,7 +133,7 @@ fun TravelVerificationCompletedScreen(
                             text = if (remainingCount > 0) {
                                 "${remainingCount}곳 더 인증하면 스티커를 받아요"
                             } else {
-                                "모든 관광지 인증을 완료했어요"
+                                "스티커 획득 조건을 달성했어요"
                             },
                             style = YadanTypography.labelSmall,
                             color = YadanPrimaryInk,
@@ -150,7 +145,7 @@ fun TravelVerificationCompletedScreen(
         }
 
         VerificationCompletedTransitionIndicator(
-            isAllCertified = isAllCertified,
+            hasReachedStickerRequirement = hasReachedStickerRequirement,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
@@ -212,7 +207,7 @@ private fun VerificationCompletedBadge(modifier: Modifier = Modifier) {
 
 @Composable
 private fun VerificationCompletedTransitionIndicator(
-    isAllCertified: Boolean,
+    hasReachedStickerRequirement: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -227,7 +222,7 @@ private fun VerificationCompletedTransitionIndicator(
         )
 
         Text(
-            text = if (isAllCertified) {
+            text = if (hasReachedStickerRequirement) {
                 "잠시 후 획득한 스티커를 확인해요"
             } else {
                 "잠시 후 일정 화면으로 돌아가요"
@@ -276,16 +271,15 @@ private fun verificationCompletedPreviewState(): TravelVerificationUiState {
         region = Region.BUSAN,
         friends = emptyList(),
         isLeader = true,
-        themeIds = emptyList(),
-        certificationTargetCount = 5,
-        certifiedSpotsCount = 2,
+        themeId = "2",
+        verifiedSpotsCount = 2,
         days = emptyList(),
         status = TravelStatus.ACTIVE,
     )
 
     return TravelVerificationUiState(
         travel = travel,
-        targetSpot = TravelSpotDetail(spot = spot),
+        targetSpot = spot,
         travelDay = 1,
         phase = TravelVerificationPhase.VERIFIED,
     )

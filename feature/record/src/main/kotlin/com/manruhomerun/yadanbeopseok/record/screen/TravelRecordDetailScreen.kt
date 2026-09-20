@@ -59,6 +59,7 @@ import com.manruhomerun.yadanbeopseok.model.BaseballGameType
 import com.manruhomerun.yadanbeopseok.model.BaseballStadium
 import com.manruhomerun.yadanbeopseok.model.KboTeam
 import com.manruhomerun.yadanbeopseok.model.Region
+import com.manruhomerun.yadanbeopseok.model.STICKER_REQUIRED_VERIFIED_SPOT_COUNT
 import com.manruhomerun.yadanbeopseok.model.Sticker
 import com.manruhomerun.yadanbeopseok.model.StickerPack
 import com.manruhomerun.yadanbeopseok.model.Travel
@@ -301,7 +302,7 @@ private fun TravelRecordScheduleCard(
                 }
 
                 Text(
-                    text = "DAY ${travelDay.day} · ${travel.toDayDateText(travelDay.day)}",
+                    text = "DAY ${travelDay.day}    ${travel.toDayDateText(travelDay.day)}",
                     style = YadanTypography.labelMedium.copy(
                         fontWeight = FontWeight.ExtraBold,
                     ),
@@ -719,6 +720,8 @@ private fun TravelRecordDetailErrorPreview() {
 private fun travelRecordDetailPreviewState(
     hasSticker: Boolean,
 ): TravelRecordDetailUiState {
+    val verifiedPlaceCount = if (hasSticker) STICKER_REQUIRED_VERIFIED_SPOT_COUNT else 2
+
     val travel = Travel(
         id = "travel-1",
         startDate = LocalDate(2026, 4, 12),
@@ -732,10 +735,9 @@ private fun travelRecordDetailPreviewState(
         region = Region.BUSAN,
         friends = listOf("한별"),
         isLeader = true,
-        themeIds = emptyList(),
-        certificationTargetCount = 3,
-        certifiedSpotsCount = if (hasSticker) 3 else 2,
-        days = previewTravelDays(),
+        themeId = "2",
+        verifiedSpotsCount = verifiedPlaceCount,
+        days = previewTravelDays(verifiedPlaceCount),
         status = TravelStatus.COMPLETED,
     )
 
@@ -785,35 +787,53 @@ private fun travelRecordDetailPreviewState(
     )
 }
 
-private fun previewTravelDays(): List<TravelDay> {
+private fun previewTravelDays(verifiedPlaceCount: Int): List<TravelDay> {
+    val places = listOf(
+        previewTravelPlace(
+            id = "spot-1",
+            name = "돼지국밥 거리",
+            category = TravelSpotCategory.FOOD,
+            order = 1,
+            isVerified = verifiedPlaceCount >= 1,
+        ),
+        previewTravelPlace(
+            id = "spot-2",
+            name = "감천문화마을",
+            category = TravelSpotCategory.CULTURE,
+            order = 2,
+            isVerified = verifiedPlaceCount >= 2,
+        ),
+        previewTravelPlace(
+            id = "spot-3",
+            name = "광안리 해변",
+            category = TravelSpotCategory.NATURE,
+            order = 1,
+            isVerified = verifiedPlaceCount >= 3,
+        ),
+        previewTravelPlace(
+            id = "spot-4",
+            name = "해운대 해수욕장",
+            category = TravelSpotCategory.NATURE,
+            order = 2,
+            isVerified = verifiedPlaceCount >= 4,
+        ),
+        previewTravelPlace(
+            id = "spot-5",
+            name = "부평깡통시장",
+            category = TravelSpotCategory.SHOPPING,
+            order = 3,
+            isVerified = verifiedPlaceCount >= 5,
+        ),
+    )
+
     return listOf(
         TravelDay(
             day = 1,
-            places = listOf(
-                previewTravelPlace(
-                    id = "spot-1",
-                    name = "돼지국밥 거리",
-                    category = TravelSpotCategory.FOOD,
-                    order = 1,
-                ),
-                previewTravelPlace(
-                    id = "spot-2",
-                    name = "감천문화마을",
-                    category = TravelSpotCategory.CULTURE,
-                    order = 2,
-                ),
-            ),
+            places = places.take(2),
         ),
         TravelDay(
             day = 2,
-            places = listOf(
-                previewTravelPlace(
-                    id = "spot-3",
-                    name = "광안리 해변",
-                    category = TravelSpotCategory.NATURE,
-                    order = 1,
-                ),
-            ),
+            places = places.drop(2),
         ),
     )
 }
@@ -823,6 +843,7 @@ private fun previewTravelPlace(
     name: String,
     category: TravelSpotCategory,
     order: Int,
+    isVerified: Boolean,
 ): TravelPlace {
     return TravelPlace(
         spot = TravelSpot(
@@ -832,7 +853,6 @@ private fun previewTravelPlace(
             category = category,
         ),
         order = order,
-        isCertificationTarget = true,
-        isCertified = true,
+        isVerified = isVerified,
     )
 }

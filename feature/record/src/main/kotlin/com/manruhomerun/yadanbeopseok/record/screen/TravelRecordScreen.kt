@@ -33,6 +33,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -78,6 +79,7 @@ fun TravelRecordScreen(
     onSeasonSelected: (Int) -> Unit,
     onTravelClick: (String) -> Unit,
     onRetryClick: () -> Unit,
+    onLoadNextPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val errorMessage = uiState.errorMessage
@@ -119,6 +121,8 @@ fun TravelRecordScreen(
                     uiState = uiState,
                     onSeasonSelected = onSeasonSelected,
                     onTravelClick = onTravelClick,
+                    onRetryClick = onRetryClick,
+                    onLoadNextPage = onLoadNextPage,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -134,6 +138,8 @@ private fun TravelRecordLoadedContent(
     uiState: TravelRecordUiState,
     onSeasonSelected: (Int) -> Unit,
     onTravelClick: (String) -> Unit,
+    onRetryClick: () -> Unit,
+    onLoadNextPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var isMapUnavailable by rememberSaveable(uiState.selectedSeason) {
@@ -227,6 +233,76 @@ private fun TravelRecordLoadedContent(
                     onTravelClick(travel.id)
                 },
                 modifier = Modifier.padding(bottom = 10.dp),
+            )
+        }
+
+        when {
+            uiState.isLoadingMore -> {
+                item(key = "loading-more") {
+                    TravelRecordLoadMoreProgress()
+                }
+            }
+
+            uiState.loadMoreErrorMessage != null -> {
+                item(key = "load-more-error") {
+                    TravelRecordLoadMoreError(
+                        message = uiState.loadMoreErrorMessage,
+                        onRetryClick = onRetryClick,
+                    )
+                }
+            }
+
+            !uiState.isLoading && uiState.hasNextPage -> {
+                item(key = "load-next-page") {
+                    LaunchedEffect(uiState.pageNumber) {
+                        onLoadNextPage()
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** 다음 완료 여행 페이지를 불러오는 동안 목록 하단에 진행 상태를 표시합니다. */
+@Composable
+private fun TravelRecordLoadMoreProgress() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(24.dp),
+            color = YadanPrimary,
+            strokeWidth = 2.dp,
+        )
+    }
+}
+
+/** 다음 완료 여행 페이지 조회 실패를 기존 목록 아래에 표시합니다. */
+@Composable
+private fun TravelRecordLoadMoreError(
+    message: String,
+    onRetryClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = message,
+            style = YadanTypography.bodySmall,
+            color = YadanTextSecondary,
+            textAlign = TextAlign.Center,
+        )
+
+        TextButton(onClick = onRetryClick) {
+            Text(
+                text = "다시 시도",
+                style = YadanTypography.labelMedium,
             )
         }
     }
@@ -521,6 +597,7 @@ private fun TravelRecordScreenPreview() {
             onSeasonSelected = {},
             onTravelClick = {},
             onRetryClick = {},
+            onLoadNextPage = {},
         )
     }
 }
@@ -540,6 +617,7 @@ private fun TravelRecordLoadingPreview() {
             onSeasonSelected = {},
             onTravelClick = {},
             onRetryClick = {},
+            onLoadNextPage = {},
         )
     }
 }
@@ -562,6 +640,7 @@ private fun TravelRecordErrorPreview() {
             onSeasonSelected = {},
             onTravelClick = {},
             onRetryClick = {},
+            onLoadNextPage = {},
         )
     }
 }
@@ -583,6 +662,7 @@ private fun TravelRecordEmptyPreview() {
             onSeasonSelected = {},
             onTravelClick = {},
             onRetryClick = {},
+            onLoadNextPage = {},
         )
     }
 }
@@ -598,9 +678,8 @@ private val previewCompletedTravels = listOf(
         awayTeam = KboTeam.KIA,
         region = Region.BUSAN,
         isLeader = true,
-        spotsCount = 4,
-        certificationTargetCount = 4,
-        certifiedSpotsCount = 4,
+        spotsCount = 6,
+        verifiedSpotsCount = 5,
         hasSticker = true,
     ),
     TravelSummary(
@@ -614,8 +693,7 @@ private val previewCompletedTravels = listOf(
         region = Region.DAEGU,
         isLeader = true,
         spotsCount = 3,
-        certificationTargetCount = 3,
-        certifiedSpotsCount = 2,
+        verifiedSpotsCount = 2,
         hasSticker = false,
     ),
 )

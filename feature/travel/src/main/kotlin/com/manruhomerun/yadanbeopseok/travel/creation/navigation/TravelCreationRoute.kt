@@ -405,9 +405,19 @@ fun TravelCreationRoute(
                         },
                         onEditScheduleClick = {
                             val params = viewModel.getCurrentCreateTravelParams()
-                            if (params != null && !viewModel.uiState.value.isSaving) {
+                            val suggestionParams = viewModel.getCurrentSuggestTravelSpotsParams()
+
+                            if (
+                                params != null &&
+                                suggestionParams != null &&
+                                !viewModel.uiState.value.isSaving
+                            ) {
                                 viewModel.clearErrorMessage()
-                                editViewModel.initializeNewTravel(params, selectedGame)
+                                editViewModel.initializeNewTravel(
+                                    params = params,
+                                    suggestionParams = suggestionParams,
+                                    baseballGame = selectedGame,
+                                )
                             }
                         },
                         onSaveClick = {
@@ -506,6 +516,7 @@ fun TravelCreationRoute(
                         onBackClick = ::navigateBackWithinCreation,
                         onGenerateClick = viewModel::generateTravelCourse,
                         onRetryClick = viewModel::retryTravelSpotSelection,
+                        onLoadNextDibsPage = viewModel::loadNextTravelSpotDibsPage,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }

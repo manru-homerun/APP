@@ -49,8 +49,8 @@ enum class YadanTravelProgressStyle {
  *
  * HTML의 `.tc-prog`, `.tp-row`, `.pbar` 구조에 대응합니다.
  *
- * @param certifiedPlaceCount 방문 인증을 완료한 장소 개수입니다.
- * @param totalPlaceCount 방문 인증 대상 장소의 전체 개수입니다.
+ * @param verifiedPlaceCount 방문 인증을 완료한 장소 개수입니다.
+ * @param totalPlaceCount 현재 화면에서 목표로 하는 방문 인증 개수입니다.
  * @param modifier 진행률 컴포넌트의 크기와 배치를 지정합니다.
  * @param style 밝은 배경 또는 어두운 배경의 색상 유형입니다.
  * @param label 진행률 왼쪽에 표시할 문구입니다.
@@ -58,7 +58,7 @@ enum class YadanTravelProgressStyle {
  */
 @Composable
 fun YadanTravelProgress(
-    certifiedPlaceCount: Int,
+    verifiedPlaceCount: Int,
     totalPlaceCount: Int,
     modifier: Modifier = Modifier,
     style: YadanTravelProgressStyle = YadanTravelProgressStyle.DEFAULT,
@@ -70,15 +70,15 @@ fun YadanTravelProgress(
      */
     val safeTotalCount =
         totalPlaceCount.coerceAtLeast(0)
-    val safeCertifiedCount =
-        certifiedPlaceCount.coerceIn(
+    val safeVerifiedCount =
+        verifiedPlaceCount.coerceIn(
             minimumValue = 0,
             maximumValue = safeTotalCount,
         )
 
     val progress =
         if (safeTotalCount > 0) {
-            safeCertifiedCount
+            safeVerifiedCount
                 .toFloat()
                 .div(safeTotalCount)
         } else {
@@ -123,9 +123,9 @@ fun YadanTravelProgress(
 
     val progressStateDescription =
         if (safeTotalCount > 0) {
-            "$safeCertifiedCount / ${safeTotalCount}곳 방문 인증 완료"
+            "$safeVerifiedCount / ${safeTotalCount}곳 방문 인증 완료"
         } else {
-            "방문 인증 대상 장소 없음"
+            "방문 인증 목표 없음"
         }
 
     Column(
@@ -166,7 +166,7 @@ fun YadanTravelProgress(
 
             Text(
                 text =
-                    "$safeCertifiedCount / " +
+                    "$safeVerifiedCount / " +
                         "${safeTotalCount}곳",
                 style =
                     YadanTypography.bodySmall.copy(
@@ -218,7 +218,7 @@ private fun YadanTravelProgressDefaultPreview() {
                         .padding(14.dp),
             ) {
                 YadanTravelProgress(
-                    certifiedPlaceCount = 1,
+                    verifiedPlaceCount = 1,
                     totalPlaceCount = 5,
                     label = null,
                 )
@@ -243,7 +243,7 @@ private fun YadanTravelProgressOnDarkPreview() {
                     .padding(20.dp),
         ) {
             YadanTravelProgress(
-                certifiedPlaceCount = 1,
+                verifiedPlaceCount = 1,
                 totalPlaceCount = 2,
                 style = YadanTravelProgressStyle.ON_DARK,
             )

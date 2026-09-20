@@ -39,6 +39,7 @@ fun TravelRecordRoute(
         onSeasonSelected = viewModel::selectSeason,
         onTravelClick = onTravelClick,
         onRetryClick = viewModel::retry,
+        onLoadNextPage = viewModel::loadNextPage,
         modifier = modifier,
     )
 }

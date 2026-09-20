@@ -17,7 +17,7 @@ import kotlinx.serialization.Serializable
  * @property regionCode 여행 지역의 시도 코드
  * @property isLeader 현재 사용자가 해당 여행의 방장인지 여부
  * @property spotsCount 여행 일정에 포함된 전체 장소 수
- * @property certifiedSpotsCount 현재 사용자가 인증한 관광지 수
+ * @property verifiedSpotsCount 현재 사용자가 인증한 관광지 수
  * @property hasSticker 완료된 여행에서 스티커를 획득했는지 여부
  */
 @Serializable
@@ -34,10 +34,9 @@ data class TravelResponseDto(
     @SerialName("spotsCnt")
     val spotsCount: Int,
     @SerialName("vertifiedSpotsCnt")
-    val certifiedSpotsCount: Int,
+    val verifiedSpotsCount: Long,
     val hasSticker: Boolean,
 )
-
 
 /**
  * 여행 목록 조회 API의 응답 데이터 DTO입니다.
@@ -57,7 +56,6 @@ data class TravelListResponseDto(
     val totalPages: Int,
 )
 
-
 /**
  * 특정 여행의 상세 일정을 조회한 응답 DTO입니다.
  *
@@ -71,17 +69,13 @@ data class TravelDetailResponseDto(
     @SerialName("to")
     val endDate: String,
     val baseballGame: TravelCourseBaseballGameResponseDto,
-    val name: String? = null,
-    val regionCode: Int,
+    val name: String,
+    val regionCode: String,
     val friends: List<String>,
     val isLeader: Boolean,
-    @SerialName("theme")
-    val themeIds: List<Long>,
-    @SerialName("verificationTargetCount")
-    val certificationTargetCount: Int,
-
-    @SerialName("verifiedSpotsCount")
-    val certifiedSpotsCount: Int,
+    @SerialName("vertifiedSpotsCnt")
+    val verifiedSpotsCount: Long,
+    val themeId: Long,
     @SerialName("schedule")
     val days: List<TravelScheduleDayResponseDto>,
 )
@@ -114,15 +108,12 @@ data class TravelScheduleDayResponseDto(
  */
 @Serializable
 data class TravelScheduleSpotResponseDto(
-    val id: Long,
+    val id: String,
     val name: String,
     val category: String,
     val image: String? = null,
-    @SerialName("isVerificationTarget")
-    val isCertificationTarget: Boolean,
-
-    @SerialName("isVerified")
-    val isCertified: Boolean,
+    @SerialName("isVertified")
+    val isVerified: Boolean,
 )
 
 /**
@@ -159,18 +150,14 @@ data class TravelThemeResponseDto(
 )
 
 /**
- * 관광지 방문 인증 성공 응답의 data 부분입니다.
+ * 관광지 방문 인증 성공 응답입니다.
  *
- * 인증 결과 식별과 완료 화면에 필요한 필드만 수신합니다.
- * 인증 시각은 Mapper에서 앱 내부 날짜 타입으로 변환합니다.
+ * @property totalVerifiedSpotsCount 현재 사용자가 해당 여행에서 인증한 관광지 수
  */
 @Serializable
 data class TravelSpotVerifyResponseDto(
-    val visitVerificationId: Long,
-    val travelId: Long,
-    val tourSpotId: Long,
-    val tourSpotName: String,
-    val verifiedAt: String,
+    @SerialName("totalVerifiedSpotsCnt")
+    val totalVerifiedSpotsCount: Long,
 )
 
 /**

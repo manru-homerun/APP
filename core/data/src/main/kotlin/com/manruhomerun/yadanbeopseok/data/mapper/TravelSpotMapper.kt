@@ -1,12 +1,28 @@
 package com.manruhomerun.yadanbeopseok.data.mapper
 
+import com.manruhomerun.yadanbeopseok.data.repository.SuggestTravelSpotsParams
 import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
 import com.manruhomerun.yadanbeopseok.model.TravelSpotDetail
+import com.manruhomerun.yadanbeopseok.model.TravelSpotListPage
 import com.manruhomerun.yadanbeopseok.network.travel.dto.PopularTravelSpotResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotDetailResponseDto
+import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotPageResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotResponseDto
+import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotSuggestionRequestDto
+
+/** 맞춤 관광지 추천 조건을 서버 요청 DTO로 변환합니다. */
+internal fun SuggestTravelSpotsParams.toTravelSpotSuggestionRequestDto() =
+    TravelSpotSuggestionRequestDto(
+        startDate = startDate.toString(),
+        endDate = endDate.toString(),
+        regionCode = region.legalDongCode,
+        companionConditions = companionConditions.map { condition -> condition.toRequestValue() },
+        companionCount = companionCount,
+        theme = themeId.toRequestId("themeId"),
+        travelSpotIdList = travelSpotIds.map { spotId -> spotId.toRequestId("travelSpotId") },
+    )
 
 /**
  * 관광지 응답 DTO를 앱 내부 관광지 모델로 변환합니다.
@@ -27,6 +43,20 @@ internal fun TravelSpotResponseDto.toTravelSpot(
         category = category.toTravelSpotCategory(),
         imageUrl = image,
         dibs = dibs ?: defaultDibs,
+    )
+
+/** 관광지 페이지 응답을 앱 내부 페이지 모델로 변환합니다. */
+internal fun TravelSpotPageResponseDto.toTravelSpotListPage(
+    defaultDibs: Boolean = false,
+): TravelSpotListPage =
+    TravelSpotListPage(
+        travelSpots = contents.map { response ->
+            response.toTravelSpot(defaultDibs = defaultDibs)
+        },
+        pageNumber = pageNumber,
+        pageSize = pageSize,
+        totalElements = totalElements,
+        totalPages = totalPages,
     )
 
 /**
@@ -59,8 +89,8 @@ internal fun TravelSpotDetailResponseDto.toTravelSpotDetail(
 
     return TravelSpotDetail(
         spot = TravelSpot(
-            id = id.toString(),
-            name = title,
+            id = id,
+            name = name,
             address = address,
             region = regionCode?.let { code ->
                 Region.findByLegalDongCode(code)
@@ -88,13 +118,13 @@ internal fun String.toTravelSpotCategory(): TravelSpotCategory {
 
     return when (normalizedCategory.uppercase()) {
         "TOURIST_ATTRACTION" -> TravelSpotCategory.TOURIST_ATTRACTION
-        "CULTURAL_FACILITY" -> TravelSpotCategory.CULTURE
-        "FESTIVAL_PERFORMANCE_EVENT" -> TravelSpotCategory.FESTIVAL
+        "CULTURAL_FACILITY", "문화시설" -> TravelSpotCategory.CULTURE
+        "FESTIVAL_PERFORMANCE_EVENT", "축제/공연/행사" -> TravelSpotCategory.FESTIVAL
         "TRAVEL_COURSE" -> TravelSpotCategory.TRAVEL_COURSE
-        "LEPORTS" -> TravelSpotCategory.LEISURE
+        "LEPORTS", "레포츠" -> TravelSpotCategory.LEISURE
         "ACCOMMODATION" -> TravelSpotCategory.ACCOMMODATION
         "SHOPPING" -> TravelSpotCategory.SHOPPING
-        "RESTAURANT" -> TravelSpotCategory.FOOD
+        "RESTAURANT", "음식점" -> TravelSpotCategory.FOOD
         else ->
             TravelSpotCategory.entries.firstOrNull { category ->
                 category.name.equals(

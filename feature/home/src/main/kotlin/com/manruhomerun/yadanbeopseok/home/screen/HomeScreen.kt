@@ -87,7 +87,7 @@ fun HomeScreen(
     onTravelClick: (String) -> Unit,
     onGameScheduleClick: () -> Unit,
     onRegionSelected: (Region) -> Unit,
-    onCategorySelected: (TravelSpotFilterCategory) -> Unit,
+    onCategorySelected: (TravelSpotFilterCategory?) -> Unit,
     onRefreshClick: () -> Unit,
     onTravelSpotClick: (String) -> Unit,
     onDibsClick: (String) -> Unit,
@@ -648,7 +648,7 @@ private class HomeUiStatePreviewProvider :
             isLeader = true,
             startDate = LocalDate(2026, 5, 20),
             endDate = LocalDate(2026, 5, 21),
-            certifiedSpotsCount = 1,
+            verifiedSpotsCount = 1,
         )
 
     private val upcomingTravel =
@@ -720,7 +720,7 @@ private fun previewTravel(
     region: Region = Region.BUSAN,
     startDate: LocalDate,
     endDate: LocalDate,
-    certifiedSpotsCount: Int = 0,
+    verifiedSpotsCount: Int = 0,
 ): TravelSummary {
     val homeTeam =
         if (region == Region.GWANGJU) {
@@ -747,8 +747,7 @@ private fun previewTravel(
         region = region,
         isLeader = isLeader,
         spotsCount = 6,
-        certificationTargetCount = 5,
-        certifiedSpotsCount = certifiedSpotsCount,
+        verifiedSpotsCount = verifiedSpotsCount,
         hasSticker = false,
     )
 }

@@ -28,6 +28,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextSecondary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
+import com.manruhomerun.yadanbeopseok.model.STICKER_REQUIRED_VERIFIED_SPOT_COUNT
 import com.manruhomerun.yadanbeopseok.model.TravelDay
 import com.manruhomerun.yadanbeopseok.model.TravelPlace
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
@@ -404,8 +405,8 @@ private fun ActiveTravelScheduleContentPreview() {
                 .background(YadanBackground),
             progressContent = {
                 YadanTravelProgress(
-                    certifiedPlaceCount = 1,
-                    totalPlaceCount = 3,
+                    verifiedPlaceCount = 1,
+                    totalPlaceCount = STICKER_REQUIRED_VERIFIED_SPOT_COUNT,
                     modifier = Modifier.fillMaxWidth(),
                 )
             },
@@ -437,15 +438,13 @@ private fun previewTravelDays(): List<TravelDay> =
                     name = "감천문화마을",
                     category = TravelSpotCategory.CULTURE,
                     order = 1,
-                    isCertificationTarget = true,
-                    isCertified = true,
+                    isVerified = true,
                 ),
                 previewTravelPlace(
                     id = "spot-2",
                     name = "광안리 해수욕장",
                     category = TravelSpotCategory.NATURE,
                     order = 2,
-                    isCertificationTarget = true,
                 ),
             ),
         ),
@@ -463,7 +462,6 @@ private fun previewTravelDays(): List<TravelDay> =
                     name = "부평깡통시장",
                     category = TravelSpotCategory.FOOD,
                     order = 2,
-                    isCertificationTarget = true,
                 ),
             ),
         ),
@@ -474,8 +472,7 @@ private fun previewTravelPlace(
     name: String,
     category: TravelSpotCategory,
     order: Int,
-    isCertificationTarget: Boolean = false,
-    isCertified: Boolean = false,
+    isVerified: Boolean = false,
 ): TravelPlace =
     TravelPlace(
         spot = TravelSpot(
@@ -484,6 +481,5 @@ private fun previewTravelPlace(
             category = category,
         ),
         order = order,
-        isCertificationTarget = isCertificationTarget,
-        isCertified = isCertified,
+        isVerified = isVerified,
     )

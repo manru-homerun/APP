@@ -10,7 +10,10 @@ import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRepository
 import com.manruhomerun.yadanbeopseok.data.repository.TravelSpotRepository
 import com.manruhomerun.yadanbeopseok.model.Region
+import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
+import com.manruhomerun.yadanbeopseok.model.TravelStatus
+import com.manruhomerun.yadanbeopseok.model.TravelSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -39,6 +42,8 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     private var hasCompletedInitialLoad = false
+    private var activeTravels: List<TravelSummary> = emptyList()
+    private var upcomingTravels: List<TravelSummary> = emptyList()
     private var homeLoadJob: Job? = null
     private var popularSpotLoadJob: Job? = null
 
@@ -80,9 +85,9 @@ class HomeViewModel @Inject constructor(
     /**
      * 인기 관광지의 카테고리를 변경합니다.
      *
-     * 서버 필수 요청 값이므로 선택한 카테고리로 인기 관광지를 다시 조회합니다.
+     * null을 선택하면 카테고리 쿼리를 생략하고 전체 인기 관광지를 조회합니다.
      */
-    fun selectCategory(category: TravelSpotFilterCategory) {
+    fun selectCategory(category: TravelSpotFilterCategory?) {
         val currentState = _uiState.value
 
         if (currentState.isLoading || currentState.selectedCategory == category) {
@@ -190,7 +195,7 @@ class HomeViewModel @Inject constructor(
     /** 선택한 지역과 카테고리의 인기 관광지만 다시 조회합니다. */
     private fun loadPopularTravelSpots(
         region: Region,
-        category: TravelSpotFilterCategory,
+        category: TravelSpotFilterCategory?,
     ) {
         homeLoadJob?.cancel()
         popularSpotLoadJob?.cancel()
@@ -281,11 +286,13 @@ class HomeViewModel @Inject constructor(
                  * supervisorScope와 개별 Result를 사용하여
                  * 한 요청의 실패가 다른 요청을 취소하지 않게 합니다.
                  */
-                val (travelsResult, travelSpotsResult) = supervisorScope {
-                    val travelsDeferred = async {
-                        runHomeRequest {
-                            travelRepository.getPlannedTravels()
-                        }
+                val homeResult = supervisorScope {
+                    val activeTravelsDeferred = async {
+                        loadTravelPages(status = TravelStatus.ACTIVE)
+                    }
+
+                    val upcomingTravelsDeferred = async {
+                        loadTravelPages(status = TravelStatus.UPCOMING)
                     }
 
                     val travelSpotsDeferred = async {
@@ -297,17 +304,27 @@ class HomeViewModel @Inject constructor(
                         }
                     }
 
-                    travelsDeferred.await() to travelSpotsDeferred.await()
+                    HomeLoadResult(
+                        activeTravels = activeTravelsDeferred.await(),
+                        upcomingTravels = upcomingTravelsDeferred.await(),
+                        popularTravelSpots = travelSpotsDeferred.await(),
+                    )
                 }
 
-                val travelFailure = travelsResult.exceptionOrNull()
-                val travelSpotFailure = travelSpotsResult.exceptionOrNull()
+                val activeTravelFailure = homeResult.activeTravels.failure
+                val upcomingTravelFailure = homeResult.upcomingTravels.failure
+                val travelFailure = activeTravelFailure ?: upcomingTravelFailure
+                val travelSpotFailure = homeResult.popularTravelSpots.exceptionOrNull()
 
                 /*
                  * 어느 요청에서든 세션 만료가 확인되면
                  * 일부 데이터를 표시하지 않고 로그인으로 이동합니다.
                  */
-                val sessionExpiredException = listOfNotNull(travelFailure, travelSpotFailure)
+                val sessionExpiredException = listOfNotNull(
+                    activeTravelFailure,
+                    upcomingTravelFailure,
+                    travelSpotFailure,
+                )
                     .filterIsInstance<SessionExpiredException>()
                     .firstOrNull()
 
@@ -315,8 +332,17 @@ class HomeViewModel @Inject constructor(
                     throw sessionExpiredException
                 }
 
-                val loadedTravels = travelsResult.getOrNull()
-                val loadedTravelSpots = travelSpotsResult.getOrNull()
+                activeTravels = mergeTravelPages(
+                    current = activeTravels,
+                    result = homeResult.activeTravels,
+                )
+                upcomingTravels = mergeTravelPages(
+                    current = upcomingTravels,
+                    result = homeResult.upcomingTravels,
+                )
+
+                val loadedTravels = activeTravels + upcomingTravels
+                val loadedTravelSpots = homeResult.popularTravelSpots.getOrNull()
                 val travelSpotErrorMessage = travelSpotFailure?.toHomeErrorMessage(
                     fallbackMessage = "인기 관광지를 불러오지 못했습니다.",
                 )
@@ -338,7 +364,7 @@ class HomeViewModel @Inject constructor(
                          * 실패한 영역은 기존 데이터를 유지하고
                          * 성공한 영역만 새로운 응답으로 교체합니다.
                          */
-                        travels = loadedTravels ?: current.travels,
+                        travels = loadedTravels,
                         popularTravelSpots = if (canApplyTravelSpots) {
                             loadedTravelSpots ?: current.popularTravelSpots
                         } else {
@@ -387,6 +413,66 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
+
+    /** 지정한 여행 상태의 페이지를 순서대로 조회하고 성공한 페이지를 보관합니다. */
+    private suspend fun loadTravelPages(status: TravelStatus): TravelPageLoadResult {
+        val travels = mutableListOf<TravelSummary>()
+        var pageNumber = FIRST_PAGE_NUMBER
+
+        while (true) {
+            val page = try {
+                travelRepository.getTravels(
+                    status = status,
+                    pageNumber = pageNumber,
+                    pageSize = TRAVEL_PAGE_SIZE,
+                )
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                return TravelPageLoadResult(
+                    travels = travels,
+                    hasLoadedFirstPage = pageNumber > FIRST_PAGE_NUMBER,
+                    failure = exception,
+                )
+            }
+
+            travels += page.travels
+
+            if (page.pageNumber >= page.totalPages) {
+                return TravelPageLoadResult(
+                    travels = travels,
+                    hasLoadedFirstPage = true,
+                )
+            }
+
+            pageNumber = page.pageNumber + 1
+        }
+    }
+}
+
+private data class HomeLoadResult(
+    val activeTravels: TravelPageLoadResult,
+    val upcomingTravels: TravelPageLoadResult,
+    val popularTravelSpots: Result<List<TravelSpot>>,
+)
+
+private data class TravelPageLoadResult(
+    val travels: List<TravelSummary>,
+    val hasLoadedFirstPage: Boolean,
+    val failure: Throwable? = null,
+)
+
+/** 새로 조회한 페이지를 반영하면서 뒤쪽 페이지 실패 시 기존 항목을 유지합니다. */
+private fun mergeTravelPages(
+    current: List<TravelSummary>,
+    result: TravelPageLoadResult,
+): List<TravelSummary> {
+    if (!result.hasLoadedFirstPage) return current
+    if (result.failure == null) return result.travels.distinctBy { travel -> travel.id }
+
+    val loadedIds = result.travels.mapTo(mutableSetOf()) { travel -> travel.id }
+
+    return result.travels + current.filterNot { travel -> travel.id in loadedIds }
 }
 
 /**
@@ -445,7 +531,7 @@ private fun homeLoadErrorMessage(
 /** 현재 인기 관광지 응답이 속한 필터 조합인지 확인합니다. */
 private fun HomeUiState.matchesPopularSpotFilter(
     region: Region,
-    category: TravelSpotFilterCategory,
+    category: TravelSpotFilterCategory?,
 ): Boolean = selectedRegion == region && selectedCategory == category
 
 /**
@@ -468,3 +554,6 @@ private fun Throwable.toHomeErrorMessage(
         else ->
             "$fallbackMessage 잠시 후 다시 시도해주세요."
     }
+
+private const val FIRST_PAGE_NUMBER = 1
+private const val TRAVEL_PAGE_SIZE = 10

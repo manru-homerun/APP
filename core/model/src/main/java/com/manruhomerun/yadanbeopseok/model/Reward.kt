@@ -1,5 +1,8 @@
 package com.manruhomerun.yadanbeopseok.model
 
+/** 스티커를 획득하기 위해 필요한 방문 인증 관광지 수입니다. */
+const val STICKER_REQUIRED_VERIFIED_SPOT_COUNT = 5
+
 /**
  * 여행에서 획득한 스티커팩과 소속 스티커 목록입니다.
  *

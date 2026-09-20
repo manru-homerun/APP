@@ -18,10 +18,10 @@ data class HomeUiState(
     val popularTravelSpots: List<TravelSpot> = emptyList(),
 
     /** 홈 관광지 추천에 적용할 지역입니다. */
-    val selectedRegion: Region = Region.BUSAN,
+    val selectedRegion: Region = Region.entries.first(),
 
-    /** 홈 관광지 추천에 적용할 카테고리입니다. */
-    val selectedCategory: TravelSpotFilterCategory = TravelSpotFilterCategory.ACCOMMODATION,
+    /** 홈 관광지 추천에 적용할 카테고리이며 null이면 전체입니다. */
+    val selectedCategory: TravelSpotFilterCategory? = null,
 
     /** 읽지 않은 알림이 있는지 나타냅니다. */
     val hasUnreadNotifications: Boolean = false,

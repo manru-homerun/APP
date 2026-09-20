@@ -6,7 +6,6 @@ import com.manruhomerun.yadanbeopseok.data.mapper.toTravelCourseAlignRequestDto
 import com.manruhomerun.yadanbeopseok.data.mapper.toTravelCourseGenerateRequestDto
 import com.manruhomerun.yadanbeopseok.data.mapper.toTravelCreateRequestDto
 import com.manruhomerun.yadanbeopseok.data.mapper.toTravelListPage
-import com.manruhomerun.yadanbeopseok.data.mapper.toTravelSummaries
 import com.manruhomerun.yadanbeopseok.data.mapper.toTravelTheme
 import com.manruhomerun.yadanbeopseok.data.mapper.toTravelUpdateRequestDto
 import com.manruhomerun.yadanbeopseok.data.repository.CreateTravelParams
@@ -15,16 +14,14 @@ import com.manruhomerun.yadanbeopseok.data.repository.TravelRepository
 import com.manruhomerun.yadanbeopseok.model.Travel
 import com.manruhomerun.yadanbeopseok.model.TravelCourse
 import com.manruhomerun.yadanbeopseok.model.TravelListPage
-import com.manruhomerun.yadanbeopseok.model.TravelSummary
+import com.manruhomerun.yadanbeopseok.model.TravelStatus
 import com.manruhomerun.yadanbeopseok.model.TravelTheme
 import com.manruhomerun.yadanbeopseok.network.common.error.ApiCallExecutor
-import com.manruhomerun.yadanbeopseok.network.common.extension.requireData
 import com.manruhomerun.yadanbeopseok.network.travel.api.TravelApi
 import com.manruhomerun.yadanbeopseok.network.travel.api.TravelQueryStatus
 import javax.inject.Inject
 import kotlin.time.Clock
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 
@@ -35,32 +32,18 @@ internal class TravelRepositoryImpl @Inject constructor(
     private val travelApi: TravelApi,
     private val apiCallExecutor: ApiCallExecutor,
 ) : TravelRepository {
-    /**
-     * 진행 중 여행과 진행 예정 여행 목록을 함께 조회합니다.
-     */
-    override suspend fun getPlannedTravels(): List<TravelSummary> = coroutineScope {
-        val inProgressResponse = async {
-            apiCallExecutor.execute {
-                travelApi.getTravels(status = TravelQueryStatus.IN_PROGRESS)
-            }
-        }
-
-        val planningResponse = async {
-            apiCallExecutor.execute {
-                travelApi.getTravels(status = TravelQueryStatus.PLANNING)
-            }
-        }
-
-        inProgressResponse.await().toTravelSummaries() +
-            planningResponse.await().toTravelSummaries()
-    }
-
-    /**
-     * 종료된 여행 기록 목록을 조회합니다.
-     */
-    override suspend fun getCompletedTravels(): TravelListPage {
+    /** 지정한 상태의 여행 목록 한 페이지를 조회합니다. */
+    override suspend fun getTravels(
+        status: TravelStatus,
+        pageNumber: Int,
+        pageSize: Int,
+    ): TravelListPage {
         val response = apiCallExecutor.execute {
-            travelApi.getTravels(status = TravelQueryStatus.COMPLETED)
+            travelApi.getTravels(
+                status = status.toTravelQueryStatus(),
+                pageNumber = pageNumber,
+                pageSize = pageSize,
+            )
         }
 
         return response.toTravelListPage()
@@ -76,7 +59,7 @@ internal class TravelRepositoryImpl @Inject constructor(
 
         val currentDate = Clock.System.todayIn(TimeZone.currentSystemDefault())
 
-        return response.requireData().toTravel(
+        return response.toTravel(
             travelId = travelId,
             currentDate = currentDate,
         )
@@ -105,20 +88,27 @@ internal class TravelRepositoryImpl @Inject constructor(
             travelApi.generateTravelCourse(request = request)
         }
 
-        return response.requireData().toTravelCourse()
+        return response.toTravelCourse()
     }
 
     /**
      * 저장 전 여행 코스의 관광지 순서를 거리 기준으로 재정렬합니다.
      */
-    override suspend fun alignTravelCourse(course: TravelCourse): TravelCourse {
-        val request = course.toTravelCourseAlignRequestDto()
+    override suspend fun alignTravelCourse(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        course: TravelCourse,
+    ): TravelCourse {
+        val request = course.toTravelCourseAlignRequestDto(
+            startDate = startDate,
+            endDate = endDate,
+        )
 
         val response = apiCallExecutor.execute {
             travelApi.alignTravelCourse(request = request)
         }
 
-        return response.requireData().toTravelCourse()
+        return response.toTravelCourse()
     }
 
     /**
@@ -150,3 +140,10 @@ internal class TravelRepositoryImpl @Inject constructor(
         }
     }
 }
+
+private fun TravelStatus.toTravelQueryStatus(): TravelQueryStatus =
+    when (this) {
+        TravelStatus.UPCOMING -> TravelQueryStatus.PLANNING
+        TravelStatus.ACTIVE -> TravelQueryStatus.IN_PROGRESS
+        TravelStatus.COMPLETED -> TravelQueryStatus.COMPLETED
+    }

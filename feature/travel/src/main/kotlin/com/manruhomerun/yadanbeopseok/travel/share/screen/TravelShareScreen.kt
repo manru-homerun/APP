@@ -651,9 +651,8 @@ private fun previewTravel(): Travel = Travel(
     region = Region.BUSAN,
     friends = emptyList(),
     isLeader = true,
-    themeIds = emptyList(),
-    certificationTargetCount = 4,
-    certifiedSpotsCount = 0,
+    themeId = "2",
+    verifiedSpotsCount = 0,
     days = listOf(
         TravelDay(
             day = 1,

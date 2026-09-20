@@ -66,12 +66,13 @@ fun TravelSpotSelectionScreen(
     onSearchDoneClick: () -> Unit,
     onTabSelected: (TravelSpotSelectionTab) -> Unit,
     onCategorySelected: (TravelSpotCategory?) -> Unit,
-    onDibsCategorySelected: (TravelSpotFilterCategory) -> Unit,
+    onDibsCategorySelected: (TravelSpotFilterCategory?) -> Unit,
     onTravelSpotClick: (TravelSpot) -> Unit,
     onTravelSpotToggle: (TravelSpot) -> Unit,
     onBackClick: () -> Unit,
     onGenerateClick: () -> Unit,
     onRetryClick: () -> Unit,
+    onLoadNextDibsPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val selectedSpotIds = remember(selectedTravelSpots) {
@@ -118,6 +119,7 @@ fun TravelSpotSelectionScreen(
             onTravelSpotClick = onTravelSpotClick,
             onTravelSpotToggle = onTravelSpotToggle,
             onRetryClick = onRetryClick,
+            onLoadNextDibsPage = onLoadNextDibsPage,
             selectedSpotsContent = {
                 item(key = "selected_spot_header") {
                     YadanSectionHeader(title = "꼭 가고 싶은 곳 $selectedCount")
@@ -387,6 +389,7 @@ private fun TravelSpotSelectionPreview(
             onBackClick = {},
             onGenerateClick = {},
             onRetryClick = {},
+            onLoadNextDibsPage = {},
         )
     }
 }

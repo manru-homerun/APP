@@ -58,7 +58,7 @@ enum class YadanGameMatchupStyle {
 }
 
 /**
- * 야구 경기의 홈팀과 원정팀 대진을 표시하는 공통 컴포넌트입니다.
+ * 야구 경기의 원정팀과 홈팀 대진을 표시하는 공통 컴포넌트입니다.
  *
  * 경기 일정 카드, 경기 선택 카드와 홈의 여행 카드에서 공통으로 사용합니다.
  * 사용하는 배경에 따라 [style]을 지정할 수 있습니다.
@@ -116,8 +116,8 @@ fun YadanGameMatchup(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         YadanMatchupTeam(
-            team = homeTeam,
-            isHomeTeam = true,
+            team = awayTeam,
+            isHomeTeam = false,
             style = style,
             showHomeIndicator = showHomeIndicator,
             modifier = Modifier.weight(1f),
@@ -130,8 +130,8 @@ fun YadanGameMatchup(
         )
 
         YadanMatchupTeam(
-            team = awayTeam,
-            isHomeTeam = false,
+            team = homeTeam,
+            isHomeTeam = true,
             style = style,
             showHomeIndicator = showHomeIndicator,
             modifier = Modifier.weight(1f),

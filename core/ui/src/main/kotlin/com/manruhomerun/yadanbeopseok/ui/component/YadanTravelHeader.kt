@@ -37,10 +37,10 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.Travel
 
 /**
- * 여행 이름이 없거나 공백이면 지역명을 사용해 화면 표시용 제목을 반환합니다.
+ * 여행 이름이 공백이면 지역명을 사용해 화면 표시용 제목을 반환합니다.
  */
 fun Travel.displayTitle(): String =
-    name?.takeIf { it.isNotBlank() }
+    name.takeIf { it.isNotBlank() }
         ?: "${region.displayName} 원정 여행"
 
 /**

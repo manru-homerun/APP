@@ -10,21 +10,19 @@ import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.repository.StickerRepository
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRecordRepository
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRepository
-import com.manruhomerun.yadanbeopseok.data.repository.TravelSpotRepository
+import com.manruhomerun.yadanbeopseok.model.STICKER_REQUIRED_VERIFIED_SPOT_COUNT
+import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
 import com.manruhomerun.yadanbeopseok.model.TravelStatus
 import com.manruhomerun.yadanbeopseok.record.location.CurrentLocationProvider
 import com.manruhomerun.yadanbeopseok.record.location.CurrentLocationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlin.time.Clock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 
 /**
  * 방문 인증에 필요한 정보와 위치를 조회하고,
@@ -35,15 +33,12 @@ import kotlinx.datetime.toLocalDateTime
 @HiltViewModel
 class TravelVerificationViewModel @Inject constructor(
     private val travelRepository: TravelRepository,
-    private val travelSpotRepository: TravelSpotRepository,
     private val travelRecordRepository: TravelRecordRepository,
     private val stickerRepository: StickerRepository,
     private val currentLocationProvider: CurrentLocationProvider,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TravelVerificationUiState())
     val uiState = _uiState.asStateFlow()
-
-    private val verificationTimeZone = TimeZone.of("Asia/Seoul")
 
     private var currentTravelId: String? = null
     private var currentSpotId: String? = null
@@ -53,7 +48,7 @@ class TravelVerificationViewModel @Inject constructor(
     /** 동일한 인증 화면이 재구성되어도 초기 조회를 반복하지 않습니다. */
     fun loadVerification(travelId: String, spotId: String) {
         if (isSessionExpired || requestJob?.isActive == true) return
-        if (_uiState.value.certification != null) return
+        if (_uiState.value.verificationResult != null) return
 
         val normalizedTravelId = travelId.trim()
         val normalizedSpotId = spotId.trim()
@@ -80,7 +75,7 @@ class TravelVerificationViewModel @Inject constructor(
         val state = _uiState.value
 
         if (state.travel == null || state.targetSpot == null) return
-        if (state.certification != null) return
+        if (state.verificationResult != null) return
 
         val canRefresh = state.phase == TravelVerificationPhase.READY ||
             state.retryAction == TravelVerificationRetryAction.LOAD_LOCATION
@@ -95,7 +90,7 @@ class TravelVerificationViewModel @Inject constructor(
         val state = _uiState.value
 
         if (state.phase != TravelVerificationPhase.READY) return
-        if (state.certification != null) return
+        if (state.verificationResult != null) return
 
         request(TravelVerificationRetryAction.VERIFY_SPOT)
     }
@@ -107,20 +102,19 @@ class TravelVerificationViewModel @Inject constructor(
     }
 
     /**
-     * D02b 표시가 끝난 뒤 전체 인증이 완료된 경우 스티커를 조회합니다.
+     * D02b 표시가 끝난 뒤 방문 인증 수가 지급 기준에 도달하면 스티커를 조회합니다.
      *
-     * 일부 인증만 완료된 경우에는 Route가 일정 화면으로 돌아가므로
+     * 지급 기준에 도달하지 않은 경우에는 Route가 일정 화면으로 돌아가므로
      * 이 함수에서 별도의 작업을 실행하지 않습니다.
      */
     fun loadStickerReward() {
         val state = _uiState.value
         val travel = state.travel ?: return
 
-        val isAllCertified = travel.certificationTargetCount > 0 &&
-            travel.certifiedSpotsCount == travel.certificationTargetCount
+        val hasReachedStickerRequirement = travel.verifiedSpotsCount >= STICKER_REQUIRED_VERIFIED_SPOT_COUNT
 
         if (state.phase != TravelVerificationPhase.VERIFIED) return
-        if (!isAllCertified) return
+        if (!hasReachedStickerRequirement) return
 
         request(TravelVerificationRetryAction.LOAD_STICKERS)
     }
@@ -188,26 +182,25 @@ class TravelVerificationViewModel @Inject constructor(
         }
         val place = day?.places?.firstOrNull { it.spot.id == spotId }
 
-        if (day == null || place == null || !place.isCertificationTarget) {
-            showError("이 여행의 방문 인증 대상 관광지가 아닙니다.")
+        if (day == null || place == null) {
+            showError("이 여행에 포함된 관광지가 아닙니다.")
             return
         }
 
-        if (place.isCertified) {
+        if (place.spot.category == TravelSpotCategory.STADIUM) {
+            showError("야구 경기는 방문 인증 대상이 아닙니다.")
+            return
+        }
+
+        if (place.isVerified) {
             showError("이미 방문 인증을 완료한 관광지입니다.")
             return
-        }
-
-        val detail = travelSpotRepository.getTravelSpotDetail(spotId)
-
-        if (detail.spot.id != spotId) {
-            throw InvalidResponseException("Unexpected travel spot ID.")
         }
 
         _uiState.update {
             it.copy(
                 travel = travel,
-                targetSpot = detail,
+                targetSpot = place.spot,
                 travelDay = day.day,
             )
         }
@@ -225,6 +218,14 @@ class TravelVerificationViewModel @Inject constructor(
 
         return when (result) {
             is CurrentLocationResult.Success -> {
+                if (!result.location.hasValidVerificationAccuracy()) {
+                    showError(
+                        message = "현재 위치의 정확도를 확인하지 못했습니다. 다시 시도해주세요.",
+                        retryAction = TravelVerificationRetryAction.LOAD_LOCATION,
+                    )
+                    return null
+                }
+
                 setPhase(TravelVerificationPhase.READY)
                 result.location
             }
@@ -253,26 +254,34 @@ class TravelVerificationViewModel @Inject constructor(
         val state = _uiState.value
         val travelId = currentTravelId ?: return
         val spotId = currentSpotId ?: return
+        val travel = state.travel ?: return
+        val travelDay = travel.days.firstOrNull { day ->
+            day.day == state.travelDay
+        } ?: throw InvalidResponseException("Unexpected travel day.")
+        val travelPlace = travelDay.places.firstOrNull { place ->
+            place.spot.id == spotId
+        } ?: throw InvalidResponseException("Unexpected travel spot placement.")
 
-        if (state.travel == null || state.targetSpot == null) return
-        if (state.certification != null) return
+        if (state.targetSpot == null) return
+        if (state.verificationResult != null) return
 
         // 인증 직전에도 권한, 위치 서비스와 현재 좌표를 다시 확인합니다.
         val location = loadLocation() ?: return
 
         setPhase(TravelVerificationPhase.SUBMITTING)
 
-        val certification = travelRecordRepository.verifyTravelSpot(
+        val verificationResult = travelRecordRepository.verifyTravelSpot(
             travelId = travelId,
             spotId = spotId,
             latitude = location.latitude,
             longitude = location.longitude,
-            visitedAt = Clock.System.now().toLocalDateTime(verificationTimeZone),
-            accuracy = if (location.hasAccuracy()) location.accuracy.toDouble() else null,
+            accuracy = location.accuracy.toDouble(),
+            day = travelDay.day,
+            placementOrder = travelPlace.order,
         )
 
         // 이후 조회가 실패해도 성공한 POST 결과는 유지합니다.
-        _uiState.update { it.copy(certification = certification) }
+        _uiState.update { it.copy(verificationResult = verificationResult) }
 
         refreshTravel()
     }
@@ -287,8 +296,8 @@ class TravelVerificationViewModel @Inject constructor(
         val place = travel.days.flatMap { it.places }
             .firstOrNull { it.spot.id == spotId }
 
-        if (place?.isCertified != true) {
-            if (_uiState.value.certification != null) {
+        if (place?.isVerified != true) {
+            if (_uiState.value.verificationResult != null) {
                 // POST 성공은 확인됐으므로 진행률 조회만 다시 시도합니다.
                 throw InvalidResponseException("Verification is not reflected in travel.")
             }
@@ -298,10 +307,6 @@ class TravelVerificationViewModel @Inject constructor(
                 retryAction = TravelVerificationRetryAction.VERIFY_SPOT,
             )
             return
-        }
-
-        if (travel.certificationTargetCount <= 0) {
-            throw InvalidResponseException("Invalid certification target count.")
         }
 
         // 인증 개수와 관계없이 D02b 인증 완료 화면을 먼저 표시합니다.
@@ -315,13 +320,12 @@ class TravelVerificationViewModel @Inject constructor(
         }
     }
 
-    /** 전체 인증 완료가 확인된 경우에만 스티커를 조회합니다. */
+    /** 방문 인증 수가 지급 기준에 도달한 경우에만 스티커를 조회합니다. */
     private suspend fun loadStickerPack() {
         val travel = _uiState.value.travel ?: return
-        val isAllCertified = travel.certificationTargetCount > 0 &&
-            travel.certifiedSpotsCount == travel.certificationTargetCount
+        val hasReachedStickerRequirement = travel.verifiedSpotsCount >= STICKER_REQUIRED_VERIFIED_SPOT_COUNT
 
-        if (!isAllCertified) return
+        if (!hasReachedStickerRequirement) return
 
         setPhase(TravelVerificationPhase.LOADING_STICKERS)
 
@@ -367,6 +371,11 @@ class TravelVerificationViewModel @Inject constructor(
             )
         }
     }
+}
+
+/** 방문 인증 API에 전달할 수 있는 위치 정확도인지 확인합니다. */
+private fun Location.hasValidVerificationAccuracy(): Boolean {
+    return hasAccuracy() && accuracy.isFinite() && accuracy >= 0f
 }
 
 /** 서버 내부 오류 문구를 그대로 화면에 노출하지 않습니다. */

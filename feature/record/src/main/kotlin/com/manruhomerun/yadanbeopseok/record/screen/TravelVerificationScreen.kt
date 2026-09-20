@@ -51,13 +51,13 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.Region
+import com.manruhomerun.yadanbeopseok.model.STICKER_REQUIRED_VERIFIED_SPOT_COUNT
 import com.manruhomerun.yadanbeopseok.model.Travel
 import com.manruhomerun.yadanbeopseok.model.TravelBaseballGame
 import com.manruhomerun.yadanbeopseok.model.TravelDay
 import com.manruhomerun.yadanbeopseok.model.TravelPlace
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
-import com.manruhomerun.yadanbeopseok.model.TravelSpotDetail
 import com.manruhomerun.yadanbeopseok.model.TravelStatus
 import com.manruhomerun.yadanbeopseok.record.component.TravelVerificationMap
 import com.manruhomerun.yadanbeopseok.record.location.CurrentLocationResult
@@ -102,7 +102,7 @@ fun TravelVerificationScreen(
 
     val canVerify = phase == TravelVerificationPhase.READY &&
         travel != null && targetSpot != null &&
-        location != null && uiState.certification == null
+        location != null && uiState.verificationResult == null
 
     val canRetry = phase == TravelVerificationPhase.ERROR && uiState.retryAction != null
     val isLocationRetry = canRetry &&
@@ -173,9 +173,9 @@ fun TravelVerificationScreen(
                     }
 
                     YadanTravelProgress(
-                        certifiedPlaceCount = travel.certifiedSpotsCount,
-                        totalPlaceCount = travel.certificationTargetCount,
-                        label = "여행 전체 인증",
+                        verifiedPlaceCount = travel.verifiedSpotsCount,
+                        totalPlaceCount = STICKER_REQUIRED_VERIFIED_SPOT_COUNT,
+                        label = "스티커 획득 진행",
                         modifier = Modifier.fillMaxWidth(),
                     )
 
@@ -205,7 +205,7 @@ fun TravelVerificationScreen(
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 Text(
-                                    text = targetSpot.spot.name,
+                                    text = targetSpot.name,
                                     style = YadanTypography.titleSmall,
                                     color = YadanTextPrimary,
                                 )
@@ -421,9 +421,8 @@ private fun verificationPreviewState(): TravelVerificationUiState {
         region = Region.BUSAN,
         friends = emptyList(),
         isLeader = true,
-        themeIds = emptyList(),
-        certificationTargetCount = 1,
-        certifiedSpotsCount = 0,
+        themeId = "2",
+        verifiedSpotsCount = 0,
         days = listOf(
             TravelDay(
                 day = 1,
@@ -431,7 +430,6 @@ private fun verificationPreviewState(): TravelVerificationUiState {
                     TravelPlace(
                         spot = spot,
                         order = 0,
-                        isCertificationTarget = true,
                     ),
                 ),
             ),
@@ -448,11 +446,7 @@ private fun verificationPreviewState(): TravelVerificationUiState {
 
     return TravelVerificationUiState(
         travel = travel,
-        targetSpot = TravelSpotDetail(
-            spot = spot,
-            latitude = 35.0975,
-            longitude = 129.0106,
-        ),
+        targetSpot = spot,
         travelDay = 1,
         locationResult = CurrentLocationResult.Success(location),
         phase = TravelVerificationPhase.READY,

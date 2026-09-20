@@ -1,17 +1,21 @@
 package com.manruhomerun.yadanbeopseok.data.repository.impl
 
+import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.mapper.toTravelSpot
 import com.manruhomerun.yadanbeopseok.data.mapper.toTravelSpotDetail
+import com.manruhomerun.yadanbeopseok.data.mapper.toTravelSpotListPage
+import com.manruhomerun.yadanbeopseok.data.mapper.toTravelSpotSuggestionRequestDto
+import com.manruhomerun.yadanbeopseok.data.repository.SuggestTravelSpotsParams
 import com.manruhomerun.yadanbeopseok.data.repository.TravelSpotRepository
 import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotDetail
 import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
+import com.manruhomerun.yadanbeopseok.model.TravelSpotListPage
 import com.manruhomerun.yadanbeopseok.network.common.error.ApiCallExecutor
-import com.manruhomerun.yadanbeopseok.network.common.extension.requireData
 import com.manruhomerun.yadanbeopseok.network.travel.api.TravelSpotApi
-import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotPageResponseDto
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 
 /**
  * 관광지 조회, 검색, 추천 및 찜 API의 Repository 구현체입니다.
@@ -22,7 +26,7 @@ internal class TravelSpotRepositoryImpl @Inject constructor(
 ) : TravelSpotRepository {
     override suspend fun getPopularTravelSpots(
         region: Region,
-        category: TravelSpotFilterCategory,
+        category: TravelSpotFilterCategory?,
     ): List<TravelSpot> {
         val response = apiCallExecutor.execute {
             travelSpotApi.getPopularTravelSpots(
@@ -36,13 +40,15 @@ internal class TravelSpotRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getSuggestedTravelSpots(region: Region): List<TravelSpot> {
+    override suspend fun getSuggestedTravelSpots(params: SuggestTravelSpotsParams): List<TravelSpot> {
+        val request = params.toTravelSpotSuggestionRequestDto()
+
         val response = apiCallExecutor.execute {
-            travelSpotApi.getSuggestedTravelSpots(region = region)
+            travelSpotApi.getSuggestedTravelSpots(request = request)
         }
 
-        return response.requireData().map { dto ->
-            dto.toTravelSpot()
+        return response.contents.map { dto ->
+            dto.toTravelSpot(region = params.region)
         }
     }
 
@@ -60,47 +66,41 @@ internal class TravelSpotRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getTravelSpotDetail(spotId: String): TravelSpotDetail {
-        val contentId = spotId.toContentId()
-
         val detailResponse = apiCallExecutor.execute {
-            travelSpotApi.getTravelSpotDetail(spotId = contentId)
+            travelSpotApi.getTravelSpotDetail(contentId = spotId)
         }
 
-        val imagesResponse = apiCallExecutor.execute {
-            travelSpotApi.getTravelSpotImages(spotId = contentId)
+        val imagesResponse = try {
+            apiCallExecutor.execute {
+                travelSpotApi.getTravelSpotImages(contentId = spotId)
+            }
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: SessionExpiredException) {
+            throw exception
+        } catch (_: Exception) {
+            emptyList()
         }
 
-        return detailResponse.requireData().toTravelSpotDetail(
-            imageUrls = imagesResponse.requireData(),
-        )
+        return detailResponse.toTravelSpotDetail(imageUrls = imagesResponse)
     }
 
     override suspend fun getTravelSpotDibs(
         region: Region,
-        category: TravelSpotFilterCategory,
-    ): List<TravelSpot> {
-        val firstPage = getTravelSpotDibsPage(
-            region = region,
-            category = category,
-            pageNumber = FIRST_PAGE_NUMBER,
-        )
-
-        val remainingPageNumbers = (FIRST_PAGE_NUMBER + 1)..firstPage.totalPages
-        val remainingSpots = if (firstPage.totalPages > FIRST_PAGE_NUMBER) {
-            remainingPageNumbers.flatMap { pageNumber ->
-                getTravelSpotDibsPage(
-                    region = region,
-                    category = category,
-                    pageNumber = pageNumber,
-                ).contents
-            }
-        } else {
-            emptyList()
+        category: TravelSpotFilterCategory?,
+        pageNumber: Int,
+        pageSize: Int,
+    ): TravelSpotListPage {
+        val response = apiCallExecutor.execute {
+            travelSpotApi.getTravelSpotDibs(
+                region = region,
+                category = category,
+                pageNumber = pageNumber,
+                pageSize = pageSize,
+            )
         }
 
-        return (firstPage.contents + remainingSpots)
-            .distinctBy { dto -> dto.id }
-            .map { dto -> dto.toTravelSpot(defaultDibs = true) }
+        return response.toTravelSpotListPage(defaultDibs = true)
     }
 
     override suspend fun addTravelSpotDibs(spotId: String) {
@@ -114,31 +114,4 @@ internal class TravelSpotRepositoryImpl @Inject constructor(
             travelSpotApi.deleteTravelSpotDibs(contentId = spotId)
         }
     }
-
-    /** 찜 목록의 한 페이지를 서버에서 조회합니다. */
-    private suspend fun getTravelSpotDibsPage(
-        region: Region,
-        category: TravelSpotFilterCategory,
-        pageNumber: Int,
-    ): TravelSpotPageResponseDto =
-        apiCallExecutor.execute {
-            travelSpotApi.getTravelSpotDibs(
-                region = region,
-                category = category,
-                pageNumber = pageNumber,
-                pageSize = DIBS_PAGE_SIZE,
-            )
-        }
 }
-
-/**
- * 앱 내부의 문자열 관광지 ID를 API에서 사용하는 숫자 ID로 변환합니다.
- */
-private fun String.toContentId(): Long =
-    toLongOrNull()
-        ?: throw IllegalArgumentException(
-            "Travel spot ID must be numeric.",
-        )
-
-private const val FIRST_PAGE_NUMBER = 1
-private const val DIBS_PAGE_SIZE = 10

@@ -35,6 +35,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryDark
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.Region
+import com.manruhomerun.yadanbeopseok.model.STICKER_REQUIRED_VERIFIED_SPOT_COUNT
 import com.manruhomerun.yadanbeopseok.model.Sticker
 import com.manruhomerun.yadanbeopseok.model.StickerPack
 import com.manruhomerun.yadanbeopseok.model.Travel
@@ -47,7 +48,7 @@ import com.manruhomerun.yadanbeopseok.ui.component.YadanStickerView
 import kotlinx.datetime.LocalDate
 
 /**
- * D03 전체 방문 인증 완료 후 획득한 스티커팩을 표시합니다.
+ * D03 방문 인증 5곳 달성 후 획득한 스티커팩을 표시합니다.
  *
  * 사진 꾸미기와 나중에 하기의 실제 화면 이동은 Route에 위임합니다.
  */
@@ -212,7 +213,7 @@ private fun rewardDescription(
     }
 
     return "${travel.region.displayName} 코스 " +
-        "${travel.certificationTargetCount}곳을 모두 인증해\n" +
+        "${STICKER_REQUIRED_VERIFIED_SPOT_COUNT}곳을 인증해\n" +
         "${stickerPackName}을 받았어요"
 }
 
@@ -259,9 +260,8 @@ private fun stickerRewardPreviewState(): TravelVerificationUiState {
         region = Region.BUSAN,
         friends = emptyList(),
         isLeader = true,
-        themeIds = emptyList(),
-        certificationTargetCount = 5,
-        certifiedSpotsCount = 5,
+        themeId = "2",
+        verifiedSpotsCount = 5,
         days = emptyList(),
         status = TravelStatus.ACTIVE,
     )

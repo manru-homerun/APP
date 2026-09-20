@@ -62,6 +62,7 @@ fun TravelSpotDibsRoute(
             onTravelSpotClick = onTravelSpotClick,
             onDibsClick = viewModel::deleteDibs,
             onRetryClick = viewModel::retry,
+            onLoadNextPage = viewModel::loadNextPage,
             modifier = Modifier.fillMaxSize(),
         )
 

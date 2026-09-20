@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
@@ -12,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -53,10 +55,11 @@ internal fun LazyListScope.travelSpotSelectionContent(
     onSearch: () -> Unit,
     onTabSelected: (TravelSpotSelectionTab) -> Unit,
     onCategorySelected: (TravelSpotCategory?) -> Unit,
-    onDibsCategorySelected: (TravelSpotFilterCategory) -> Unit,
+    onDibsCategorySelected: (TravelSpotFilterCategory?) -> Unit,
     onTravelSpotClick: (TravelSpot) -> Unit,
     onTravelSpotToggle: (TravelSpot) -> Unit,
     onRetryClick: () -> Unit,
+    onLoadNextDibsPage: () -> Unit,
     searchPlaceholder: String = "관광지·음식을 검색해보세요",
     disabledSpotIds: Set<String> = emptySet(),
     selectedSpotsContent: LazyListScope.() -> Unit = {},
@@ -150,6 +153,78 @@ internal fun LazyListScope.travelSpotSelectionContent(
                 onActionClick = { onTravelSpotToggle(spot) },
             )
         }
+
+        if (!uiState.isSearchMode && uiState.selectedTab == TravelSpotSelectionTab.DIBS) {
+            when {
+                uiState.isDibsSpotsLoadingMore -> {
+                    item(key = "dibs_loading_more") {
+                        TravelSpotLoadMoreProgress()
+                    }
+                }
+
+                uiState.dibsLoadMoreErrorMessage != null -> {
+                    item(key = "dibs_load_more_error") {
+                        TravelSpotLoadMoreError(
+                            message = uiState.dibsLoadMoreErrorMessage,
+                            onRetryClick = onRetryClick,
+                        )
+                    }
+                }
+
+                uiState.hasNextDibsPage -> {
+                    item(key = "dibs_load_next_page") {
+                        LaunchedEffect(uiState.dibsPageNumber) {
+                            onLoadNextDibsPage()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** 찜 목록의 다음 페이지를 조회하는 동안 하단 진행 상태를 표시합니다. */
+@Composable
+private fun TravelSpotLoadMoreProgress() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(24.dp),
+            color = YadanPrimary,
+            strokeWidth = 2.dp,
+        )
+    }
+}
+
+/** 찜 목록의 다음 페이지 조회 실패 문구와 재시도 동작을 표시합니다. */
+@Composable
+private fun TravelSpotLoadMoreError(
+    message: String,
+    onRetryClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = message,
+            style = YadanTypography.bodySmall,
+            color = YadanTextSecondary,
+            textAlign = TextAlign.Center,
+        )
+
+        YadanButton(
+            text = "다시 시도",
+            onClick = onRetryClick,
+            modifier = Modifier.widthIn(min = 120.dp),
+        )
     }
 }
 

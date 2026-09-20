@@ -8,6 +8,7 @@ import com.manruhomerun.yadanbeopseok.common.NetworkConnectionException
 import com.manruhomerun.yadanbeopseok.common.NetworkTimeoutException
 import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRepository
+import com.manruhomerun.yadanbeopseok.model.TravelStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -31,7 +32,10 @@ class TravelRecordViewModel @Inject constructor(
     private var loadJob: Job? = null
 
     init {
-        loadCompletedTravels()
+        loadCompletedTravels(
+            pageNumber = FIRST_PAGE_NUMBER,
+            clearCurrentTravels = true,
+        )
     }
 
     /**
@@ -54,38 +58,85 @@ class TravelRecordViewModel @Inject constructor(
      * 완료 여행 목록 조회를 다시 시도합니다.
      */
     fun retry() {
-        if (_uiState.value.isLoading) return
+        val currentState = _uiState.value
+        if (currentState.isLoading || currentState.isLoadingMore) return
 
-        loadCompletedTravels()
+        if (currentState.loadMoreErrorMessage != null) {
+            loadNextPage()
+        } else {
+            loadCompletedTravels(
+                pageNumber = FIRST_PAGE_NUMBER,
+                clearCurrentTravels = currentState.completedTravels.isEmpty(),
+            )
+        }
     }
 
     /**
      * 완료 여행 목록을 최신 상태로 다시 조회합니다.
      */
     fun refresh() {
-        if (_uiState.value.isLoading) return
+        val currentState = _uiState.value
+        if (currentState.isLoading || currentState.isLoadingMore) return
 
-        loadCompletedTravels()
+        loadCompletedTravels(
+            pageNumber = FIRST_PAGE_NUMBER,
+            clearCurrentTravels = false,
+        )
     }
 
-    /**
-     * 완료 여행 목록을 조회하고 최신 여행이 먼저 보이도록 정렬합니다.
-     */
-    private fun loadCompletedTravels() {
+    /** 목록 하단에서 완료 여행의 다음 페이지를 조회합니다. */
+    fun loadNextPage() {
+        val currentState = _uiState.value
+        val canLoadNextPage = !currentState.isLoading &&
+            !currentState.isLoadingMore &&
+            currentState.hasNextPage
+
+        if (!canLoadNextPage) return
+
+        loadCompletedTravels(
+            pageNumber = currentState.pageNumber + 1,
+            clearCurrentTravels = false,
+        )
+    }
+
+    /** 완료 여행 한 페이지를 조회하고 최신 여행이 먼저 보이도록 누적합니다. */
+    private fun loadCompletedTravels(
+        pageNumber: Int,
+        clearCurrentTravels: Boolean,
+    ) {
         loadJob?.cancel()
+        val isFirstPage = pageNumber == FIRST_PAGE_NUMBER
 
         _uiState.update {
             it.copy(
-                isLoading = true,
+                completedTravels = if (clearCurrentTravels) emptyList() else it.completedTravels,
+                pageNumber = if (clearCurrentTravels) 0 else it.pageNumber,
+                totalPages = if (clearCurrentTravels) 0 else it.totalPages,
+                isLoading = isFirstPage,
+                isLoadingMore = !isFirstPage,
                 errorMessage = null,
+                loadMoreErrorMessage = null,
             )
         }
 
         loadJob = viewModelScope.launch {
             try {
-                val page = travelRepository.getCompletedTravels()
-                val completedTravels = page.travels.sortedByDescending { travel ->
-                    travel.endDate
+                val page = travelRepository.getTravels(
+                    status = TravelStatus.COMPLETED,
+                    pageNumber = pageNumber,
+                    pageSize = TRAVEL_PAGE_SIZE,
+                )
+
+                val completedTravels = _uiState.value.let { currentState ->
+                    val travels = if (isFirstPage) {
+                        page.travels
+                    } else {
+                        currentState.completedTravels + page.travels
+                    }
+
+                    travels
+                        .distinctBy { travel -> travel.id }
+                        .sortedByDescending { travel -> travel.endDate }
                 }
 
                 val availableSeasons = completedTravels
@@ -102,21 +153,50 @@ class TravelRecordViewModel @Inject constructor(
                     it.copy(
                         completedTravels = completedTravels,
                         selectedSeason = selectedSeason,
+                        pageNumber = page.pageNumber,
+                        totalPages = page.totalPages,
                         isLoading = false,
+                        isLoadingMore = false,
                         errorMessage = null,
+                        loadMoreErrorMessage = null,
                     )
                 }
             } catch (exception: CancellationException) {
                 throw exception
             } catch (_: SessionExpiredException) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = null) }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isLoadingMore = false,
+                        errorMessage = null,
+                        loadMoreErrorMessage = null,
+                    )
+                }
             } catch (exception: Exception) {
                 _uiState.update {
                     it.copy(
-                        completedTravels = emptyList(),
-                        selectedSeason = null,
+                        completedTravels = if (isFirstPage && clearCurrentTravels) {
+                            emptyList()
+                        } else {
+                            it.completedTravels
+                        },
+                        selectedSeason = if (isFirstPage && clearCurrentTravels) {
+                            null
+                        } else {
+                            it.selectedSeason
+                        },
                         isLoading = false,
-                        errorMessage = exception.toTravelRecordErrorMessage(),
+                        isLoadingMore = false,
+                        errorMessage = if (isFirstPage) {
+                            exception.toTravelRecordErrorMessage()
+                        } else {
+                            null
+                        },
+                        loadMoreErrorMessage = if (isFirstPage) {
+                            null
+                        } else {
+                            exception.toTravelRecordErrorMessage()
+                        },
                     )
                 }
             }
@@ -142,3 +222,6 @@ private fun Exception.toTravelRecordErrorMessage(): String =
         else ->
             "여행 기록을 불러오지 못했습니다. 잠시 후 다시 시도해주세요."
     }
+
+private const val FIRST_PAGE_NUMBER = 1
+private const val TRAVEL_PAGE_SIZE = 10

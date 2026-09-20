@@ -50,12 +50,13 @@ fun TravelCourseSpotSelectionScreen(
     onSearch: () -> Unit,
     onTabSelected: (TravelSpotSelectionTab) -> Unit,
     onCategorySelected: (TravelSpotCategory?) -> Unit,
-    onDibsCategorySelected: (TravelSpotFilterCategory) -> Unit,
+    onDibsCategorySelected: (TravelSpotFilterCategory?) -> Unit,
     onTravelSpotClick: (TravelSpot) -> Unit,
     onTravelSpotToggle: (TravelSpot) -> Unit,
     onBackClick: () -> Unit,
     onDoneClick: () -> Unit,
     onRetryClick: () -> Unit,
+    onLoadNextDibsPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val targetDay = uiState.targetDay ?: return
@@ -104,6 +105,7 @@ fun TravelCourseSpotSelectionScreen(
                 onTravelSpotClick = onTravelSpotClick,
                 onTravelSpotToggle = onTravelSpotToggle,
                 onRetryClick = onRetryClick,
+                onLoadNextDibsPage = onLoadNextDibsPage,
                 searchPlaceholder = "관광지·음식을 검색해서 추가",
                 disabledSpotIds = disabledSpotIds,
             )
@@ -266,6 +268,7 @@ private fun TravelCourseSpotSelectionPreview(
             onBackClick = {},
             onDoneClick = {},
             onRetryClick = {},
+            onLoadNextDibsPage = {},
         )
     }
 }

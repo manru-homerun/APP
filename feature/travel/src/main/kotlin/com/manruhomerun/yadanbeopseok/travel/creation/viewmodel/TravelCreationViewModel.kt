@@ -7,11 +7,11 @@ import com.manruhomerun.yadanbeopseok.data.repository.BaseballRepository
 import com.manruhomerun.yadanbeopseok.data.repository.CreateTravelParams
 import com.manruhomerun.yadanbeopseok.data.repository.FriendRepository
 import com.manruhomerun.yadanbeopseok.data.repository.GenerateTravelCourseParams
+import com.manruhomerun.yadanbeopseok.data.repository.SuggestTravelSpotsParams
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRepository
 import com.manruhomerun.yadanbeopseok.data.repository.TravelSpotRepository
 import com.manruhomerun.yadanbeopseok.model.BaseballGame
 import com.manruhomerun.yadanbeopseok.model.KboTeam
-import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelCompanionCondition
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
@@ -274,11 +274,14 @@ class TravelCreationViewModel @Inject constructor(
 
     /** B06 진입 시 선택한 경기 지역의 관광지 목록을 준비합니다. */
     fun initializeTravelSpotSelection() {
-        val region = selectedTravelRegion() ?: return
-        spotQuery.initializeTravelSpotSelection(region)
+        val params = _uiState.value.toSuggestTravelSpotsParams() ?: return
+        spotQuery.initializeTravelSpotSelection(params)
     }
 
-    fun selectTravelSpotTab(tab: TravelSpotSelectionTab) = spotQuery.selectTravelSpotTab(tab)
+    fun selectTravelSpotTab(tab: TravelSpotSelectionTab) {
+        updateSuggestionParams()
+        spotQuery.selectTravelSpotTab(tab)
+    }
 
     fun updateTravelSpotSearchQuery(query: String) = spotQuery.updateTravelSpotSearchQuery(query)
 
@@ -288,13 +291,21 @@ class TravelCreationViewModel @Inject constructor(
 
     fun selectTravelSpotCategory(category: TravelSpotCategory?) = spotQuery.selectTravelSpotCategory(category)
 
-    fun selectTravelSpotDibsCategory(category: TravelSpotFilterCategory) =
+    fun selectTravelSpotDibsCategory(category: TravelSpotFilterCategory?) =
         spotQuery.selectTravelSpotDibsCategory(category)
 
     /** 관광지 상세에서 B06으로 돌아오면 현재 목록을 갱신합니다. */
-    fun refreshTravelSpotSelection() = spotQuery.refreshTravelSpotSelection()
+    fun refreshTravelSpotSelection() {
+        updateSuggestionParams()
+        spotQuery.refreshTravelSpotSelection()
+    }
 
-    fun retryTravelSpotSelection() = spotQuery.retryTravelSpotSelection()
+    fun retryTravelSpotSelection() {
+        updateSuggestionParams()
+        spotQuery.retryTravelSpotSelection()
+    }
+
+    fun loadNextTravelSpotDibsPage() = spotQuery.loadNextDibsPage()
 
     /** 필수 포함 관광지를 선택·해제하고 이전 생성 결과를 초기화합니다. */
     fun toggleTravelSpot(travelSpot: TravelSpot) {
@@ -324,6 +335,10 @@ class TravelCreationViewModel @Inject constructor(
      */
     fun getCurrentCreateTravelParams(): CreateTravelParams? =
         _uiState.value.toCreateTravelParams()
+
+    /** B07에서 C01로 전달할 맞춤 관광지 추천 조건을 반환합니다. */
+    fun getCurrentSuggestTravelSpotsParams(): SuggestTravelSpotsParams? =
+        _uiState.value.toSuggestTravelSpotsParams()
 
     /** 추천 결과에서 B·06으로 돌아갈 때 생성된 추천 코스만 제거합니다. */
     fun clearGeneratedCourse() {
@@ -662,9 +677,10 @@ class TravelCreationViewModel @Inject constructor(
         spotQuery.reset()
     }
 
-    /** 현재 선택한 경기장의 지역을 반환합니다. */
-    private fun selectedTravelRegion(): Region? {
-        return _uiState.value.selectedGame?.stadium?.region
+    /** 현재 입력값을 공통 관광지 조회기에 반영합니다. */
+    private fun updateSuggestionParams() {
+        val params = _uiState.value.toSuggestTravelSpotsParams() ?: return
+        spotQuery.updateSuggestionParams(params)
     }
 
     /** ViewModel에서 실행 중인 모든 조회 작업을 취소합니다. */
@@ -685,16 +701,16 @@ private fun TravelCreationUiState.toGenerateTravelCourseParams(): GenerateTravel
 
     if (!isValidDateRange(game, resolvedStartDate, resolvedEndDate)) return null
 
-    val friendNicknames = selectedCompanions.toFriendNicknamesOrNull() ?: return null
+    val friendIds = selectedCompanions.toFriendIdsOrNull() ?: return null
 
     return GenerateTravelCourseParams(
         startDate = resolvedStartDate,
         endDate = resolvedEndDate,
         baseballGameId = game.id,
         region = game.stadium.region,
-        friendNicknames = friendNicknames,
+        friendIds = friendIds,
         companionConditions = selectedCompanionConditions.toList(),
-        themeIds = listOf(theme.id),
+        themeId = theme.id,
         travelSpotIds = selectedTravelSpots.map { spot -> spot.id },
     )
 }
@@ -707,27 +723,43 @@ private fun TravelCreationUiState.toCreateTravelParams(): CreateTravelParams? {
     val resolvedEndDate = endDate ?: return null
     val resolvedCourse = generatedCourse ?: return null
     val resolvedName = travelName.trim().takeIf { it.isNotEmpty() } ?: return null
-    val friendNicknames = selectedCompanions.toFriendNicknamesOrNull() ?: return null
+    val friendIds = selectedCompanions.toFriendIdsOrNull() ?: return null
 
     return CreateTravelParams(
         startDate = resolvedStartDate,
         endDate = resolvedEndDate,
         name = resolvedName,
         region = game.stadium.region,
-        friendNicknames = friendNicknames,
-        themeIds = listOf(theme.id),
+        friendIds = friendIds,
+        themeId = theme.id,
         course = resolvedCourse,
     )
 }
 
-/** 선택한 사용자들의 고유 닉네임을 서버 요청값으로 변환합니다. */
-private fun List<UserProfile>.toFriendNicknamesOrNull(): List<String>? {
-    val nicknames = mapNotNull { user ->
-        val nickname = user.nickname?.trim()
-        nickname?.takeIf { it.isNotEmpty() }
-    }
+/** 맞춤 관광지 추천 요청에 필요한 현재 입력값으로 변환합니다. */
+private fun TravelCreationUiState.toSuggestTravelSpotsParams(): SuggestTravelSpotsParams? {
+    val game = selectedGame ?: return null
+    val theme = selectedTheme ?: return null
+    val resolvedStartDate = startDate ?: return null
+    val resolvedEndDate = endDate ?: return null
 
-    return nicknames.takeIf { it.size == size }
+    if (!isValidDateRange(game, resolvedStartDate, resolvedEndDate)) return null
+
+    return SuggestTravelSpotsParams(
+        startDate = resolvedStartDate,
+        endDate = resolvedEndDate,
+        region = game.stadium.region,
+        companionConditions = selectedCompanionConditions.toList(),
+        companionCount = selectedCompanions.size,
+        themeId = theme.id,
+        travelSpotIds = selectedTravelSpots.map { spot -> spot.id },
+    )
+}
+
+/** 선택한 사용자들의 UUID를 서버 요청값으로 변환합니다. */
+private fun List<UserProfile>.toFriendIdsOrNull(): List<String>? {
+    val ids = map { user -> user.id.trim() }
+    return ids.takeIf { friendIds -> friendIds.all { id -> id.isNotEmpty() } }
 }
 
 /** 여행 기간이 최대 2박 3일이고 선택 경기일을 포함하는지 검사합니다. */

@@ -25,6 +25,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanEmphasizedTransition
 import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanFadeTransition
+import com.manruhomerun.yadanbeopseok.model.STICKER_REQUIRED_VERIFIED_SPOT_COUNT
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
 import com.manruhomerun.yadanbeopseok.navigation.route.HomeNavKey
 import com.manruhomerun.yadanbeopseok.record.location.CurrentLocationResult
@@ -38,7 +39,7 @@ import kotlinx.coroutines.delay
 /**
  * D02 방문 인증, D02b 인증 완료와 D03 스티커 획득 화면을 연결합니다.
  *
- * 위치 권한과 위치 설정을 처리하고, 인증 완료 후 전체 인증 여부에 따라
+ * 위치 권한과 위치 설정을 처리하고, 인증 완료 후 스티커 지급 기준 충족 여부에 따라
  * 일정 화면 또는 스티커 획득 화면으로 전환합니다.
  *
  * @param travelId 인증 대상 여행 ID
@@ -164,12 +165,11 @@ fun TravelVerificationRoute(
 
     /*
      * D02b를 2초간 표시합니다.
-     * 전체 인증이면 스티커를 조회하고, 일부 인증이면 일정 화면으로 복귀합니다.
+     * 5곳 이상 인증했으면 스티커를 조회하고, 미만이면 일정 화면으로 복귀합니다.
      */
     LaunchedEffect(
         uiState.phase,
-        uiState.travel?.certifiedSpotsCount,
-        uiState.travel?.certificationTargetCount,
+        uiState.travel?.verifiedSpotsCount,
     ) {
         if (uiState.phase != TravelVerificationPhase.VERIFIED) {
             return@LaunchedEffect
@@ -178,10 +178,9 @@ fun TravelVerificationRoute(
         delay(VERIFICATION_COMPLETION_DISPLAY_MILLIS)
 
         val travel = uiState.travel ?: return@LaunchedEffect
-        val isAllCertified = travel.certificationTargetCount > 0 &&
-            travel.certifiedSpotsCount == travel.certificationTargetCount
+        val hasReachedStickerRequirement = travel.verifiedSpotsCount >= STICKER_REQUIRED_VERIFIED_SPOT_COUNT
 
-        if (isAllCertified) {
+        if (hasReachedStickerRequirement) {
             viewModel.loadStickerReward()
         } else {
             navigator.navigateBack()

@@ -38,8 +38,14 @@ data class TravelSpotSelectionUiState(
     /** 검색 결과에 적용할 카테고리이며 null이면 전체를 표시합니다. */
     val selectedCategory: TravelSpotCategory? = null,
 
-    /** 찜 탭을 서버에서 조회할 때 사용하는 필수 카테고리입니다. */
-    val selectedDibsCategory: TravelSpotFilterCategory = TravelSpotFilterCategory.ACCOMMODATION,
+    /** 찜 탭을 서버에서 조회할 때 사용하는 카테고리이며 null이면 전체를 조회합니다. */
+    val selectedDibsCategory: TravelSpotFilterCategory? = null,
+
+    /** 마지막으로 불러온 찜 목록 페이지 번호입니다. */
+    val dibsPageNumber: Int = 0,
+
+    /** 찜 목록의 전체 페이지 수입니다. */
+    val dibsTotalPages: Int = 0,
 
     /** 맞춤 추천 관광지를 불러오고 있는지 나타냅니다. */
     val isSuggestedSpotsLoading: Boolean = false,
@@ -47,11 +53,17 @@ data class TravelSpotSelectionUiState(
     /** 찜한 관광지를 불러오고 있는지 나타냅니다. */
     val isDibsSpotsLoading: Boolean = false,
 
+    /** 찜 목록의 다음 페이지를 불러오고 있는지 나타냅니다. */
+    val isDibsSpotsLoadingMore: Boolean = false,
+
     /** 관광지를 검색하고 있는지 나타냅니다. */
     val isSearchLoading: Boolean = false,
 
     /** 관광지 조회 또는 검색 중 표시할 안내 문구입니다. */
     val errorMessage: String? = null,
+
+    /** 찜 목록의 다음 페이지 조회 실패 문구입니다. */
+    val dibsLoadMoreErrorMessage: String? = null,
 ) {
     /** 검색어가 입력되어 검색 결과 화면을 표시해야 하는지 나타냅니다. */
     val isSearchMode: Boolean
@@ -78,4 +90,8 @@ data class TravelSpotSelectionUiState(
             selectedTab == TravelSpotSelectionTab.SUGGESTED -> isSuggestedSpotsLoading
             else -> isDibsSpotsLoading
         }
+
+    /** 찜 목록에 조회할 다음 페이지가 있는지 나타냅니다. */
+    val hasNextDibsPage: Boolean
+        get() = dibsPageNumber < dibsTotalPages
 }

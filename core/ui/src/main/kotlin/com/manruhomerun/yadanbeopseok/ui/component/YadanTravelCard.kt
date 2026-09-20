@@ -47,6 +47,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.KboTeam
 import com.manruhomerun.yadanbeopseok.model.Region
+import com.manruhomerun.yadanbeopseok.model.STICKER_REQUIRED_VERIFIED_SPOT_COUNT
 import com.manruhomerun.yadanbeopseok.model.TravelSummary
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.number
@@ -159,8 +160,8 @@ fun YadanTravelCard(
 
                 if (isActive) {
                     YadanTravelProgress(
-                        certifiedPlaceCount = travel.certifiedSpotsCount,
-                        totalPlaceCount = travel.certificationTargetCount,
+                        verifiedPlaceCount = travel.verifiedSpotsCount,
+                        totalPlaceCount = STICKER_REQUIRED_VERIFIED_SPOT_COUNT,
                         style = YadanTravelProgressStyle.ON_DARK,
                     )
                 }
@@ -378,8 +379,7 @@ private fun YadanTravelCardPreview() {
             region = Region.BUSAN,
             isLeader = true,
             spotsCount = 6,
-            certificationTargetCount = 5,
-            certifiedSpotsCount = 1,
+            verifiedSpotsCount = 1,
             hasSticker = false,
         )
 
@@ -390,7 +390,7 @@ private fun YadanTravelCardPreview() {
             startDate = LocalDate(2026, 5, 23),
             endDate = LocalDate(2026, 5, 24),
             isLeader = false,
-            certifiedSpotsCount = 0,
+            verifiedSpotsCount = 0,
         )
 
     YadanbeopseokTheme {

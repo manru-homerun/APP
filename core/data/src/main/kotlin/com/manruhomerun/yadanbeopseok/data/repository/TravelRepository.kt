@@ -5,7 +5,7 @@ import com.manruhomerun.yadanbeopseok.model.Travel
 import com.manruhomerun.yadanbeopseok.model.TravelCompanionCondition
 import com.manruhomerun.yadanbeopseok.model.TravelCourse
 import com.manruhomerun.yadanbeopseok.model.TravelListPage
-import com.manruhomerun.yadanbeopseok.model.TravelSummary
+import com.manruhomerun.yadanbeopseok.model.TravelStatus
 import com.manruhomerun.yadanbeopseok.model.TravelTheme
 import kotlinx.datetime.LocalDate
 
@@ -15,20 +15,12 @@ import kotlinx.datetime.LocalDate
  * Network DTO를 외부에 노출하지 않고 앱 내부 여행 모델로 변환해 제공합니다.
  */
 interface TravelRepository {
-    /**
-     * 진행 중 여행과 진행 예정 여행 목록을 함께 조회합니다.
-     *
-     * 구현체는 진행 중 상태와 진행 예정 상태를 각각 조회하여
-     * 진행 중 여행이 먼저 오도록 하나의 목록으로 반환합니다.
-     */
-    suspend fun getPlannedTravels(): List<TravelSummary>
-
-    /**
-     * 종료된 여행 기록 목록을 조회합니다.
-     *
-     * 구현체는 여행 목록 API에 COMPLETED 상태를 전달합니다.
-     */
-    suspend fun getCompletedTravels(): TravelListPage
+    /** 지정한 상태의 여행 목록 한 페이지를 조회합니다. */
+    suspend fun getTravels(
+        status: TravelStatus,
+        pageNumber: Int = 1,
+        pageSize: Int = 10,
+    ): TravelListPage
 
     /**
      * 여행 ID에 해당하는 상세 일정과 방문 인증 상태를 조회합니다.
@@ -52,15 +44,21 @@ interface TravelRepository {
     /**
      * 저장 전 여행 코스의 관광지 순서를 거리 기준으로 재정렬합니다.
      *
+     * @param startDate 여행 시작일
+     * @param endDate 여행 종료일
      * @param course 현재 경기 배치와 일차별 관광지 일정
      * @return 재정렬된 여행 코스
      */
-    suspend fun alignTravelCourse(course: TravelCourse): TravelCourse
+    suspend fun alignTravelCourse(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        course: TravelCourse,
+    ): TravelCourse
 
     /**
      * 사용자가 최종 확정한 여행 코스를 서버에 저장합니다.
      *
-     * 서버는 저장 성공 시 201 Created를 반환하며 별도 응답 데이터는 없습니다.
+     * 서버는 저장 성공 시 204 No Content를 반환하며 별도 응답 데이터는 없습니다.
      *
      * @param params 여행 기본 정보와 최종 여행 코스
      */
@@ -85,9 +83,9 @@ interface TravelRepository {
  * @property endDate 여행 종료일
  * @property baseballGameId 선택한 야구 경기 ID
  * @property region 여행 지역
- * @property friendNicknames 동행하는 사용자의 고유 닉네임 목록
+ * @property friendIds 동행하는 사용자의 UUID 목록
  * @property companionConditions AI 코스 생성에 반영할 동행 조건 목록
- * @property themeIds 선택한 여행 테마 ID 목록
+ * @property themeId 선택한 여행 테마 ID
  * @property travelSpotIds 일정에 반드시 포함할 관광지 ID 목록
  */
 data class GenerateTravelCourseParams(
@@ -95,9 +93,9 @@ data class GenerateTravelCourseParams(
     val endDate: LocalDate,
     val baseballGameId: String,
     val region: Region,
-    val friendNicknames: List<String>,
+    val friendIds: List<String>,
     val companionConditions: List<TravelCompanionCondition>,
-    val themeIds: List<String>,
+    val themeId: String,
     val travelSpotIds: List<String>,
 )
 
@@ -110,8 +108,8 @@ data class GenerateTravelCourseParams(
  * @property endDate 여행 종료일
  * @property name 최종 여행 이름
  * @property region 여행 지역
- * @property friendNicknames 동행하는 사용자의 고유 닉네임 목록
- * @property themeIds 선택한 여행 테마 ID 목록
+ * @property friendIds 동행하는 사용자의 UUID 목록
+ * @property themeId 선택한 여행 테마 ID
  * @property course 최종 확정한 여행 코스
  */
 data class CreateTravelParams(
@@ -119,7 +117,7 @@ data class CreateTravelParams(
     val endDate: LocalDate,
     val name: String,
     val region: Region,
-    val friendNicknames: List<String>,
-    val themeIds: List<String>,
+    val friendIds: List<String>,
+    val themeId: String,
     val course: TravelCourse,
 )

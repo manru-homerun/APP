@@ -1,6 +1,5 @@
 package com.manruhomerun.yadanbeopseok.network.travel.api
 
-import com.manruhomerun.yadanbeopseok.network.common.dto.ApiResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelCourseAlignRequestDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelCourseGenerateRequestDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelCourseResponseDto
@@ -32,15 +31,17 @@ interface TravelApi {
      * 서버의 여행 상태 Enum과 동일한 [TravelQueryStatus]를 전달합니다.
      */
     @GET("travel")
-    suspend fun getTravels(@Query("status") status: TravelQueryStatus): TravelListResponseDto
+    suspend fun getTravels(
+        @Query("status") status: TravelQueryStatus,
+        @Query("pageNumber") pageNumber: Int = 1,
+        @Query("pageSize") pageSize: Int = 10,
+    ): TravelListResponseDto
 
     /**
      * 여행 ID에 해당하는 일차별 상세 일정을 조회합니다.
      */
     @GET("travel/{travelId}")
-    suspend fun getTravel(
-        @Path("travelId") travelId: String,
-    ): ApiResponseDto<TravelDetailResponseDto>
+    suspend fun getTravel(@Path("travelId") travelId: String): TravelDetailResponseDto
 
     /**
      * 여행 만들기에서 선택할 수 있는 여행 테마 목록을 조회합니다.
@@ -55,20 +56,20 @@ interface TravelApi {
     @POST("travel/generate")
     suspend fun generateTravelCourse(
         @Body request: TravelCourseGenerateRequestDto,
-    ): ApiResponseDto<TravelCourseResponseDto>
+    ): TravelCourseResponseDto
 
     /**
      * 경기 배치를 유지하면서 일차별 관광지 순서를 재정렬합니다.
      */
-    @POST("travel/courses/align")
+    @POST("travel/align")
     suspend fun alignTravelCourse(
         @Body request: TravelCourseAlignRequestDto,
-    ): ApiResponseDto<TravelCourseResponseDto>
+    ): TravelCourseResponseDto
 
     /**
      * 생성된 여행 코스를 최종 저장합니다.
      *
-     * 성공하면 서버는 201 Created를 반환하며 응답 Body는 없습니다.
+     * 성공하면 서버는 204 No Content를 반환하며 응답 Body는 없습니다.
      */
     @POST("travel")
     suspend fun createTravel(
@@ -87,16 +88,16 @@ interface TravelApi {
     )
 
     /**
-     * 현재 사용자의 위치와 요청 시각으로 관광지 방문 인증을 요청합니다.
+     * 현재 사용자의 위치와 여행 일정상의 배치 정보로 관광지 방문 인증을 요청합니다.
      *
-     * 인증 성공 결과는 공통 응답의 data에 포함됩니다.
+     * 인증 성공 시 현재 사용자가 해당 여행에서 인증한 관광지 수를 직접 반환합니다.
      */
-    @POST("travel/{travelId}/spots/{spotId}/verify")
+    @POST("travel/{travelId}/spots/{spotId}/verification")
     suspend fun verifyTravelSpot(
         @Path("travelId") travelId: String,
         @Path("spotId") spotId: String,
         @Body request: TravelSpotVerifyRequestDto,
-    ): ApiResponseDto<TravelSpotVerifyResponseDto>
+    ): TravelSpotVerifyResponseDto
 
     /**
      * 특정 여행에서 획득한 스티커팩과 스티커 목록을 조회합니다.

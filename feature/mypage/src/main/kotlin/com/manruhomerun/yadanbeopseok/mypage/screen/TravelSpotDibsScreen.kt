@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -55,10 +57,11 @@ fun TravelSpotDibsScreen(
     uiState: TravelSpotDibsUiState,
     onBackClick: () -> Unit,
     onRegionSelected: (Region) -> Unit,
-    onCategorySelected: (TravelSpotFilterCategory) -> Unit,
+    onCategorySelected: (TravelSpotFilterCategory?) -> Unit,
     onTravelSpotClick: (String) -> Unit,
     onDibsClick: (String) -> Unit,
     onRetryClick: () -> Unit,
+    onLoadNextPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -107,8 +110,13 @@ fun TravelSpotDibsScreen(
                 TravelSpotDibsContent(
                     travelSpots = uiState.dibsSpots,
                     updatingDibsSpotIds = uiState.updatingDibsSpotIds,
+                    hasNextPage = uiState.hasNextPage,
+                    isLoadingMore = uiState.isLoadingMore,
+                    loadMoreErrorMessage = uiState.loadMoreErrorMessage,
                     onTravelSpotClick = onTravelSpotClick,
                     onDibsClick = onDibsClick,
+                    onLoadNextPage = onLoadNextPage,
+                    onRetryClick = onRetryClick,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -123,8 +131,13 @@ fun TravelSpotDibsScreen(
 private fun TravelSpotDibsContent(
     travelSpots: List<TravelSpot>,
     updatingDibsSpotIds: Set<String>,
+    hasNextPage: Boolean,
+    isLoadingMore: Boolean,
+    loadMoreErrorMessage: String?,
     onTravelSpotClick: (String) -> Unit,
     onDibsClick: (String) -> Unit,
+    onLoadNextPage: () -> Unit,
+    onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -160,7 +173,77 @@ private fun TravelSpotDibsContent(
                     enabled = enabled,
                 )
             }
+
+            when {
+                isLoadingMore -> {
+                    item(key = "loading-more") {
+                        TravelSpotDibsLoadMoreProgress()
+                    }
+                }
+
+                loadMoreErrorMessage != null -> {
+                    item(key = "load-more-error") {
+                        TravelSpotDibsLoadMoreError(
+                            message = loadMoreErrorMessage,
+                            onRetryClick = onRetryClick,
+                        )
+                    }
+                }
+
+                hasNextPage -> {
+                    item(key = "load-next-page") {
+                        LaunchedEffect(travelSpots.size) {
+                            onLoadNextPage()
+                        }
+                    }
+                }
+            }
         }
+    }
+}
+
+/** 다음 찜 페이지를 불러오는 동안 목록 하단에 진행 상태를 표시합니다. */
+@Composable
+private fun TravelSpotDibsLoadMoreProgress() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(24.dp),
+            color = YadanPrimary,
+            strokeWidth = 2.dp,
+        )
+    }
+}
+
+/** 다음 찜 페이지 조회 실패 문구와 재시도 동작을 표시합니다. */
+@Composable
+private fun TravelSpotDibsLoadMoreError(
+    message: String,
+    onRetryClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = message,
+            style = YadanTypography.bodySmall,
+            color = YadanTextSecondary,
+            textAlign = TextAlign.Center,
+        )
+
+        YadanButton(
+            text = "다시 시도",
+            onClick = onRetryClick,
+            modifier = Modifier.widthIn(min = 120.dp),
+        )
     }
 }
 
@@ -382,6 +465,7 @@ private fun TravelSpotDibsPreview(
             onTravelSpotClick = {},
             onDibsClick = {},
             onRetryClick = {},
+            onLoadNextPage = {},
         )
     }
 }

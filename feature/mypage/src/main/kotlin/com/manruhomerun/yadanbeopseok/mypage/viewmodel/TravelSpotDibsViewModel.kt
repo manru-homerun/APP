@@ -31,7 +31,10 @@ class TravelSpotDibsViewModel @Inject constructor(
     private var loadJob: Job? = null
 
     init {
-        loadDibsSpots()
+        loadDibsSpots(
+            pageNumber = FIRST_PAGE_NUMBER,
+            clearCurrentSpots = true,
+        )
     }
 
     /**
@@ -40,46 +43,79 @@ class TravelSpotDibsViewModel @Inject constructor(
     fun selectRegion(region: Region) {
         val currentState = _uiState.value
 
-        if (currentState.isLoading) return
+        if (currentState.isLoading || currentState.isLoadingMore) return
         if (currentState.selectedRegion == region) return
 
         _uiState.update {
             it.copy(selectedRegion = region)
         }
 
-        loadDibsSpots(clearCurrentSpots = true)
+        loadDibsSpots(
+            pageNumber = FIRST_PAGE_NUMBER,
+            clearCurrentSpots = true,
+        )
     }
 
-    /** 찜한 관광지를 조회할 카테고리를 변경합니다. */
-    fun selectCategory(category: TravelSpotFilterCategory) {
+    /** 찜한 관광지를 조회할 카테고리를 변경하며 null이면 전체를 조회합니다. */
+    fun selectCategory(category: TravelSpotFilterCategory?) {
         val currentState = _uiState.value
 
-        if (currentState.isLoading) return
+        if (currentState.isLoading || currentState.isLoadingMore) return
         if (currentState.selectedCategory == category) return
 
         _uiState.update {
             it.copy(selectedCategory = category)
         }
 
-        loadDibsSpots(clearCurrentSpots = true)
+        loadDibsSpots(
+            pageNumber = FIRST_PAGE_NUMBER,
+            clearCurrentSpots = true,
+        )
     }
 
     /**
      * 찜한 관광지 목록 조회를 다시 시도합니다.
      */
     fun retry() {
-        if (_uiState.value.isLoading) return
+        val currentState = _uiState.value
+        if (currentState.isLoading || currentState.isLoadingMore) return
 
-        loadDibsSpots()
+        if (currentState.loadMoreErrorMessage != null) {
+            loadNextPage()
+        } else {
+            loadDibsSpots(
+                pageNumber = FIRST_PAGE_NUMBER,
+                clearCurrentSpots = currentState.dibsSpots.isEmpty(),
+            )
+        }
     }
 
     /**
      * 관광지 상세 화면에서 돌아온 경우 찜 목록을 다시 조회합니다.
      */
     fun refresh() {
-        if (_uiState.value.isLoading) return
+        val currentState = _uiState.value
+        if (currentState.isLoading || currentState.isLoadingMore) return
 
-        loadDibsSpots()
+        loadDibsSpots(
+            pageNumber = FIRST_PAGE_NUMBER,
+            clearCurrentSpots = false,
+        )
+    }
+
+    /** 목록 하단에서 다음 찜 페이지를 조회합니다. */
+    fun loadNextPage() {
+        val currentState = _uiState.value
+        val canLoadNextPage = !currentState.isLoading &&
+            !currentState.isLoadingMore &&
+            currentState.hasNextPage
+
+        if (!canLoadNextPage) return
+
+        loadDibsSpots(
+            pageNumber = currentState.pageNumber + 1,
+            clearCurrentSpots = false,
+        )
     }
 
     /**
@@ -90,7 +126,7 @@ class TravelSpotDibsViewModel @Inject constructor(
     fun deleteDibs(spotId: String) {
         val currentState = _uiState.value
 
-        if (currentState.isLoading) return
+        if (currentState.isLoading || currentState.isLoadingMore) return
         if (spotId in currentState.updatingDibsSpotIds) return
         if (currentState.dibsSpots.none { travelSpot -> travelSpot.id == spotId }) return
 
@@ -156,33 +192,53 @@ class TravelSpotDibsViewModel @Inject constructor(
     /**
      * 현재 선택한 지역과 카테고리의 찜한 관광지를 조회합니다.
      */
-    private fun loadDibsSpots(clearCurrentSpots: Boolean = false) {
+    private fun loadDibsSpots(
+        pageNumber: Int,
+        clearCurrentSpots: Boolean,
+    ) {
         loadJob?.cancel()
 
         val requestedRegion = _uiState.value.selectedRegion
         val requestedCategory = _uiState.value.selectedCategory
+        val isFirstPage = pageNumber == FIRST_PAGE_NUMBER
 
         _uiState.update {
             it.copy(
                 dibsSpots = if (clearCurrentSpots) emptyList() else it.dibsSpots,
-                isLoading = true,
+                pageNumber = if (clearCurrentSpots) 0 else it.pageNumber,
+                totalPages = if (clearCurrentSpots) 0 else it.totalPages,
+                isLoading = isFirstPage,
+                isLoadingMore = !isFirstPage,
                 errorMessage = null,
+                loadMoreErrorMessage = null,
             )
         }
 
         loadJob = viewModelScope.launch {
             try {
-                val dibsSpots = travelSpotRepository.getTravelSpotDibs(
+                val page = travelSpotRepository.getTravelSpotDibs(
                     region = requestedRegion,
                     category = requestedCategory,
+                    pageNumber = pageNumber,
+                    pageSize = DIBS_PAGE_SIZE,
                 )
 
                 if (_uiState.value.matchesFilter(requestedRegion, requestedCategory)) {
-                    _uiState.update {
-                        it.copy(
-                            dibsSpots = dibsSpots,
+                    _uiState.update { state ->
+                        val travelSpots = if (isFirstPage) {
+                            page.travelSpots
+                        } else {
+                            state.dibsSpots + page.travelSpots
+                        }
+
+                        state.copy(
+                            dibsSpots = travelSpots.distinctBy { travelSpot -> travelSpot.id },
+                            pageNumber = page.pageNumber,
+                            totalPages = page.totalPages,
                             isLoading = false,
+                            isLoadingMore = false,
                             errorMessage = null,
+                            loadMoreErrorMessage = null,
                         )
                     }
                 }
@@ -193,7 +249,9 @@ class TravelSpotDibsViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
+                            isLoadingMore = false,
                             errorMessage = null,
+                            loadMoreErrorMessage = null,
                         )
                     }
                 }
@@ -202,9 +260,21 @@ class TravelSpotDibsViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = exception.toTravelSpotDibsErrorMessage(
-                                defaultMessage = "찜한 관광지를 불러오지 못했습니다. 다시 시도해주세요.",
-                            ),
+                            isLoadingMore = false,
+                            errorMessage = if (isFirstPage) {
+                                exception.toTravelSpotDibsErrorMessage(
+                                    defaultMessage = "찜한 관광지를 불러오지 못했습니다. 다시 시도해주세요.",
+                                )
+                            } else {
+                                null
+                            },
+                            loadMoreErrorMessage = if (isFirstPage) {
+                                null
+                            } else {
+                                exception.toTravelSpotDibsErrorMessage(
+                                    defaultMessage = "다음 찜 목록을 불러오지 못했습니다.",
+                                )
+                            },
                         )
                     }
                 }
@@ -216,7 +286,7 @@ class TravelSpotDibsViewModel @Inject constructor(
 /** 현재 찜 목록 응답이 속한 필터 조합인지 확인합니다. */
 private fun TravelSpotDibsUiState.matchesFilter(
     region: Region,
-    category: TravelSpotFilterCategory,
+    category: TravelSpotFilterCategory?,
 ): Boolean = selectedRegion == region && selectedCategory == category
 
 /**
@@ -233,3 +303,6 @@ private fun Exception.toTravelSpotDibsErrorMessage(defaultMessage: String): Stri
         else ->
             defaultMessage
     }
+
+private const val FIRST_PAGE_NUMBER = 1
+private const val DIBS_PAGE_SIZE = 10

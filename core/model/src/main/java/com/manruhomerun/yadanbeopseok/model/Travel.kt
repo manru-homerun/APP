@@ -1,7 +1,6 @@
 package com.manruhomerun.yadanbeopseok.model
 
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.LocalDateTime
 
 /**
  * 여행 상세 조회 결과를 앱 내부에서 사용하는 모델입니다.
@@ -17,9 +16,8 @@ import kotlinx.datetime.LocalDateTime
  * @property region 여행 지역
  * @property friends 함께 여행하는 사용자들의 닉네임
  * @property isLeader 현재 사용자가 여행의 방장인지 여부
- * @property themeIds 여행에 적용된 테마 ID 목록
- * @property certificationTargetCount 방문 인증 대상 관광지 수
- * @property certifiedSpotsCount 현재 사용자가 인증한 관광지 수
+ * @property themeId 여행에 적용된 테마 ID
+ * @property verifiedSpotsCount 현재 사용자가 인증한 관광지 수
  * @property days 일차별 여행 일정
  * @property status 날짜를 기준으로 계산한 여행 상태
  */
@@ -28,13 +26,12 @@ data class Travel(
     val startDate: LocalDate,
     val endDate: LocalDate,
     val baseballGame: TravelBaseballGame,
-    val name: String?,
+    val name: String,
     val region: Region,
     val friends: List<String>,
     val isLeader: Boolean,
-    val themeIds: List<String>,
-    val certificationTargetCount: Int,
-    val certifiedSpotsCount: Int,
+    val themeId: String,
+    val verifiedSpotsCount: Int,
     val days: List<TravelDay>,
     val status: TravelStatus,
 )
@@ -76,35 +73,21 @@ data class TravelDay(
  *
  * @property spot 일정에 포함된 관광지
  * @property order 해당 일차 안에서의 표시 순서
- * @property isCertificationTarget 방문 인증 대상인지 여부
- * @property isCertified 현재 사용자가 방문 인증을 완료했는지 여부
+ * @property isVerified 현재 사용자가 방문 인증을 완료했는지 여부
  */
 data class TravelPlace(
     val spot: TravelSpot,
     val order: Int,
-    val isCertificationTarget: Boolean = false,
-    val isCertified: Boolean = false,
+    val isVerified: Boolean = false,
 )
 
 /**
  * 특정 관광지의 방문 인증이 완료된 결과입니다.
  *
- * 서버가 확인한 관광지 이름과 인증 시각을 보관합니다.
- * 전체 인증 진행률과 스티커 지급 여부는 별도 조회 결과로 판단합니다.
- *
- * @property id 방문 인증 기록의 고유 식별자
- * @property travelId 인증한 관광지가 포함된 여행의 식별자
- * @property spotId 인증한 관광지의 식별자
- * @property spotName 인증한 관광지 이름
- * @property verifiedAt 서버에서 반환한 인증 완료 시각
+ * @property totalVerifiedSpotsCount 현재 사용자가 해당 여행에서 인증한 관광지 수
  */
-data class TravelCertification(
-    val id: String,
-    val travelId: String,
-    val spotId: String,
-    val spotName: String,
-    val verifiedAt: LocalDateTime,
-)
+data class TravelVerificationResult(val totalVerifiedSpotsCount: Int)
+
 /**
  * 앱 화면에서 사용하는 여행 진행 상태입니다.
  *
@@ -145,7 +128,7 @@ data class TravelTheme(
 /**
  * 여행 코스를 만들 때 고려할 동행 조건입니다.
  *
- * 서버 요청에서는 각 Enum 이름을 동행 조건 문자열로 사용합니다.
+ * 서버 요청 문자열은 Data 계층의 Mapper에서 서버 Enum에 맞게 변환합니다.
  */
 enum class TravelCompanionCondition {
     /** 유아차와 수유실 등 아이 동반 조건을 고려합니다. */
@@ -174,8 +157,7 @@ enum class TravelCompanionCondition {
  * @property region 여행이 진행되는 야구 여행 지역
  * @property isLeader 현재 사용자가 해당 여행의 방장인지 여부
  * @property spotsCount 여행 일정에 포함된 전체 장소 수
- * @property certificationTargetCount 방문 인증 대상 관광지 수
- * @property certifiedSpotsCount 현재 사용자가 인증한 관광지 수
+ * @property verifiedSpotsCount 현재 사용자가 인증한 관광지 수
  * @property hasSticker 완료된 여행에서 획득한 스티커가 있는지 여부
  */
 data class TravelSummary(
@@ -189,8 +171,7 @@ data class TravelSummary(
     val region: Region,
     val isLeader: Boolean,
     val spotsCount: Int,
-    val certificationTargetCount: Int,
-    val certifiedSpotsCount: Int,
+    val verifiedSpotsCount: Int,
     val hasSticker: Boolean,
 )
 

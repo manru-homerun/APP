@@ -10,14 +10,22 @@ import com.manruhomerun.yadanbeopseok.model.TravelSummary
  *
  * @property completedTravels 서버에서 조회한 완료 여행 목록
  * @property selectedSeason 현재 화면에서 선택한 시즌 연도
- * @property isLoading 완료 여행 목록을 불러오는 중인지 여부
+ * @property pageNumber 마지막으로 불러온 페이지 번호
+ * @property totalPages 전체 페이지 수
+ * @property isLoading 첫 페이지를 불러오는 중인지 여부
+ * @property isLoadingMore 다음 페이지를 불러오는 중인지 여부
  * @property errorMessage 사용자에게 표시할 오류 메시지
+ * @property loadMoreErrorMessage 다음 페이지 조회 실패 메시지
  */
 data class TravelRecordUiState(
     val completedTravels: List<TravelSummary> = emptyList(),
     val selectedSeason: Int? = null,
+    val pageNumber: Int = 0,
+    val totalPages: Int = 0,
     val isLoading: Boolean = true,
+    val isLoadingMore: Boolean = false,
     val errorMessage: String? = null,
+    val loadMoreErrorMessage: String? = null,
 ) {
     /**
      * 조회된 여행의 시작 연도를 기준으로 선택 가능한 시즌을 만듭니다.
@@ -63,4 +71,8 @@ data class TravelRecordUiState(
         get() = !isLoading &&
             errorMessage == null &&
             visibleTravels.isEmpty()
+
+    /** 완료 여행 목록에 조회할 다음 페이지가 있는지 나타냅니다. */
+    val hasNextPage: Boolean
+        get() = pageNumber < totalPages
 }

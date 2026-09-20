@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.repository.BaseballRepository
 import com.manruhomerun.yadanbeopseok.data.repository.CreateTravelParams
+import com.manruhomerun.yadanbeopseok.data.repository.SuggestTravelSpotsParams
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRepository
 import com.manruhomerun.yadanbeopseok.data.repository.TravelSpotRepository
 import com.manruhomerun.yadanbeopseok.model.BaseballGame
@@ -67,6 +68,7 @@ class TravelCourseEditViewModel @Inject constructor(
     val events: Flow<TravelCourseEditEvent> = _events.receiveAsFlow()
 
     private var newTravelParams: CreateTravelParams? = null
+    private var travelSpotSuggestionParams: SuggestTravelSpotsParams? = null
     private var currentTravelId: String? = null
 
     private var loadJob: Job? = null
@@ -95,10 +97,15 @@ class TravelCourseEditViewModel @Inject constructor(
      * 날짜, 동행자, 경기와 코스 정보를 화면 상태에 저장하고,
      * 지역과 테마 정보는 신규 여행 저장을 위해 내부에 유지합니다.
      */
-    fun initializeNewTravel(params: CreateTravelParams, baseballGame: BaseballGame) {
+    fun initializeNewTravel(
+        params: CreateTravelParams,
+        suggestionParams: SuggestTravelSpotsParams,
+        baseballGame: BaseballGame,
+    ) {
         val isAlreadyInitialized =
             currentTravelId == null &&
                 newTravelParams == params &&
+                travelSpotSuggestionParams == suggestionParams &&
                 _uiState.value.baseballGame == baseballGame
 
         if (isAlreadyInitialized) return
@@ -108,12 +115,13 @@ class TravelCourseEditViewModel @Inject constructor(
 
         currentTravelId = null
         newTravelParams = params
+        travelSpotSuggestionParams = suggestionParams
 
         _uiState.value = TravelCourseEditUiState(
             travelName = params.name,
             startDate = params.startDate,
             endDate = params.endDate,
-            companionCount = params.friendNicknames.size,
+            companionCount = params.friendIds.size,
             baseballGame = baseballGame,
             course = params.course,
         )
@@ -133,6 +141,7 @@ class TravelCourseEditViewModel @Inject constructor(
 
             currentTravelId = null
             newTravelParams = null
+            travelSpotSuggestionParams = null
 
             _uiState.value = TravelCourseEditUiState(
                 errorMessage = "수정할 여행 정보를 확인할 수 없습니다.",
@@ -151,6 +160,7 @@ class TravelCourseEditViewModel @Inject constructor(
 
         currentTravelId = normalizedTravelId
         newTravelParams = null
+        travelSpotSuggestionParams = null
 
         loadExistingTravel(normalizedTravelId)
     }
@@ -176,11 +186,13 @@ class TravelCourseEditViewModel @Inject constructor(
         val course = _uiState.value.course ?: return
         if (course.days.none { it.day == day }) return
 
-        val region = _uiState.value.baseballGame?.stadium?.region ?: return
+        val suggestionParams = travelSpotSuggestionParams
+            ?.copy(travelSpotIds = course.travelSpotIds())
+            ?: return
 
         resetTravelSpotSelection()
         _spotSelectionUiState.value = TravelCourseSpotSelectionUiState(targetDay = day)
-        spotQuery.initializeTravelSpotSelection(region)
+        spotQuery.initializeTravelSpotSelection(suggestionParams)
     }
 
     /**
@@ -234,12 +246,13 @@ class TravelCourseEditViewModel @Inject constructor(
     fun searchTravelSpots() = spotQuery.searchTravelSpots()
     fun clearTravelSpotSearch() = spotQuery.clearTravelSpotSearch()
     fun selectTravelSpotCategory(category: TravelSpotCategory?) = spotQuery.selectTravelSpotCategory(category)
-    fun selectTravelSpotDibsCategory(category: TravelSpotFilterCategory) =
+    fun selectTravelSpotDibsCategory(category: TravelSpotFilterCategory?) =
         spotQuery.selectTravelSpotDibsCategory(category)
 
     /** 관광지 상세에서 C01b/C01c로 돌아오면 현재 목록을 갱신합니다. */
     fun refreshTravelSpotSelection() = spotQuery.refreshTravelSpotSelection()
     fun retryTravelSpotSelection() = spotQuery.retryTravelSpotSelection()
+    fun loadNextTravelSpotDibsPage() = spotQuery.loadNextDibsPage()
 
     /** C01에서 여행 이름을 변경합니다. */
     fun updateTravelName(name: String) {
@@ -382,6 +395,8 @@ class TravelCourseEditViewModel @Inject constructor(
         val currentState = _uiState.value
         if (!currentState.canEditContent) return
 
+        val startDate = currentState.startDate ?: return
+        val endDate = currentState.endDate ?: return
         val course = currentState.course ?: return
 
         _uiState.update {
@@ -393,7 +408,11 @@ class TravelCourseEditViewModel @Inject constructor(
 
         alignJob = viewModelScope.launch {
             try {
-                val alignedCourse = travelRepository.alignTravelCourse(course)
+                val alignedCourse = travelRepository.alignTravelCourse(
+                    startDate = startDate,
+                    endDate = endDate,
+                    course = course,
+                )
 
                 _uiState.update {
                     it.copy(
@@ -506,6 +525,7 @@ class TravelCourseEditViewModel @Inject constructor(
         resetTravelSpotSelection()
 
         newTravelParams = null
+        travelSpotSuggestionParams = null
         currentTravelId = null
         _uiState.value = TravelCourseEditUiState()
     }
@@ -538,13 +558,26 @@ class TravelCourseEditViewModel @Inject constructor(
                 }
 
                 val baseballGame = baseballRepository.getGame(travel.baseballGame.id)
+                val companionCount = (travel.friends.size - 1).coerceAtLeast(0)
+
+                travelSpotSuggestionParams = SuggestTravelSpotsParams(
+                    startDate = travel.startDate,
+                    endDate = travel.endDate,
+                    region = travel.region,
+                    companionConditions = emptyList(),
+                    companionCount = companionCount,
+                    themeId = travel.themeId,
+                    travelSpotIds = travel.days
+                        .flatMap { day -> day.places }
+                        .map { place -> place.spot.id },
+                )
 
                 _uiState.value = TravelCourseEditUiState(
                     travelId = travelId,
-                    travelName = travel.name.orEmpty(),
+                    travelName = travel.name,
                     startDate = travel.startDate,
                     endDate = travel.endDate,
-                    companionCount = travel.friends.size,
+                    companionCount = companionCount,
                     baseballGame = baseballGame,
                     course = travel.toTravelCourse(),
                 )
@@ -629,6 +662,16 @@ private fun Travel.toTravelCourse(): TravelCourse =
         baseballGame = baseballGame,
         days = days,
     )
+
+/** 현재 코스에 포함된 관광지 ID를 일차와 방문 순서대로 반환합니다. */
+private fun TravelCourse.travelSpotIds(): List<String> =
+    days.sortedBy { day -> day.day }
+        .flatMap { day ->
+            day.places
+                .sortedBy { place -> place.order }
+                .map { place -> place.spot.id }
+        }
+        .distinct()
 
 /** 관광지 순서를 1부터 다시 부여합니다. */
 private fun List<TravelPlace>.normalizeOrders(): List<TravelPlace> =

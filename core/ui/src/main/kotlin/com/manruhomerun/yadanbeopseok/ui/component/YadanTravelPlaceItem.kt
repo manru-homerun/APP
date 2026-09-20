@@ -121,7 +121,7 @@ fun YadanTravelPlaceItem(
     dragHandleModifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    val isCertified = place.isCertified
+    val isVerified = place.isVerified
     val isCompleted = mode == YadanTravelPlaceItemMode.COMPLETED
 
     Row(
@@ -140,7 +140,7 @@ fun YadanTravelPlaceItem(
     ) {
         YadanTravelTimelineIndicator(
             place = place,
-            isCertified = isCertified,
+            isVerified = isVerified,
             displayOrder = displayOrder,
             mode = mode,
             isLast = isLast,
@@ -165,7 +165,7 @@ fun YadanTravelPlaceItem(
             ) {
                 YadanTravelPlaceCard(
                     place = place,
-                    isCertified = isCertified,
+                    isVerified = isVerified,
                     supportingText = supportingText,
                     mode = mode,
                     isFixed = isFixed,
@@ -186,7 +186,7 @@ fun YadanTravelPlaceItem(
 @Composable
 private fun YadanTravelTimelineIndicator(
     place: TravelPlace,
-    isCertified: Boolean,
+    isVerified: Boolean,
     displayOrder: Int,
     mode: YadanTravelPlaceItemMode,
     isLast: Boolean,
@@ -194,28 +194,28 @@ private fun YadanTravelTimelineIndicator(
 ) {
     val isGame = place.spot.category == TravelSpotCategory.STADIUM
     val isStay = place.spot.category == TravelSpotCategory.ACCOMMODATION
-    val isActiveCertified = mode == YadanTravelPlaceItemMode.ACTIVE && isCertified
+    val isActiveVerified = mode == YadanTravelPlaceItemMode.ACTIVE && isVerified
     val isCompleted = mode == YadanTravelPlaceItemMode.COMPLETED
-    val isCompletedCertified = isCompleted && isCertified
-    val isCompletedUncertified = isCompleted && !isCertified
+    val isCompletedVerified = isCompleted && isVerified
+    val isCompletedUnverified = isCompleted && !isVerified
 
     /*
      * 진행 중인 여행에서는 인증한 장소를 체크로 표시합니다.
      * 지난 여행에서는 인증한 일반 장소만 체크로 표시하며,
      * 인증한 야구장은 HTML과 동일하게 야구공 아이콘을 유지합니다.
      */
-    val showsCompletionCheck = isActiveCertified || (isCompletedCertified && !isGame)
+    val showsCompletionCheck = isActiveVerified || (isCompletedVerified && !isGame)
 
     /*
      * 지난 여행의 미인증 장소와 일반 화면의 미인증 숙박 장소는
      * 외곽선이 있는 흐린 마커로 구분합니다.
      */
-    val showsMutedMarker = isCompletedUncertified || (isStay && !isActiveCertified && !isCompleted)
+    val showsMutedMarker = isCompletedUnverified || (isStay && !isActiveVerified && !isCompleted)
 
     val containerColor =
         when {
             showsMutedMarker -> YadanDivider
-            isGame && !isActiveCertified -> YadanTextPrimary
+            isGame && !isActiveVerified -> YadanTextPrimary
             else -> YadanPrimary
         }
 
@@ -420,7 +420,7 @@ private fun YadanCompletedTravelPlaceContent(
 @Composable
 private fun YadanTravelPlaceCard(
     place: TravelPlace,
-    isCertified: Boolean,
+    isVerified: Boolean,
     supportingText: String?,
     mode: YadanTravelPlaceItemMode,
     isFixed: Boolean,
@@ -434,9 +434,9 @@ private fun YadanTravelPlaceCard(
         mode == YadanTravelPlaceItemMode.EDIT
     val isGame =
         place.spot.category == TravelSpotCategory.STADIUM
-    val isActiveCertified =
+    val isActiveVerified =
         mode == YadanTravelPlaceItemMode.ACTIVE &&
-            isCertified
+            isVerified
 
     val gameBorderModifier =
         if (isGame) {
@@ -454,7 +454,7 @@ private fun YadanTravelPlaceCard(
         modifier = Modifier
             .fillMaxWidth()
             .then(gameBorderModifier)
-            .alpha(if (isActiveCertified) 0.6f else 1f),
+            .alpha(if (isActiveVerified) 0.6f else 1f),
         enabled = enabled,
     ) {
         Row(
@@ -533,9 +533,9 @@ private fun YadanTravelPlaceCard(
             }
 
             YadanTravelPlaceTrailingContent(
-                isCertificationTarget = place.isCertificationTarget,
-                isCertified = isCertified,
+                isVerified = isVerified,
                 mode = mode,
+                isGame = isGame,
                 isFixed = isFixed,
                 onVerifyClick = onVerifyClick,
                 onRemoveClick = onRemoveClick,
@@ -566,7 +566,6 @@ private fun YadanTravelPlaceCardContainer(
         )
     }
 }
-
 
 /**
  * 편집 모드에서 장소 순서를 변경하는 드래그 핸들을 표시합니다.
@@ -608,9 +607,9 @@ private fun YadanTravelDragHandle(
  */
 @Composable
 private fun YadanTravelPlaceTrailingContent(
-    isCertificationTarget: Boolean,
-    isCertified: Boolean,
+    isVerified: Boolean,
     mode: YadanTravelPlaceItemMode,
+    isGame: Boolean,
     isFixed: Boolean,
     onVerifyClick: (() -> Unit)?,
     onRemoveClick: (() -> Unit)?,
@@ -623,9 +622,9 @@ private fun YadanTravelPlaceTrailingContent(
 
         YadanTravelPlaceItemMode.ACTIVE -> {
             when {
-                !isCertificationTarget -> Unit
+                isGame -> Unit
 
-                isCertified -> {
+                isVerified -> {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -767,15 +766,15 @@ private fun YadanTravelPlaceItemPreview() {
             name = "사직야구장",
             category = TravelSpotCategory.STADIUM,
             order = 3,
-            certified = true,
+            verified = true,
         )
-    val certifiedPlace =
+    val verifiedPlace =
         previewTravelPlace(
-            id = "place-certified",
+            id = "place-verified",
             name = "감천문화마을",
             category = TravelSpotCategory.CULTURE,
             order = 1,
-            certified = true,
+            verified = true,
         )
 
     YadanbeopseokTheme {
@@ -810,7 +809,7 @@ private fun YadanTravelPlaceItemPreview() {
             Spacer(modifier = Modifier.height(12.dp))
 
             YadanTravelPlaceItem(
-                place = certifiedPlace,
+                place = verifiedPlace,
                 isLast = true,
                 onClick = {},
                 mode = YadanTravelPlaceItemMode.ACTIVE,
@@ -850,7 +849,7 @@ private fun YadanTravelPlaceItemPreview() {
              * 지난 여행의 인증 완료, 미인증, 직관 장소를 함께 확인합니다.
              */
             YadanTravelPlaceItem(
-                place = certifiedPlace,
+                place = verifiedPlace,
                 isLast = false,
                 onClick = {},
                 mode = YadanTravelPlaceItemMode.COMPLETED,
@@ -885,7 +884,7 @@ private fun previewTravelPlace(
     name: String,
     category: TravelSpotCategory,
     order: Int,
-    certified: Boolean = false,
+    verified: Boolean = false,
 ): TravelPlace = TravelPlace(
     spot = TravelSpot(
         id = "spot-$id",
@@ -895,6 +894,5 @@ private fun previewTravelPlace(
         imageUrl = null,
     ),
     order = order,
-    isCertificationTarget = true,
-    isCertified = certified,
+    isVerified = verified,
 )

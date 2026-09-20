@@ -2,20 +2,20 @@ package com.manruhomerun.yadanbeopseok.record.viewmodel
 
 import com.manruhomerun.yadanbeopseok.model.StickerPack
 import com.manruhomerun.yadanbeopseok.model.Travel
-import com.manruhomerun.yadanbeopseok.model.TravelCertification
-import com.manruhomerun.yadanbeopseok.model.TravelSpotDetail
+import com.manruhomerun.yadanbeopseok.model.TravelSpot
+import com.manruhomerun.yadanbeopseok.model.TravelVerificationResult
 import com.manruhomerun.yadanbeopseok.record.location.CurrentLocationResult
 
 /** D02 위치 확인, D02b 인증 완료, D03 스티커 획득에서 사용하는 상태입니다. */
 data class TravelVerificationUiState(
     val travel: Travel? = null,
-    val targetSpot: TravelSpotDetail? = null,
+    val targetSpot: TravelSpot? = null,
     val travelDay: Int? = null,
     val locationResult: CurrentLocationResult? = null,
     val phase: TravelVerificationPhase = TravelVerificationPhase.LOADING,
 
     /** POST 성공 결과를 유지하여 이후 조회 실패와 인증 실패를 구분합니다. */
-    val certification: TravelCertification? = null,
+    val verificationResult: TravelVerificationResult? = null,
 
     /** 스티커 조회로 실제 획득이 확인된 경우에만 값을 보관합니다. */
     val stickerPack: StickerPack? = null,

@@ -4,11 +4,10 @@ import com.manruhomerun.yadanbeopseok.common.InvalidResponseException
 import com.manruhomerun.yadanbeopseok.data.repository.CreateTravelParams
 import com.manruhomerun.yadanbeopseok.data.repository.GenerateTravelCourseParams
 import com.manruhomerun.yadanbeopseok.model.KboTeam
-import com.manruhomerun.yadanbeopseok.model.ProfileRegion
 import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.Travel
 import com.manruhomerun.yadanbeopseok.model.TravelBaseballGame
-import com.manruhomerun.yadanbeopseok.model.TravelCertification
+import com.manruhomerun.yadanbeopseok.model.TravelCompanionCondition
 import com.manruhomerun.yadanbeopseok.model.TravelCourse
 import com.manruhomerun.yadanbeopseok.model.TravelDay
 import com.manruhomerun.yadanbeopseok.model.TravelListPage
@@ -17,6 +16,7 @@ import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelStatus
 import com.manruhomerun.yadanbeopseok.model.TravelSummary
 import com.manruhomerun.yadanbeopseok.model.TravelTheme
+import com.manruhomerun.yadanbeopseok.model.TravelVerificationResult
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelBaseballGameRequestDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelCourseAlignRequestDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelCourseGenerateRequestDto
@@ -30,7 +30,6 @@ import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotVerifyRespons
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelThemeResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelUpdateRequestDto
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.LocalDateTime
 
 /**
  * 여행 목록 API 응답을 앱 내부 페이지 모델로 변환합니다.
@@ -88,7 +87,7 @@ internal fun TravelCourseResponseDto.toTravelCourse(): TravelCourse =
 /**
  * 앱 내부의 여행 코스 생성 조건을 서버 요청 DTO로 변환합니다.
  *
- * 동행 조건은 서버 계약에 맞춰 CHILD, SENIOR, WHEELCHAIR 문자열로 전달합니다.
+ * 동행 조건은 서버 계약에 맞춰 CHILD, ELDERLY, WHEELCHAIR 문자열로 전달합니다.
  */
 internal fun GenerateTravelCourseParams.toTravelCourseGenerateRequestDto() =
     TravelCourseGenerateRequestDto(
@@ -96,19 +95,22 @@ internal fun GenerateTravelCourseParams.toTravelCourseGenerateRequestDto() =
         endDate = endDate.toString(),
         baseballGameId = baseballGameId.toRequestId("baseballGameId"),
         regionCode = region.legalDongCode,
-        friends = friendNicknames,
-        companionConditions = companionConditions.map { condition -> condition.name },
-        theme = themeIds.map { themeId ->
-            themeId.toRequestId("themeId")
-        },
+        friends = friendIds,
+        companionConditions = companionConditions.map { condition -> condition.toRequestValue() },
+        theme = themeId.toRequestId("themeId"),
         travelSpotIdList = travelSpotIds,
     )
 
 /**
  * 저장 전 여행 코스를 서버의 일정 재정렬 요청 DTO로 변환합니다.
  */
-internal fun TravelCourse.toTravelCourseAlignRequestDto() =
+internal fun TravelCourse.toTravelCourseAlignRequestDto(
+    startDate: LocalDate,
+    endDate: LocalDate,
+) =
     TravelCourseAlignRequestDto(
+        startDate = startDate.toString(),
+        endDate = endDate.toString(),
         baseballGame = baseballGame.toTravelBaseballGameRequestDto(),
         schedule = days.toTravelScheduleDayRequestDtos(),
     )
@@ -125,10 +127,8 @@ internal fun CreateTravelParams.toTravelCreateRequestDto() =
         baseballGame = course.baseballGame.toTravelBaseballGameRequestDto(),
         name = name,
         regionCode = region.legalDongCode,
-        friends = friendNicknames,
-        theme = themeIds.map { themeId ->
-            themeId.toRequestId("themeId")
-        },
+        friends = friendIds,
+        theme = themeId.toRequestId("themeId"),
         schedule = course.days.toTravelScheduleDayRequestDtos(),
     )
 
@@ -138,7 +138,7 @@ internal fun CreateTravelParams.toTravelCreateRequestDto() =
 internal fun TravelCourse.toTravelUpdateRequestDto(name: String) =
     TravelUpdateRequestDto(
         name = name,
-        gameIdx = baseballGame.baseballGameAfterIdx,
+        baseballGameAfterIdx = baseballGame.baseballGameAfterIdx,
         schedule = days.toTravelScheduleDayRequestDtos(),
     )
 
@@ -148,7 +148,6 @@ internal fun TravelCourse.toTravelUpdateRequestDto(name: String) =
 private fun TravelBaseballGame.toTravelBaseballGameRequestDto() =
     TravelBaseballGameRequestDto(
         id = id.toRequestId("baseballGameId"),
-        day = day,
         baseballGameAfterIdx = baseballGameAfterIdx,
     )
 
@@ -185,21 +184,20 @@ internal fun TravelDetailResponseDto.toTravel(
         )
     }
 
-    val travelRegion = regionCode.toString().toRegion()
+    val travelRegion = regionCode.toRegion()
 
     val travelDays = days.map { dayResponse ->
         val places = dayResponse.travelSpotList.mapIndexed { index, spotResponse ->
             TravelPlace(
                 spot = TravelSpot(
-                    id = spotResponse.id.toString(),
+                    id = spotResponse.id,
                     name = spotResponse.name,
                     region = travelRegion,
                     category = spotResponse.category.toTravelSpotCategory(),
                     imageUrl = spotResponse.image,
                 ),
                 order = index + 1,
-                isCertificationTarget = spotResponse.isCertificationTarget,
-                isCertified = spotResponse.isCertified,
+                isVerified = spotResponse.isVerified,
             )
         }
 
@@ -209,10 +207,12 @@ internal fun TravelDetailResponseDto.toTravel(
         )
     }
 
+    val totalSpotsCount = travelDays.sumOf { travelDay -> travelDay.places.size }
+    val normalizedVerifiedSpotsCount = verifiedSpotsCount.toValidatedCount("vertifiedSpotsCnt")
+
     validateSpotCounts(
-        spotsCount = travelDays.sumOf { it.places.size },
-        certificationTargetCount = certificationTargetCount,
-        certifiedSpotsCount = certifiedSpotsCount,
+        spotsCount = totalSpotsCount,
+        verifiedSpotsCount = normalizedVerifiedSpotsCount,
     )
 
     return Travel(
@@ -228,9 +228,8 @@ internal fun TravelDetailResponseDto.toTravel(
         region = travelRegion,
         friends = friends,
         isLeader = isLeader,
-        themeIds = themeIds.map { it.toString() },
-        certificationTargetCount = certificationTargetCount,
-        certifiedSpotsCount = certifiedSpotsCount,
+        themeId = themeId.toString(),
+        verifiedSpotsCount = normalizedVerifiedSpotsCount,
         days = travelDays,
         status = resolveTravelStatus(
             startDate = parsedStartDate,
@@ -253,10 +252,11 @@ private fun TravelResponseDto.toTravelSummary(): TravelSummary {
         )
     }
 
+    val normalizedVerifiedSpotsCount = verifiedSpotsCount.toValidatedCount("vertifiedSpotsCnt")
+
     validateSpotCounts(
         spotsCount = spotsCount,
-        certificationTargetCount = spotsCount,
-        certifiedSpotsCount = certifiedSpotsCount,
+        verifiedSpotsCount = normalizedVerifiedSpotsCount,
     )
 
     return TravelSummary(
@@ -270,8 +270,7 @@ private fun TravelResponseDto.toTravelSummary(): TravelSummary {
         region = regionCode.toRegion(),
         isLeader = isLeader,
         spotsCount = spotsCount,
-        certificationTargetCount = spotsCount,
-        certifiedSpotsCount = certifiedSpotsCount,
+        verifiedSpotsCount = normalizedVerifiedSpotsCount,
         hasSticker = hasSticker,
     )
 }
@@ -279,23 +278,30 @@ private fun TravelResponseDto.toTravelSummary(): TravelSummary {
 /**
  * 전체 장소 수와 방문 인증 수의 정합성을 검증합니다.
  */
-private fun validateSpotCounts(
-    spotsCount: Int,
-    certificationTargetCount: Int,
-    certifiedSpotsCount: Int,
-) {
+private fun validateSpotCounts(spotsCount: Int, verifiedSpotsCount: Int) {
     val hasInvalidCount =
         spotsCount < 0 ||
-            certificationTargetCount < 0 ||
-            certifiedSpotsCount < 0 ||
-            certificationTargetCount > spotsCount ||
-            certifiedSpotsCount > certificationTargetCount
+            verifiedSpotsCount < 0 ||
+            verifiedSpotsCount > spotsCount
 
     if (hasInvalidCount) {
         throw InvalidResponseException(
             message = "Invalid travel spot counts.",
         )
     }
+}
+
+/**
+ * 서버의 Long 개수를 앱 내부 Int 개수로 안전하게 변환합니다.
+ */
+private fun Long.toValidatedCount(fieldName: String): Int {
+    if (this !in 0L..Int.MAX_VALUE.toLong()) {
+        throw InvalidResponseException(
+            message = "Invalid $fieldName.",
+        )
+    }
+
+    return toInt()
 }
 
 /**
@@ -338,49 +344,31 @@ internal fun Long.toKboTeam(fieldName: String): KboTeam =
  * 서버의 시도 코드를 앱의 야구 여행 지역으로 변환합니다.
  */
 private fun String.toRegion(): Region =
-    when (this) {
-        ProfileRegion.SEOUL.code -> Region.SEOUL
-        ProfileRegion.GYEONGGI.code -> Region.SUWON
-        ProfileRegion.INCHEON.code -> Region.INCHEON
-        ProfileRegion.DAEJEON.code -> Region.DAEJEON
-        ProfileRegion.DAEGU.code -> Region.DAEGU
-        ProfileRegion.GWANGJU.code -> Region.GWANGJU
-        ProfileRegion.BUSAN.code -> Region.BUSAN
-        ProfileRegion.GYEONGNAM.code -> Region.CHANGWON
-
-        else -> throw InvalidResponseException(
+    Region.findByLegalDongCode(this)
+        ?: throw InvalidResponseException(
             message = "Unsupported travel region code: $this",
         )
-    }
 
 /**
  * 앱 내부의 문자열 ID를 서버 요청에서 사용하는 숫자 ID로 변환합니다.
  */
-private fun String.toRequestId(fieldName: String): Long {
+internal fun String.toRequestId(fieldName: String): Long {
     return toLongOrNull() ?: throw IllegalArgumentException("$fieldName must be numeric.")
+}
+
+/** 앱의 동행 조건을 서버 요청 Enum 이름으로 변환합니다. */
+internal fun TravelCompanionCondition.toRequestValue(): String = when (this) {
+    TravelCompanionCondition.CHILD -> "CHILD"
+    TravelCompanionCondition.SENIOR -> "ELDERLY"
+    TravelCompanionCondition.WHEELCHAIR -> "WHEELCHAIR"
 }
 
 /**
  * 관광지 방문 인증 응답을 앱 내부 인증 결과로 변환합니다.
- *
- * 숫자 ID는 앱에서 사용하는 문자열 ID로 변환합니다.
- * 인증 시각은 서버 값을 그대로 해석하며 시간대를 임의로 보정하지 않습니다.
  */
-internal fun TravelSpotVerifyResponseDto.toTravelCertification(): TravelCertification {
-    val parsedVerifiedAt = try {
-        LocalDateTime.parse(verifiedAt)
-    } catch (exception: IllegalArgumentException) {
-        throw InvalidResponseException(
-            message = "Invalid travel verification verifiedAt.",
-            cause = exception,
-        )
-    }
-
-    return TravelCertification(
-        id = visitVerificationId.toString(),
-        travelId = travelId.toString(),
-        spotId = tourSpotId.toString(),
-        spotName = tourSpotName,
-        verifiedAt = parsedVerifiedAt,
+internal fun TravelSpotVerifyResponseDto.toTravelVerificationResult(): TravelVerificationResult =
+    TravelVerificationResult(
+        totalVerifiedSpotsCount = totalVerifiedSpotsCount.toValidatedCount(
+            fieldName = "totalVerifiedSpotsCnt",
+        ),
     )
-}

@@ -468,7 +468,7 @@ private fun previewTravelDay(): TravelDay =
                     name = "돼지국밥 거리",
                     category = TravelSpotCategory.FOOD,
                     order = 1,
-                    certified = true,
+                    verified = true,
                 ),
                 previewTravelPlace(
                     id = "culture",
@@ -499,7 +499,7 @@ private fun previewTravelPlace(
     name: String,
     category: TravelSpotCategory,
     order: Int,
-    certified: Boolean = false,
+    verified: Boolean = false,
 ): TravelPlace = TravelPlace(
     spot = TravelSpot(
         id = "spot-$id",
@@ -509,7 +509,5 @@ private fun previewTravelPlace(
         imageUrl = null,
     ),
     order = order,
-    isCertificationTarget =
-        category != TravelSpotCategory.ACCOMMODATION,
-    isCertified = certified,
+    isVerified = verified,
 )

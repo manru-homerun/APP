@@ -79,7 +79,7 @@ data class TravelSpotPageResponseDto(
  *
  * @property id 관광지 고유 식별자
  * @property category 관광지 카테고리
- * @property title 관광지 이름
+ * @property name 관광지 이름
  * @property tel 관광지 전화번호
  * @property homepage 관광지 홈페이지 정보
  * @property regionCode 관광지가 속한 5자리 지역 코드
@@ -91,9 +91,9 @@ data class TravelSpotPageResponseDto(
  */
 @Serializable
 data class TravelSpotDetailResponseDto(
-    val id: Long,
+    val id: String,
     val category: String,
-    val title: String,
+    val name: String,
     val tel: String? = null,
     val homepage: String? = null,
     val regionCode: String? = null,

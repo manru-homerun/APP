@@ -118,12 +118,13 @@ fun YadanTravelRegionDropdown(
 }
 
 /**
- * 서버가 지원하는 관광지 카테고리를 가로 필터로 표시합니다.
+ * 전체와 서버가 지원하는 관광지 카테고리를 가로 필터로 표시합니다.
+ * 전체를 선택하면 null을 전달하여 category 쿼리를 생략할 수 있게 합니다.
  */
 @Composable
 fun YadanTravelSpotCategoryFilters(
-    selectedCategory: TravelSpotFilterCategory,
-    onCategorySelected: (TravelSpotFilterCategory) -> Unit,
+    selectedCategory: TravelSpotFilterCategory?,
+    onCategorySelected: (TravelSpotFilterCategory?) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     contentPadding: PaddingValues = PaddingValues(0.dp),
@@ -135,6 +136,15 @@ fun YadanTravelSpotCategoryFilters(
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(7.dp),
     ) {
+        item(key = "all") {
+            YadanFilterChip(
+                text = "전체",
+                selected = selectedCategory == null,
+                onClick = { onCategorySelected(null) },
+                enabled = enabled,
+            )
+        }
+
         items(
             items = categories,
             key = TravelSpotFilterCategory::name,
@@ -166,12 +176,12 @@ private fun YadanTravelSpotFiltersPreview() {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             YadanTravelRegionDropdown(
-                selectedRegion = Region.BUSAN,
+                selectedRegion = Region.entries.first(),
                 onRegionSelected = {},
             )
 
             YadanTravelSpotCategoryFilters(
-                selectedCategory = TravelSpotFilterCategory.ACCOMMODATION,
+                selectedCategory = null,
                 onCategorySelected = {},
             )
         }

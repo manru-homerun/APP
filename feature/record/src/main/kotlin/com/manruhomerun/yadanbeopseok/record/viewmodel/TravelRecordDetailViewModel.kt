@@ -8,6 +8,7 @@ import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.repository.BaseballRepository
 import com.manruhomerun.yadanbeopseok.data.repository.StickerRepository
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRepository
+import com.manruhomerun.yadanbeopseok.model.STICKER_REQUIRED_VERIFIED_SPOT_COUNT
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -37,7 +38,7 @@ class TravelRecordDetailViewModel @Inject constructor(
     /**
      * 여행 상세와 해당 여행의 야구 경기 정보를 조회합니다.
      *
-     * 방문 인증이 모두 완료된 여행이면 획득 스티커도 이어서 조회합니다.
+     * 방문 인증 수가 지급 기준에 도달한 여행이면 획득 스티커도 이어서 조회합니다.
      */
     fun loadTravel(travelId: String) {
         val normalizedTravelId = travelId.trim()
@@ -75,14 +76,14 @@ class TravelRecordDetailViewModel @Inject constructor(
     }
 
     /**
-     * 전체 인증 완료 후 실패했던 스티커 조회만 다시 시도합니다.
+     * 지급 기준 도달 후 실패했던 스티커 조회만 다시 시도합니다.
      */
     fun retrySticker() {
         val currentState = _uiState.value
         val travelId = currentTravelId ?: return
 
         if (stickerLoadJob?.isActive == true) return
-        if (!currentState.isCertificationCompleted) return
+        if (!currentState.isStickerRequirementMet) return
 
         requestStickerPack(travelId)
     }
@@ -99,11 +100,9 @@ class TravelRecordDetailViewModel @Inject constructor(
         detailLoadJob = viewModelScope.launch {
             try {
                 val travel = travelRepository.getTravel(travelId)
-                val baseballGame = baseballRepository.getGame(gameId = travel.baseballGame.id,)
+                val baseballGame = baseballRepository.getGame(gameId = travel.baseballGame.id)
 
-                val shouldLoadSticker =
-                    travel.certificationTargetCount > 0 &&
-                        travel.certifiedSpotsCount >= travel.certificationTargetCount
+                val shouldLoadSticker = travel.verifiedSpotsCount >= STICKER_REQUIRED_VERIFIED_SPOT_COUNT
 
                 _uiState.value = TravelRecordDetailUiState(
                     travel = travel,

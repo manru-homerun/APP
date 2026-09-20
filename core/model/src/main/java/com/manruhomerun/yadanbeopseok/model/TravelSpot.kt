@@ -18,6 +18,23 @@ data class TravelSpot(
 )
 
 /**
+ * 관광지 목록과 서버의 페이지 정보를 함께 보관하는 앱 내부 모델입니다.
+ *
+ * @property travelSpots 현재 페이지에 포함된 관광지 목록
+ * @property pageNumber 현재 페이지 번호
+ * @property pageSize 한 페이지에 포함되는 최대 관광지 수
+ * @property totalElements 조회 조건에 해당하는 전체 관광지 수
+ * @property totalPages 전체 페이지 수
+ */
+data class TravelSpotListPage(
+    val travelSpots: List<TravelSpot>,
+    val pageNumber: Int,
+    val pageSize: Int,
+    val totalElements: Long,
+    val totalPages: Int,
+)
+
+/**
  * 관광지 상세 화면에서 사용하는 앱 내부 모델입니다.
  *
  * 목록에서 사용하는 [TravelSpot]을 재사용하고 상세 API와 이미지 목록 API에서

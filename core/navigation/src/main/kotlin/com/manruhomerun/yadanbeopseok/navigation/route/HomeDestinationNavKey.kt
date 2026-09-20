@@ -28,6 +28,18 @@ data object ProfileEditNavKey : NavKey
 data object TravelPreferenceEditNavKey : NavKey
 
 /**
+ * F·01 친구 목록과 F·02 친구 요청 탭 화면으로 이동합니다.
+ */
+@Serializable
+data object FriendManagementNavKey : NavKey
+
+/**
+ * F·03 닉네임 기반 친구 찾기 화면으로 이동합니다.
+ */
+@Serializable
+data object FriendSearchNavKey : NavKey
+
+/**
  * 선택한 여행의 상세 일정 화면으로 이동할 때 사용하는 NavKey입니다.
  *
  * @property travelId 조회할 여행의 고유 식별자

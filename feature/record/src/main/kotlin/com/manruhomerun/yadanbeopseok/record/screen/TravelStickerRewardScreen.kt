@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -175,6 +174,7 @@ private fun StickerRewardImages(stickerPack: StickerPack) {
                 sticker = stickers.first(),
                 contentDescription = "${stickerPack.name} 스티커",
                 size = YadanStickerSize.LARGE,
+                showFrame = false,
             )
         }
         return
@@ -182,8 +182,10 @@ private fun StickerRewardImages(stickerPack: StickerPack) {
 
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 24.dp),
-        horizontalArrangement = Arrangement.spacedBy(18.dp),
+        horizontalArrangement = Arrangement.spacedBy(
+            space = 18.dp,
+            alignment = Alignment.CenterHorizontally,
+        ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         items(
@@ -194,6 +196,7 @@ private fun StickerRewardImages(stickerPack: StickerPack) {
                 sticker = sticker,
                 contentDescription = "${stickerPack.name} 스티커",
                 size = YadanStickerSize.LARGE,
+                showFrame = false,
             )
         }
     }

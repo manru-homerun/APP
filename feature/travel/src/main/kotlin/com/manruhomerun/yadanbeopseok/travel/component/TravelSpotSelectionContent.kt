@@ -45,6 +45,7 @@ import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotCategoryFilter
  *
  * @param selectedSpotIds 현재 임시로 선택한 관광지 ID입니다.
  * @param disabledSpotIds 표시하되 선택할 수 없는 관광지 ID입니다.
+ * @param canAddMoreSpots 선택되지 않은 관광지를 추가할 수 있는지 나타냅니다.
  * @param selectedSpotsContent 검색 중이 아닐 때 검색창과 추천 탭 사이에 표시할 영역입니다.
  * @param searchResultHeader 검색 중 카테고리 필터 아래에 표시할 제목 영역입니다.
  */
@@ -62,6 +63,7 @@ internal fun LazyListScope.travelSpotSelectionContent(
     onLoadNextDibsPage: () -> Unit,
     searchPlaceholder: String = "관광지·음식을 검색해보세요",
     disabledSpotIds: Set<String> = emptySet(),
+    canAddMoreSpots: Boolean = true,
     selectedSpotsContent: LazyListScope.() -> Unit = {},
     searchResultHeader: LazyListScope.() -> Unit = {},
 ) {
@@ -140,6 +142,7 @@ internal fun LazyListScope.travelSpotSelectionContent(
         ) { spot ->
             val disabled = spot.id in disabledSpotIds
             val selected = spot.id in selectedSpotIds || disabled
+            val actionEnabled = !disabled && (selected || canAddMoreSpots)
 
             YadanTravelSpotCard(
                 spot = spot,
@@ -149,6 +152,7 @@ internal fun LazyListScope.travelSpotSelectionContent(
                     YadanTravelSpotAction.ADD
                 },
                 enabled = !disabled,
+                actionEnabled = actionEnabled,
                 onClick = { onTravelSpotClick(spot) },
                 onActionClick = { onTravelSpotToggle(spot) },
             )

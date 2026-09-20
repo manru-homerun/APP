@@ -43,3 +43,21 @@ data class ProfileRegionResponseDto(
     val regionCode: String,
     val regionName: String,
 )
+
+/**
+ * 닉네임으로 검색한 사용자 목록 응답입니다.
+ */
+@Serializable
+data class UserSearchResponseDto(val resultCount: Int, val users: List<UserSearchItemResponseDto>)
+
+/**
+ * 사용자 검색 결과의 개별 항목입니다.
+ */
+@Serializable
+data class UserSearchItemResponseDto(
+    val userId: String,
+    val nickname: String,
+    val profileImageUrl: String? = null,
+    val favoriteTeamName: String,
+    val friendStatus: String,
+)

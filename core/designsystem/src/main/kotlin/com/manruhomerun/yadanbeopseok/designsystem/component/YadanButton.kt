@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOnPrimary
@@ -67,6 +68,7 @@ enum class YadanButtonStyle {
  * @param style 버튼의 색상 및 테두리 유형입니다.
  * @param enabled 버튼 활성화 여부입니다.
  * @param isLoading 진행 상태 표시 여부입니다. 로딩 중에는 중복 클릭을 막습니다.
+ * @param iconSize 아이콘과 반대편 예약 공간의 크기입니다.
  * @param leadingIcon 텍스트 앞에 표시할 아이콘입니다.
  * @param trailingIcon 텍스트 뒤에 표시할 아이콘입니다.
  */
@@ -78,6 +80,7 @@ fun YadanButton(
     style: YadanButtonStyle = YadanButtonStyle.PRIMARY,
     enabled: Boolean = true,
     isLoading: Boolean = false,
+    iconSize: Dp = DEFAULT_ICON_SIZE,
     leadingIcon: (@Composable () -> Unit)? = null,
     trailingIcon: (@Composable () -> Unit)? = null,
 ) {
@@ -175,13 +178,13 @@ fun YadanButton(
 
         if (shouldReserveIconSpace) {
             Box(
-                modifier = Modifier.size(ICON_SIZE),
+                modifier = Modifier.size(iconSize),
                 contentAlignment = Alignment.Center,
             ) {
                 when {
                     isLoading -> {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(ICON_SIZE),
+                            modifier = Modifier.size(iconSize),
                             color = LocalContentColor.current,
                             strokeWidth = 2.dp,
                         )
@@ -209,7 +212,7 @@ fun YadanButton(
             Spacer(modifier = Modifier.width(ICON_SPACING))
 
             Box(
-                modifier = Modifier.size(ICON_SIZE),
+                modifier = Modifier.size(iconSize),
                 contentAlignment = Alignment.Center,
             ) {
                 if (hasTrailingContent) {
@@ -222,7 +225,7 @@ fun YadanButton(
 
 private val BUTTON_MIN_HEIGHT = 52.dp
 private val BUTTON_CORNER_RADIUS = 16.dp
-private val ICON_SIZE = 20.dp
+private val DEFAULT_ICON_SIZE = 20.dp
 private val ICON_SPACING = 8.dp
 private const val DISABLED_ALPHA = 0.42f
 

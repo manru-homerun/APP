@@ -348,7 +348,7 @@ private fun HomeTravelPager(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(248.dp),
+                    .height(276.dp),
             contentPadding =
                 PaddingValues(
                     start = 20.dp,

@@ -3,6 +3,7 @@ package com.manruhomerun.yadanbeopseok.record.viewmodel
 import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.manruhomerun.yadanbeopseok.common.ApiException
 import com.manruhomerun.yadanbeopseok.common.InvalidResponseException
 import com.manruhomerun.yadanbeopseok.common.NetworkConnectionException
 import com.manruhomerun.yadanbeopseok.common.NetworkTimeoutException
@@ -16,6 +17,7 @@ import com.manruhomerun.yadanbeopseok.model.TravelStatus
 import com.manruhomerun.yadanbeopseok.record.location.CurrentLocationProvider
 import com.manruhomerun.yadanbeopseok.record.location.CurrentLocationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.net.HttpURLConnection.HTTP_BAD_REQUEST
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -143,6 +145,14 @@ class TravelVerificationViewModel @Inject constructor(
                     )
                 }
             } catch (exception: Exception) {
+                if (exception.isDistanceVerificationFailure(action)) {
+                    showError(
+                        message = "인증 장소에서 너무 멀리 떨어져 있습니다.\n관광지 근처에서 다시 시도해주세요.",
+                        retryAction = TravelVerificationRetryAction.VERIFY_SPOT,
+                    )
+                    return@launch
+                }
+
                 val retryAction = when (_uiState.value.phase) {
                     TravelVerificationPhase.LOCATING ->
                         TravelVerificationRetryAction.LOAD_LOCATION
@@ -376,6 +386,13 @@ class TravelVerificationViewModel @Inject constructor(
 /** 방문 인증 API에 전달할 수 있는 위치 정확도인지 확인합니다. */
 private fun Location.hasValidVerificationAccuracy(): Boolean {
     return hasAccuracy() && accuracy.isFinite() && accuracy >= 0f
+}
+
+/** 방문 인증 요청에서 인증 범위 초과를 포함하는 400 응답인지 확인합니다. */
+private fun Exception.isDistanceVerificationFailure(action: TravelVerificationRetryAction): Boolean {
+    return action == TravelVerificationRetryAction.VERIFY_SPOT &&
+        this is ApiException &&
+        statusCode == HTTP_BAD_REQUEST
 }
 
 /** 서버 내부 오류 문구를 그대로 화면에 노출하지 않습니다. */

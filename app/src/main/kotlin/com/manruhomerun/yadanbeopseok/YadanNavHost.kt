@@ -11,6 +11,7 @@ import com.manruhomerun.yadanbeopseok.baseball.navigation.baseballEntryProvider
 import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanBackwardTransition
 import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanFadeTransition
 import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanForwardTransition
+import com.manruhomerun.yadanbeopseok.friend.navigation.friendEntryProvider
 import com.manruhomerun.yadanbeopseok.home.navigation.homeEntryProvider
 import com.manruhomerun.yadanbeopseok.mypage.navigation.myPageEntryProvider
 import com.manruhomerun.yadanbeopseok.navigation.YadanNavigationState
@@ -93,6 +94,10 @@ fun YadanNavHost(
                 )
 
                 myPageEntryProvider(
+                    navigator = navigationState,
+                )
+
+                friendEntryProvider(
                     navigator = navigationState,
                 )
             }

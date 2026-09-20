@@ -6,6 +6,7 @@ import com.manruhomerun.yadanbeopseok.network.user.dto.TravelPreferenceResponseD
 import com.manruhomerun.yadanbeopseok.network.user.dto.TravelPreferenceUpdateRequestDto
 import com.manruhomerun.yadanbeopseok.network.user.dto.UserProfileResponseDto
 import com.manruhomerun.yadanbeopseok.network.user.dto.UserProfileUpdateRequestDto
+import com.manruhomerun.yadanbeopseok.network.user.dto.UserSearchResponseDto
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -16,6 +17,12 @@ import retrofit2.http.Query
  * 야단법석 백엔드의 사용자 관련 API를 정의합니다.
  */
 interface UserApi {
+    /**
+     * 닉네임으로 사용자를 검색합니다.
+     */
+    @GET("users")
+    suspend fun searchUsers(@Query("nickname") nickname: String, @Query("limit") limit: Int): UserSearchResponseDto
+
     /**
      * 현재 로그인한 사용자의 프로필을 조회합니다.
      */

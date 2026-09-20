@@ -5,6 +5,7 @@ import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
 import com.manruhomerun.yadanbeopseok.common.LegalDocumentUrl
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
+import com.manruhomerun.yadanbeopseok.navigation.route.FriendManagementNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.MyPageNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.ProfileEditNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.TravelSpotDetailNavKey
@@ -28,7 +29,9 @@ fun EntryProviderScope<NavKey>.myPageEntryProvider(navigator: Navigator) {
             onTravelPreferenceClick = {
                 navigator.navigate(TravelPreferenceEditNavKey)
             },
-            onFriendsClick = {},
+            onFriendsClick = {
+                navigator.navigate(FriendManagementNavKey)
+            },
             onTermsClick = {
                 uriHandler.openUri(LegalDocumentUrl.TERMS_OF_SERVICE)
             },

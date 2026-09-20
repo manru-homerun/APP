@@ -15,6 +15,21 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Yadanbeopseok">
 
+        <!-- 지원 기기에 Google Play 서비스의 Photo Picker 백포트 설치를 요청합니다. -->
+        <service
+            android:name="com.google.android.gms.metadata.ModuleDependencies"
+            android:enabled="false"
+            android:exported="false"
+            tools:ignore="MissingClass">
+            <intent-filter>
+                <action android:name="com.google.android.gms.metadata.MODULE_DEPENDENCIES" />
+            </intent-filter>
+
+            <meta-data
+                android:name="photopicker_activity:0:required"
+                android:value="" />
+        </service>
+
         <!-- 카카오 인증 완료 후 야단법석 앱으로 돌아오는 리다이렉트를 처리합니다. -->
         <activity
             android:name="com.kakao.sdk.auth.AuthCodeHandlerActivity"

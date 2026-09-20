@@ -358,7 +358,7 @@ private fun MyPageTravelMenu(
             title = "친구",
             supportingText = "동행 초대할 야구 친구 관리",
             onClick = onFriendsClick,
-            enabled = false,
+            enabled = enabled,
             leadingContent = {
                 Icon(
                     imageVector = Icons.Default.Group,

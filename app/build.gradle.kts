@@ -103,6 +103,7 @@ dependencies {
     implementation(projects.feature.travel)
     implementation(projects.feature.record)
     implementation(projects.feature.mypage)
+    implementation(projects.feature.friend)
     implementation(projects.core.data)
     implementation(projects.core.designsystem)
 

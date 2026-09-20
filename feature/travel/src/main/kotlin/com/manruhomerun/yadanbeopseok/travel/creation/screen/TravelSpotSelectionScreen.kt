@@ -44,6 +44,7 @@ import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
 import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
 import com.manruhomerun.yadanbeopseok.travel.component.travelSpotSelectionContent
+import com.manruhomerun.yadanbeopseok.travel.creation.viewmodel.MAX_SELECTED_TRAVEL_SPOT_COUNT
 import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotSelectionTab
 import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotSelectionUiState
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotAction
@@ -80,6 +81,7 @@ fun TravelSpotSelectionScreen(
     }
 
     val selectedCount = selectedTravelSpots.size
+    val canAddMoreSpots = selectedCount < MAX_SELECTED_TRAVEL_SPOT_COUNT
     val screenTitle = if (uiState.isSearchMode) {
         "‘${uiState.searchQuery}’ 검색 결과"
     } else {
@@ -120,9 +122,12 @@ fun TravelSpotSelectionScreen(
             onTravelSpotToggle = onTravelSpotToggle,
             onRetryClick = onRetryClick,
             onLoadNextDibsPage = onLoadNextDibsPage,
+            canAddMoreSpots = canAddMoreSpots,
             selectedSpotsContent = {
                 item(key = "selected_spot_header") {
-                    YadanSectionHeader(title = "꼭 가고 싶은 곳 $selectedCount")
+                    YadanSectionHeader(
+                        title = "꼭 가고 싶은 곳 $selectedCount/$MAX_SELECTED_TRAVEL_SPOT_COUNT",
+                    )
                 }
 
                 if (selectedTravelSpots.isEmpty()) {

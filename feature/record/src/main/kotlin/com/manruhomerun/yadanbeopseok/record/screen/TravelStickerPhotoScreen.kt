@@ -272,6 +272,7 @@ private fun StickerTrayItems(
                 sticker = sticker,
                 contentDescription = "사진에 스티커 추가",
                 size = YadanStickerSize.TRAY,
+                showFrame = false,
                 enabled = enabled,
                 onClick = {
                     onStickerClick(sticker)

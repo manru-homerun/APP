@@ -310,6 +310,16 @@ class TravelCreationViewModel @Inject constructor(
     /** 필수 포함 관광지를 선택·해제하고 이전 생성 결과를 초기화합니다. */
     fun toggleTravelSpot(travelSpot: TravelSpot) {
         _uiState.update { currentState ->
+            val isSelected = currentState.selectedTravelSpots.any { spot ->
+                spot.id == travelSpot.id
+            }
+            val hasReachedSelectionLimit =
+                currentState.selectedTravelSpots.size >= MAX_SELECTED_TRAVEL_SPOT_COUNT
+
+            if (!isSelected && hasReachedSelectionLimit) {
+                return@update currentState
+            }
+
             currentState.copy(
                 selectedTravelSpots = currentState.selectedTravelSpots.toggleTravelSpotSelection(travelSpot),
                 generatedCourse = null,
@@ -622,7 +632,7 @@ class TravelCreationViewModel @Inject constructor(
 
         companionLoadJob = viewModelScope.launch {
             try {
-                val companions = friendRepository.getFriends().map { friend ->
+                val companions = friendRepository.getFriends().friends.map { friend ->
                     friend.user
                 }
 

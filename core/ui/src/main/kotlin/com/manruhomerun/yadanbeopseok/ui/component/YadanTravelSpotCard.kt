@@ -95,7 +95,8 @@ enum class YadanTravelSpotAction {
  * @param onActionClick 하트 또는 담기·담음·삭제 버튼을 눌렀을 때 실행할 작업입니다.
  * @param modifier 카드의 크기와 배치를 지정할 Modifier입니다.
  * @param action 카드 오른쪽에 표시할 작업 유형입니다.
- * @param enabled 카드와 작업 버튼의 활성화 여부입니다.
+ * @param enabled 카드 자체의 활성화 여부입니다.
+ * @param actionEnabled 카드 오른쪽 작업 버튼의 활성화 여부입니다.
  */
 @Composable
 fun YadanTravelSpotCard(
@@ -105,6 +106,7 @@ fun YadanTravelSpotCard(
     modifier: Modifier = Modifier,
     action: YadanTravelSpotAction = YadanTravelSpotAction.DIBS,
     enabled: Boolean = true,
+    actionEnabled: Boolean = enabled,
 ) {
     val imageSize =
         if (action == YadanTravelSpotAction.DIBS) {
@@ -166,7 +168,7 @@ fun YadanTravelSpotCard(
                             onActionClick()
                         },
                         size = YadanIconButtonSize.MEDIUM,
-                        enabled = enabled,
+                        enabled = actionEnabled,
                         uncheckedContentColor = YadanTextMuted,
                         checkedContentColor = YadanDibs,
                     ) { checked ->
@@ -191,7 +193,7 @@ fun YadanTravelSpotCard(
                     YadanTravelSpotActionButton(
                         action = action,
                         onClick = onActionClick,
-                        enabled = enabled,
+                        enabled = actionEnabled,
                     )
                 }
             }

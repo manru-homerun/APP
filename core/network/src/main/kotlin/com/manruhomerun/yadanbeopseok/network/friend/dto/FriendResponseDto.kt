@@ -35,3 +35,38 @@ data class FriendResponseDto(
     val favoriteTeamId: Long,
     val favoriteTeamName: String,
 )
+
+/**
+ * 받은 요청과 보낸 요청에 포함되는 상대방 정보입니다.
+ */
+@Serializable
+data class FriendRequestItemResponseDto(
+    val friendRequestId: Long,
+    val userId: String,
+    val nickname: String,
+    val profileImageUrl: String? = null,
+    val favoriteTeamId: Long,
+    val favoriteTeamName: String,
+)
+
+/**
+ * 현재 사용자가 받은 대기 중인 친구 요청 목록입니다.
+ */
+@Serializable
+data class ReceivedFriendRequestListResponseDto(
+    val friendCount: Long,
+    val receivedRequestCount: Long,
+    val sentRequestCount: Long,
+    val receivedRequests: List<FriendRequestItemResponseDto>,
+)
+
+/**
+ * 현재 사용자가 보낸 대기 중인 친구 요청 목록입니다.
+ */
+@Serializable
+data class SentFriendRequestListResponseDto(
+    val friendCount: Long,
+    val receivedRequestCount: Long,
+    val sentRequestCount: Long,
+    val sentRequests: List<FriendRequestItemResponseDto>,
+)

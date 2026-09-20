@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
@@ -70,6 +71,7 @@ enum class YadanStickerSize {
  * 장식용으로 사용할 때는 null을 전달합니다.
  * @param modifier 컴포넌트의 배치와 추가 효과를 지정합니다.
  * @param size 화면 용도에 따른 스티커 크기입니다.
+ * @param showFrame 원형 테두리와 그림자를 표시할지 나타냅니다.
  * @param selected 사진 꾸미기 목록에서 현재 선택된 스티커인지 나타냅니다.
  * @param locked 획득하지 않은 잠긴 스티커인지 나타냅니다.
  * @param enabled 스티커 활성화 여부입니다.
@@ -82,6 +84,7 @@ fun YadanStickerView(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     size: YadanStickerSize = YadanStickerSize.DEFAULT,
+    showFrame: Boolean = true,
     selected: Boolean = false,
     locked: Boolean = false,
     enabled: Boolean = true,
@@ -98,13 +101,31 @@ fun YadanStickerView(
 
     val clickModifier =
         if (onClick != null) {
-            Modifier
-                .clip(CircleShape)
-                .clickable(
+            val clickableModifier =
+                Modifier.clickable(
                     enabled = enabled,
                     role = Role.Button,
                     onClick = onClick,
                 )
+
+            if (showFrame || isLocked) {
+                Modifier
+                    .clip(CircleShape)
+                    .then(clickableModifier)
+            } else {
+                clickableModifier
+            }
+        } else {
+            Modifier
+        }
+
+    val frameModifier =
+        if (showFrame && !isLocked) {
+            Modifier.shadow(
+                elevation = visuals.elevation,
+                shape = CircleShape,
+                clip = false,
+            )
         } else {
             Modifier
         }
@@ -120,16 +141,7 @@ fun YadanStickerView(
                         0.42f
                     },
                 )
-                .shadow(
-                    elevation =
-                        if (isLocked) {
-                            0.dp
-                        } else {
-                            visuals.elevation
-                        },
-                    shape = CircleShape,
-                    clip = false,
-                )
+                .then(frameModifier)
                 .then(clickModifier)
                 .semantics {
                     resolvedContentDescription?.let {
@@ -153,6 +165,7 @@ fun YadanStickerView(
             YadanStickerImage(
                 sticker = checkNotNull(sticker),
                 borderWidth = visuals.borderWidth,
+                showFrame = showFrame,
                 selected = selected,
                 modifier = Modifier.matchParentSize(),
             )
@@ -167,11 +180,12 @@ fun YadanStickerView(
 private fun YadanStickerImage(
     sticker: Sticker,
     borderWidth: Dp,
+    showFrame: Boolean,
     selected: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val selectionModifier =
-        if (selected) {
+        if (showFrame && selected) {
             Modifier
                 .border(
                     width = 3.dp,
@@ -183,16 +197,24 @@ private fun YadanStickerImage(
             Modifier
         }
 
-    Box(
-        modifier =
-            modifier
+    val frameModifier =
+        if (showFrame) {
+            Modifier
                 .then(selectionModifier)
                 .border(
                     width = borderWidth,
                     color = YadanOnPrimary,
                     shape = CircleShape,
                 )
-                .clip(CircleShape),
+                .clip(CircleShape)
+        } else {
+            Modifier
+        }
+
+    val imageShape = if (showFrame) CircleShape else RectangleShape
+
+    Box(
+        modifier = modifier.then(frameModifier),
     ) {
         /*
          * 접근성 문구는 바깥 YadanStickerView에서 제공하므로
@@ -202,7 +224,7 @@ private fun YadanStickerImage(
             imageUrl = sticker.imageUrl,
             contentDescription = null,
             modifier = Modifier.matchParentSize(),
-            shape = CircleShape,
+            shape = imageShape,
             contentScale = ContentScale.Fit,
             placeholderIcon = Icons.Outlined.WorkspacePremium,
         )

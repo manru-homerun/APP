@@ -8,6 +8,9 @@ import com.manruhomerun.yadanbeopseok.model.TravelTheme
 import com.manruhomerun.yadanbeopseok.model.UserProfile
 import kotlinx.datetime.LocalDate
 
+/** B06에서 여행 코스에 직접 포함할 수 있는 최대 관광지 수입니다. */
+const val MAX_SELECTED_TRAVEL_SPOT_COUNT = 6
+
 /**
  * 여행 만들기 전체 화면에서 공유하는 입력 및 요청 상태입니다.
  *

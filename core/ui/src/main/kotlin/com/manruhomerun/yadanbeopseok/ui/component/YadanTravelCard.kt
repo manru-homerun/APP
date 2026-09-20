@@ -108,7 +108,7 @@ fun YadanTravelCard(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 236.dp)
+                        .heightIn(min = 264.dp)
                         .padding(16.dp),
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
@@ -120,6 +120,7 @@ fun YadanTravelCard(
 
                 Text(
                     text = travel.name,
+                    modifier = Modifier.heightIn(min = 56.dp),
                     style =
                         YadanTypography.titleLarge.copy(
                             fontWeight = FontWeight.ExtraBold,
@@ -361,16 +362,29 @@ private data class TravelStatusVisuals(
 )
 
 @Preview(
-    name = "Yadan travel cards",
+    name = "Yadan travel cards - 320dp",
     showBackground = true,
     backgroundColor = 0xFFFAFAFA,
+    widthDp = 320,
+)
+@Preview(
+    name = "Yadan travel cards - 360dp",
+    showBackground = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 360,
+)
+@Preview(
+    name = "Yadan travel cards - 411dp",
+    showBackground = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 411,
 )
 @Composable
 private fun YadanTravelCardPreview() {
     val activeTravel =
         TravelSummary(
             id = "travel-1",
-            name = "부산 원정 · 사직 직관 여행",
+            name = "롯데 자이언츠와 함께하는 부산 사직 장거리 원정 여행",
             startDate = LocalDate(2026, 5, 22),
             endDate = LocalDate(2026, 5, 23),
             baseballGameId = "game-1",
@@ -386,7 +400,7 @@ private fun YadanTravelCardPreview() {
     val upcomingTravel =
         activeTravel.copy(
             id = "travel-2",
-            name = "주말 부산 야구 여행",
+            name = "주말 동안 떠나는 부산 야구장과 대표 관광지 원정 여행",
             startDate = LocalDate(2026, 5, 23),
             endDate = LocalDate(2026, 5, 24),
             isLeader = false,

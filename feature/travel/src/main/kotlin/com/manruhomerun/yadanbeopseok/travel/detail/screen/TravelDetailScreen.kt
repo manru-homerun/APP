@@ -356,6 +356,7 @@ private fun TravelDetailEditBottomBar(
                 onShareImageClick?.invoke()
             },
             modifier = Modifier.weight(1.35f),
+            iconSize = 22.dp,
             trailingIcon = {
                 Icon(
                     imageVector = Icons.Default.PhotoLibrary,

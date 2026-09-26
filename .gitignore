@@ -191,6 +191,7 @@ AGENTS.md
 /app/release/
 /tmp/
 /store-assets/
+/docs/legal/
 .DS_Store
 
 # End of https://www.toptal.com/developers/gitignore/api/androidstudio,android,kotlin

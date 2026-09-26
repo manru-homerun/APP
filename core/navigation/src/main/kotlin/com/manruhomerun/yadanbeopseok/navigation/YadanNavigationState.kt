@@ -54,6 +54,10 @@ class YadanNavigationState internal constructor(
     val canNavigateBack: Boolean
         get() = mutableBackStack.size > 1
 
+    /** 현재 최상위 화면이 알림에서 열려 이전 화면으로 돌아갈 수 있는지 나타냅니다. */
+    val shouldReturnToPrevious: Boolean
+        get() = canNavigateBack && (currentKey as? TopLevelNavKey)?.returnToPrevious == true
+
     /**
      * 현재 화면에서 하단 내비게이션을 표시할지 나타냅니다.
      *
@@ -80,6 +84,28 @@ class YadanNavigationState internal constructor(
         }
     }
 
+    override fun navigateBackToOrNavigate(key: NavKey) {
+        if (key is TopLevelNavKey) {
+            navigateToTopLevel(key)
+            return
+        }
+
+        val targetIndex = mutableBackStack.indexOfLast { backStackKey ->
+            backStackKey == key
+        }
+
+        if (targetIndex == -1) {
+            navigate(key)
+            return
+        }
+
+        if (targetIndex < mutableBackStack.lastIndex) {
+            mutableBackStack
+                .subList(targetIndex + 1, mutableBackStack.size)
+                .clear()
+        }
+    }
+
     /**
      * 현재 화면을 제거하고 이전 화면으로 이동합니다.
      *
@@ -102,12 +128,14 @@ class YadanNavigationState internal constructor(
     override fun navigateToTopLevel(key: TopLevelNavKey) {
         val currentTopLevelKey = currentTopLevelKey
 
-        if (currentTopLevelKey == key) {
+        if (currentTopLevelKey?.hasSameDestination(key) == true) {
             popToTopLevelRoot(key)
             return
         }
 
-        val targetStartIndex = mutableBackStack.indexOf(key)
+        val targetStartIndex = mutableBackStack.indexOfFirst { backStackKey ->
+            backStackKey is TopLevelNavKey && backStackKey.hasSameDestination(key)
+        }
 
         if (targetStartIndex == -1) {
             // 로그인 등의 백스택만 존재한다면 인증 흐름을 제거합니다.
@@ -120,15 +148,45 @@ class YadanNavigationState internal constructor(
         }
 
         val targetEndIndex = findTopLevelSegmentEnd(targetStartIndex)
-        val targetSegment = mutableBackStack
-            .subList(targetStartIndex, targetEndIndex)
-            .toList()
+        val targetRoot = mutableBackStack[targetStartIndex] as TopLevelNavKey
+        val targetDetails = if (targetRoot.returnToPrevious) {
+            emptyList()
+        } else {
+            mutableBackStack
+                .subList(targetStartIndex + 1, targetEndIndex)
+                .toList()
+        }
 
         // 선택한 탭의 기존 백스택 구간을 맨 뒤로 옮겨 활성화합니다.
         mutableBackStack
             .subList(targetStartIndex, targetEndIndex)
             .clear()
-        mutableBackStack.addAll(targetSegment)
+        mutableBackStack.add(key)
+        mutableBackStack.addAll(targetDetails)
+    }
+
+    /**
+     * 선택한 최상위 탭의 기존 상세 스택을 제거하고 전달받은 루트 키로 이동합니다.
+     */
+    override fun navigateToTopLevelRoot(key: TopLevelNavKey) {
+        val targetStartIndex = mutableBackStack.indexOfFirst { backStackKey ->
+            backStackKey is TopLevelNavKey && backStackKey.hasSameDestination(key)
+        }
+
+        if (targetStartIndex == -1) {
+            if (currentTopLevelKey == null) {
+                mutableBackStack.clear()
+            }
+
+            mutableBackStack.add(key)
+            return
+        }
+
+        val targetEndIndex = findTopLevelSegmentEnd(targetStartIndex)
+        mutableBackStack
+            .subList(targetStartIndex, targetEndIndex)
+            .clear()
+        mutableBackStack.add(key)
     }
 
     /**
@@ -171,7 +229,7 @@ class YadanNavigationState internal constructor(
      */
     private fun popToTopLevelRoot(key: TopLevelNavKey) {
         val rootIndex = mutableBackStack.indexOfLast { backStackKey ->
-            backStackKey == key
+            backStackKey is TopLevelNavKey && backStackKey.hasSameDestination(key)
         }
 
         if (rootIndex < mutableBackStack.lastIndex) {
@@ -179,6 +237,8 @@ class YadanNavigationState internal constructor(
                 .subList(rootIndex + 1, mutableBackStack.size)
                 .clear()
         }
+
+        mutableBackStack[rootIndex] = key
     }
 
     /**
@@ -191,6 +251,9 @@ class YadanNavigationState internal constructor(
             }
             ?: mutableBackStack.size
 }
+
+/** 파라미터가 달라도 같은 종류의 최상위 탭인지 확인합니다. */
+private fun TopLevelNavKey.hasSameDestination(other: TopLevelNavKey): Boolean = this::class == other::class
 
 /**
  * 구성 변경과 프로세스 재생성에도 백스택이 복원되는

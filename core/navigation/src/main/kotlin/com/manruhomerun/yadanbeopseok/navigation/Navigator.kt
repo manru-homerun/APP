@@ -19,6 +19,12 @@ interface Navigator {
     fun navigate(key: NavKey)
 
     /**
+     * 이미 백스택에 있는 화면이면 해당 위치로 돌아가고,
+     * 없으면 현재 화면 위에 새로 추가합니다.
+     */
+    fun navigateBackToOrNavigate(key: NavKey)
+
+    /**
      * 현재 화면을 백스택에서 제거하고 이전 화면으로 돌아갑니다.
      */
     fun navigateBack()
@@ -29,6 +35,14 @@ interface Navigator {
      * 각 탭이 가지고 있던 백스택은 유지한 채 선택된 탭만 전환합니다.
      */
     fun navigateToTopLevel(key: TopLevelNavKey)
+
+    /**
+     * 선택한 최상위 탭의 기존 상세 화면을 제거하고 탭 시작 화면으로 이동합니다.
+     *
+     * 알림처럼 기존 탭 흐름을 복원하지 않고 명확한 시작 화면부터
+     * 새로운 이동 흐름을 구성해야 할 때 사용합니다.
+     */
+    fun navigateToTopLevelRoot(key: TopLevelNavKey)
 
     /**
      * 현재 화면을 제거하고 새로운 화면으로 교체합니다.

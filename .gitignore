@@ -187,4 +187,10 @@ fabric.properties
 ## AI
 AGENTS.md
 
+# Local release and publishing artifacts
+/app/release/
+/tmp/
+/store-assets/
+.DS_Store
+
 # End of https://www.toptal.com/developers/gitignore/api/androidstudio,android,kotlin

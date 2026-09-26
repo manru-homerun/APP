@@ -18,6 +18,7 @@ import com.manruhomerun.yadanbeopseok.navigation.YadanNavigationState
 import com.manruhomerun.yadanbeopseok.navigation.rememberSharedViewModelStoreNavEntryDecorator
 import com.manruhomerun.yadanbeopseok.navigation.route.LoginNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.TopLevelNavKey
+import com.manruhomerun.yadanbeopseok.notification.navigation.notificationEntryProvider
 import com.manruhomerun.yadanbeopseok.record.navigation.recordEntryProvider
 import com.manruhomerun.yadanbeopseok.travel.navigation.travelEntryProvider
 
@@ -36,7 +37,10 @@ fun YadanNavHost(
     NavDisplay(
         backStack = navigationState.backStack,
         onBack = {
-            if (navigationState.currentKey is TopLevelNavKey) {
+            if (
+                navigationState.currentKey is TopLevelNavKey &&
+                !navigationState.shouldReturnToPrevious
+            ) {
                 onTopLevelBack()
             } else {
                 navigationState.navigateBack()
@@ -98,6 +102,10 @@ fun YadanNavHost(
                 )
 
                 friendEntryProvider(
+                    navigator = navigationState,
+                )
+
+                notificationEntryProvider(
                     navigator = navigationState,
                 )
             }

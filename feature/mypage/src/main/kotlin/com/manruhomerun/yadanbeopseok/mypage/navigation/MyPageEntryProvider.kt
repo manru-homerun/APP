@@ -30,7 +30,7 @@ fun EntryProviderScope<NavKey>.myPageEntryProvider(navigator: Navigator) {
                 navigator.navigate(TravelPreferenceEditNavKey)
             },
             onFriendsClick = {
-                navigator.navigate(FriendManagementNavKey)
+                navigator.navigate(FriendManagementNavKey())
             },
             onTermsClick = {
                 uriHandler.openUri(LegalDocumentUrl.TERMS_OF_SERVICE)

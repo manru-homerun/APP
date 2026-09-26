@@ -6,6 +6,7 @@ import com.manruhomerun.yadanbeopseok.network.auth.interceptor.AuthInterceptor
 import com.manruhomerun.yadanbeopseok.network.auth.interceptor.TokenAuthenticator
 import com.manruhomerun.yadanbeopseok.network.baseball.api.BaseballApi
 import com.manruhomerun.yadanbeopseok.network.friend.api.FriendApi
+import com.manruhomerun.yadanbeopseok.network.notification.api.NotificationApi
 import com.manruhomerun.yadanbeopseok.network.travel.api.TravelApi
 import com.manruhomerun.yadanbeopseok.network.travel.api.TravelSpotApi
 import com.manruhomerun.yadanbeopseok.network.user.api.UserApi
@@ -146,4 +147,9 @@ internal object NetworkModule {
     fun provideFriendApi(
         retrofit: Retrofit
     ): FriendApi = retrofit.create(FriendApi::class.java)
+
+    /** 현재 사용자의 알림과 FCM 설치 등록 API 구현체를 제공합니다. */
+    @Provides
+    @Singleton
+    fun provideNotificationApi(retrofit: Retrofit): NotificationApi = retrofit.create(NotificationApi::class.java)
 }

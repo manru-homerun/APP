@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.yadanbeopseok.android.application)
     alias(libs.plugins.yadanbeopseok.android.application.compose)
     alias(libs.plugins.yadanbeopseok.hilt)
+    alias(libs.plugins.gms)
 }
 
 val localKakaoNativeAppKey =
@@ -104,8 +105,10 @@ dependencies {
     implementation(projects.feature.record)
     implementation(projects.feature.mypage)
     implementation(projects.feature.friend)
+    implementation(projects.feature.notification)
     implementation(projects.core.data)
     implementation(projects.core.designsystem)
+    implementation(projects.core.notifications)
 
 
     implementation(libs.androidx.navigation3.ui)

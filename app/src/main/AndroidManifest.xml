@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".YadanApplication"
@@ -49,7 +50,7 @@
         <activity
             android:name="com.manruhomerun.yadanbeopseok.MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Yadanbeopseok.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

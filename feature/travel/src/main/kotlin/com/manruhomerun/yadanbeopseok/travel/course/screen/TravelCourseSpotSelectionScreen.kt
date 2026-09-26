@@ -108,6 +108,7 @@ fun TravelCourseSpotSelectionScreen(
                 onLoadNextDibsPage = onLoadNextDibsPage,
                 searchPlaceholder = "관광지·음식을 검색해서 추가",
                 disabledSpotIds = disabledSpotIds,
+                canAddMoreSpots = uiState.canAddMoreSpots,
             )
         }
 

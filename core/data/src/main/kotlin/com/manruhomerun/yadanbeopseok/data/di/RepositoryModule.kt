@@ -3,6 +3,7 @@ package com.manruhomerun.yadanbeopseok.data.di
 import com.manruhomerun.yadanbeopseok.data.repository.AuthRepository
 import com.manruhomerun.yadanbeopseok.data.repository.BaseballRepository
 import com.manruhomerun.yadanbeopseok.data.repository.FriendRepository
+import com.manruhomerun.yadanbeopseok.data.repository.NotificationRepository
 import com.manruhomerun.yadanbeopseok.data.repository.OnboardingRepository
 import com.manruhomerun.yadanbeopseok.data.repository.StickerRepository
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRecordRepository
@@ -12,6 +13,7 @@ import com.manruhomerun.yadanbeopseok.data.repository.UserRepository
 import com.manruhomerun.yadanbeopseok.data.repository.impl.AuthRepositoryImpl
 import com.manruhomerun.yadanbeopseok.data.repository.impl.BaseballRepositoryImpl
 import com.manruhomerun.yadanbeopseok.data.repository.impl.FriendRepositoryImpl
+import com.manruhomerun.yadanbeopseok.data.repository.impl.NotificationRepositoryImpl
 import com.manruhomerun.yadanbeopseok.data.repository.impl.OnboardingRepositoryImpl
 import com.manruhomerun.yadanbeopseok.data.repository.impl.StickerRepositoryImpl
 import com.manruhomerun.yadanbeopseok.data.repository.impl.TravelRecordRepositoryImpl
@@ -90,6 +92,11 @@ internal abstract class RepositoryModule {
     abstract fun bindFriendRepository(
         repositoryImpl: FriendRepositoryImpl,
     ): FriendRepository
+
+    /** 알림 조회·설정과 FCM 설치 등록 Repository를 제공합니다. */
+    @Binds
+    @Singleton
+    abstract fun bindNotificationRepository(repositoryImpl: NotificationRepositoryImpl): NotificationRepository
 
     /**
      * 방문 인증 Repository에 실제 API 구현체를 제공합니다.

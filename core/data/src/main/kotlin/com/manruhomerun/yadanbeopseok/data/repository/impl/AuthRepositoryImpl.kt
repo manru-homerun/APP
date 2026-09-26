@@ -6,6 +6,7 @@ import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.mapper.toAuthTokens
 import com.manruhomerun.yadanbeopseok.data.repository.AuthRepository
 import com.manruhomerun.yadanbeopseok.data.repository.AuthSessionState
+import com.manruhomerun.yadanbeopseok.data.repository.NotificationRepository
 import com.manruhomerun.yadanbeopseok.datastore.AuthTokenDataSource
 import com.manruhomerun.yadanbeopseok.datastore.AuthTokens
 import com.manruhomerun.yadanbeopseok.network.auth.api.AuthApi
@@ -15,6 +16,7 @@ import com.manruhomerun.yadanbeopseok.network.common.error.ApiCallExecutor
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -31,6 +33,7 @@ internal class AuthRepositoryImpl @Inject constructor(
     private val authApi: AuthApi,
     private val apiCallExecutor: ApiCallExecutor,
     private val authTokenDataSource: AuthTokenDataSource,
+    private val notificationRepository: NotificationRepository,
 ) : AuthRepository {
     /**
      * 카카오 액세스 토큰으로 야단법석 서비스에 로그인합니다.
@@ -106,6 +109,8 @@ internal class AuthRepositoryImpl @Inject constructor(
      */
     override suspend fun logout() {
         try {
+            unregisterPushInstallation()
+
             apiCallExecutor.execute {
                 authApi.logout()
             }
@@ -125,7 +130,22 @@ internal class AuthRepositoryImpl @Inject constructor(
             authApi.withdraw()
         }
 
-        clearLocalSessions()
+        try {
+            unregisterPushInstallation()
+        } finally {
+            clearLocalSessions()
+        }
+    }
+
+    /** 로그아웃이나 탈퇴를 막지 않도록 푸시 설치 해제를 최선 노력으로 처리합니다. */
+    private suspend fun unregisterPushInstallation() {
+        try {
+            notificationRepository.unregisterPushInstallation()
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (_: Exception) {
+            // 서버 또는 FCM 해제 실패와 관계없이 계정 작업을 계속합니다.
+        }
     }
 
     /**

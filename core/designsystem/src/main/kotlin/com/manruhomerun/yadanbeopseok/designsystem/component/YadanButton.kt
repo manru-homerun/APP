@@ -69,6 +69,9 @@ enum class YadanButtonStyle {
  * @param enabled 버튼 활성화 여부입니다.
  * @param isLoading 진행 상태 표시 여부입니다. 로딩 중에는 중복 클릭을 막습니다.
  * @param iconSize 아이콘과 반대편 예약 공간의 크기입니다.
+ * @param contentPadding 버튼 내부 콘텐츠의 여백입니다.
+ * @param reserveOppositeIconSpace 한쪽에만 아이콘이 있을 때
+ * 반대편 공간을 예약할지 결정합니다.
  * @param leadingIcon 텍스트 앞에 표시할 아이콘입니다.
  * @param trailingIcon 텍스트 뒤에 표시할 아이콘입니다.
  */
@@ -81,6 +84,8 @@ fun YadanButton(
     enabled: Boolean = true,
     isLoading: Boolean = false,
     iconSize: Dp = DEFAULT_ICON_SIZE,
+    contentPadding: PaddingValues = DEFAULT_CONTENT_PADDING,
+    reserveOppositeIconSpace: Boolean = true,
     leadingIcon: (@Composable () -> Unit)? = null,
     trailingIcon: (@Composable () -> Unit)? = null,
 ) {
@@ -160,23 +165,15 @@ fun YadanButton(
                     color = color,
                 )
             },
-        contentPadding =
-            PaddingValues(
-                horizontal = 20.dp,
-                vertical = 14.dp,
-            ),
+        contentPadding = contentPadding,
     ) {
         val hasLeadingContent = isLoading || leadingIcon != null
         val hasTrailingContent = !isLoading && trailingIcon != null
 
-        /*
-         * 한쪽에만 아이콘이 있더라도 반대쪽에 동일한 크기의
-         * 빈 공간을 확보하여 텍스트의 중심을 유지합니다.
-         */
-        val shouldReserveIconSpace =
-            hasLeadingContent || hasTrailingContent
+        val showLeadingSlot = hasLeadingContent || (reserveOppositeIconSpace && hasTrailingContent)
+        val showTrailingSlot = hasTrailingContent || (reserveOppositeIconSpace && hasLeadingContent)
 
-        if (shouldReserveIconSpace) {
+        if (showLeadingSlot) {
             Box(
                 modifier = Modifier.size(iconSize),
                 contentAlignment = Alignment.Center,
@@ -208,7 +205,7 @@ fun YadanButton(
                 ),
         )
 
-        if (shouldReserveIconSpace) {
+        if (showTrailingSlot) {
             Spacer(modifier = Modifier.width(ICON_SPACING))
 
             Box(
@@ -226,6 +223,7 @@ fun YadanButton(
 private val BUTTON_MIN_HEIGHT = 52.dp
 private val BUTTON_CORNER_RADIUS = 16.dp
 private val DEFAULT_ICON_SIZE = 20.dp
+private val DEFAULT_CONTENT_PADDING = PaddingValues(horizontal = 20.dp, vertical = 14.dp)
 private val ICON_SPACING = 8.dp
 private const val DISABLED_ALPHA = 0.42f
 

@@ -8,22 +8,27 @@ import kotlinx.datetime.LocalDateTime
  * ERD의 notification 테이블을 참고합니다.
  */
 data class AppNotification(
-    val id: String,
-    val userId: String,
+    val id: Long,
     val type: NotificationType,
     val title: String,
-    val content: String,
+    val body: String,
+    val referenceId: String?,
     val createdAt: LocalDateTime,
 )
 
 enum class NotificationType {
-    TICKET_OPEN,
-    VISIT_CERTIFICATION_REMINDER,
-    NEARBY_GAME,
     FRIEND_REQUEST,
-    FRIEND_ACCEPTED,
-    TRAVEL_RECOMMENDATION,
+    FRIEND_REQUEST_ACCEPTED,
+    WEEKLY_TEAM_SCHEDULE,
     UNKNOWN,
+    ;
+
+    companion object {
+        /** 서버 또는 FCM payload의 알림 타입을 앱 내부 타입으로 변환합니다. */
+        fun fromServerValue(value: String?): NotificationType = entries.firstOrNull { type ->
+            type != UNKNOWN && type.name == value
+        } ?: UNKNOWN
+    }
 }
 
 /**
@@ -32,10 +37,6 @@ enum class NotificationType {
  * ERD의 notification_setting에 대응됩니다.
  */
 data class NotificationSetting(
-    val userId: String,
-    val ticketOpenNotificationEnabled: Boolean,
-    val visitCertificationReminderEnabled: Boolean,
-    val nearbyGameNotificationEnabled: Boolean,
-    val createdAt: LocalDateTime? = null,
-    val updatedAt: LocalDateTime? = null,
+    val friendNotificationEnabled: Boolean,
+    val weeklyTeamScheduleNotificationEnabled: Boolean,
 )

@@ -9,6 +9,10 @@ import kotlinx.serialization.Serializable
 @Serializable
 data object NotificationNavKey : NavKey
 
+/** E·02 알림 설정 화면으로 이동할 때 사용하는 NavKey입니다. */
+@Serializable
+data object NotificationSettingNavKey : NavKey
+
 /**
  * H·04 찜한 관광지 목록 화면으로 이동할 때 사용하는 NavKey입니다.
  */
@@ -31,7 +35,15 @@ data object TravelPreferenceEditNavKey : NavKey
  * F·01 친구 목록과 F·02 친구 요청 탭 화면으로 이동합니다.
  */
 @Serializable
-data object FriendManagementNavKey : NavKey
+data class FriendManagementNavKey(val initialTab: FriendManagementInitialTab = FriendManagementInitialTab.FRIENDS) :
+    NavKey
+
+/** 친구 관리 화면을 처음 열 때 선택할 탭입니다. */
+@Serializable
+enum class FriendManagementInitialTab {
+    FRIENDS,
+    REQUESTS,
+}
 
 /**
  * F·03 닉네임 기반 친구 찾기 화면으로 이동합니다.

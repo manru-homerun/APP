@@ -4,6 +4,9 @@ import com.manruhomerun.yadanbeopseok.model.BaseballGame
 import com.manruhomerun.yadanbeopseok.model.TravelCourse
 import kotlinx.datetime.LocalDate
 
+/** C01에서 한 일차에 포함할 수 있는 최대 장소 수입니다. */
+const val MAX_TRAVEL_PLACE_COUNT_PER_DAY = 6
+
 /**
  * C01 여행 일정 편집과 C02 저장 완료 화면에서 사용하는 상태입니다.
  *
@@ -58,10 +61,19 @@ data class TravelCourseEditUiState(
             baseballGame != null &&
             course != null
 
+    /** 장소가 하루 최대 개수를 초과한 일차가 있는지 나타냅니다. */
+    val hasExceededDailyPlaceLimit: Boolean
+        get() = course?.hasExceededDailyPlaceLimit() == true
+
     /** 현재 편집 내용을 저장할 수 있는지 나타냅니다. */
     val canSave: Boolean
         get() = hasContent &&
             travelName.isNotBlank() &&
+            !hasExceededDailyPlaceLimit &&
             !isLoading &&
             !isRequestInProgress
 }
+
+/** 숙소를 포함한 일차별 장소 수가 최대 개수를 초과했는지 확인합니다. */
+internal fun TravelCourse.hasExceededDailyPlaceLimit(): Boolean =
+    days.any { day -> day.places.size > MAX_TRAVEL_PLACE_COUNT_PER_DAY }

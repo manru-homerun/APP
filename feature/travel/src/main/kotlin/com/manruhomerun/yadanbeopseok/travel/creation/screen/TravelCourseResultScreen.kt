@@ -3,6 +3,7 @@ package com.manruhomerun.yadanbeopseok.travel.creation.screen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -174,9 +175,11 @@ private fun TravelCourseResultBottomBar(
         YadanButton(
             text = "이대로 저장",
             onClick = onSaveClick,
-            modifier = Modifier.weight(1.35f),
+            modifier = Modifier.weight(1.15f),
             enabled = isSaveEnabled,
             isLoading = isSaving,
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp),
+            reserveOppositeIconSpace = false,
             trailingIcon = {
                 Icon(
                     imageVector = Icons.Default.Check,

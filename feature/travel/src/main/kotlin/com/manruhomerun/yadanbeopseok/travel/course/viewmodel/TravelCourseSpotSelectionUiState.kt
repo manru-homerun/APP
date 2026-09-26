@@ -20,6 +20,9 @@ data class TravelCourseSpotSelectionUiState(
 
     /** 현재 C01b/C01c에서 임시로 선택한 관광지입니다. */
     val selectedTravelSpots: List<TravelSpot> = emptyList(),
+
+    /** 대상 일차에 추가할 수 있는 최대 관광지 수입니다. */
+    val maxSelectableCount: Int = MAX_TRAVEL_PLACE_COUNT_PER_DAY,
 ) {
     /** 현재 관광지 추가 화면이 열려 있는지 나타냅니다. */
     val isActive: Boolean
@@ -28,4 +31,8 @@ data class TravelCourseSpotSelectionUiState(
     /** 완료 버튼에 표시할 임시 선택 관광지 수입니다. */
     val selectedCount: Int
         get() = selectedTravelSpots.size
+
+    /** 선택되지 않은 관광지를 더 추가할 수 있는지 나타냅니다. */
+    val canAddMoreSpots: Boolean
+        get() = selectedCount < maxSelectableCount
 }

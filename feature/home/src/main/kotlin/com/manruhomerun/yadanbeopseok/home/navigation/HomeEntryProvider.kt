@@ -21,7 +21,7 @@ fun EntryProviderScope<NavKey>.homeEntryProvider(
         HomeRoute(
             navigator = navigator,
             onNotificationClick = {
-                navigator.navigate(NotificationNavKey)
+                navigator.navigateBackToOrNavigate(NotificationNavKey)
             },
             onTravelClick = { travelId ->
                 navigator.navigate(
@@ -40,5 +40,4 @@ fun EntryProviderScope<NavKey>.homeEntryProvider(
         )
     }
 }
-
 

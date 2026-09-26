@@ -8,9 +8,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -52,6 +52,11 @@ import com.manruhomerun.yadanbeopseok.model.TravelSummary
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.number
 
+/** 홈 여행 카드와 동일한 크기를 적용할 때 사용하는 기본값입니다. */
+object YadanTravelCardDefaults {
+    val Height = 264.dp
+}
+
 /**
  * 홈 화면에서 진행 중이거나 예정된 여행을 보여주는 카드입니다.
  *
@@ -87,7 +92,9 @@ fun YadanTravelCard(
         )
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(YadanTravelCardDefaults.Height),
         shape = MaterialTheme.shapes.large,
         colors =
             CardDefaults.cardColors(
@@ -99,17 +106,14 @@ fun YadanTravelCard(
             ),
     ) {
         Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(YadanPrimaryGradient),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(YadanPrimaryGradient),
         ) {
             Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 264.dp)
-                        .padding(16.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
                 YadanTravelCardHeader(
@@ -120,7 +124,7 @@ fun YadanTravelCard(
 
                 Text(
                     text = travel.name,
-                    modifier = Modifier.heightIn(min = 56.dp),
+                    modifier = Modifier.height(56.dp),
                     style =
                         YadanTypography.titleLarge.copy(
                             fontWeight = FontWeight.ExtraBold,

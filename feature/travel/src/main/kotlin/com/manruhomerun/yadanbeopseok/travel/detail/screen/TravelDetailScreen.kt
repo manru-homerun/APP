@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -355,8 +356,10 @@ private fun TravelDetailEditBottomBar(
             onClick = {
                 onShareImageClick?.invoke()
             },
-            modifier = Modifier.weight(1.35f),
-            iconSize = 22.dp,
+            modifier = Modifier.weight(1.15f),
+            iconSize = 24.dp,
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp),
+            reserveOppositeIconSpace = false,
             trailingIcon = {
                 Icon(
                     imageVector = Icons.Default.PhotoLibrary,

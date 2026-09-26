@@ -71,6 +71,7 @@ import com.manruhomerun.yadanbeopseok.model.TravelDay
 import com.manruhomerun.yadanbeopseok.model.TravelPlace
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
+import com.manruhomerun.yadanbeopseok.travel.course.viewmodel.MAX_TRAVEL_PLACE_COUNT_PER_DAY
 import com.manruhomerun.yadanbeopseok.travel.course.viewmodel.TravelCourseEditUiState
 import com.manruhomerun.yadanbeopseok.travel.util.TravelCourseTimelineItem
 import com.manruhomerun.yadanbeopseok.travel.util.toSchedulePlace
@@ -461,10 +462,12 @@ private fun CourseEditContent(
                     }
 
                     is CourseEditRow.Add -> {
+                        val canAddPlace = controlsEnabled && row.placeCount < MAX_TRAVEL_PLACE_COUNT_PER_DAY
+
                         YadanTravelDayAddPlaceRow(
                             day = row.day,
                             onClick = { onAddPlaceClick(row.day) },
-                            enabled = controlsEnabled,
+                            enabled = canAddPlace,
                         )
                     }
                 }
@@ -522,10 +525,7 @@ private sealed interface CourseEditRow {
         val isGame: Boolean,
     ) : CourseEditRow
 
-    data class Add(
-        override val day: Int,
-        val timelineSize: Int,
-    ) : CourseEditRow {
+    data class Add(override val day: Int, val timelineSize: Int, val placeCount: Int) : CourseEditRow {
         override val key: String = "add:$day"
     }
 }
@@ -572,7 +572,13 @@ private fun TravelCourse.toEditRows(game: BaseballGame): List<CourseEditRow> = b
             )
         }
 
-        add(CourseEditRow.Add(travelDay.day, timeline.size))
+        add(
+            CourseEditRow.Add(
+                day = travelDay.day,
+                timelineSize = timeline.size,
+                placeCount = travelDay.places.size,
+            ),
+        )
     }
 }
 
@@ -607,6 +613,8 @@ private fun List<CourseEditRow>.resolveMove(
         .firstOrNull { it.day == target.day } ?: return null
 
     val sameDay = source.day == target.day
+    if (!sameDay && targetEnd.placeCount >= MAX_TRAVEL_PLACE_COUNT_PER_DAY) return null
+
     val lastInsertionIndex = targetEnd.timelineSize - if (sameDay) 1 else 0
 
     val targetIndex = when (target) {
@@ -655,14 +663,19 @@ private fun List<CourseEditRow>.moveActions(
             )
         }
 
-        dayEnds.filter { it.day != row.day }.forEach { target ->
-            add(
-                CustomAccessibilityAction("DAY ${target.day}로 이동") {
-                    onMovePlace(row.place.spot.id, target.day, target.timelineSize)
-                    true
-                },
-            )
-        }
+        dayEnds
+            .filter { target ->
+                target.day != row.day &&
+                    target.placeCount < MAX_TRAVEL_PLACE_COUNT_PER_DAY
+            }
+            .forEach { target ->
+                add(
+                    CustomAccessibilityAction("DAY ${target.day}로 이동") {
+                        onMovePlace(row.place.spot.id, target.day, target.timelineSize)
+                        true
+                    },
+                )
+            }
     }
 }
 

@@ -279,13 +279,10 @@ private fun YadanSettingItemContent(
 )
 @Composable
 private fun YadanSettingItemPreview() {
-    var ticketNotificationEnabled by remember {
+    var friendNotificationEnabled by remember {
         mutableStateOf(true)
     }
-    var certificationNotificationEnabled by remember {
-        mutableStateOf(true)
-    }
-    var nearbyGameNotificationEnabled by remember {
+    var weeklyScheduleNotificationEnabled by remember {
         mutableStateOf(false)
     }
 
@@ -311,11 +308,11 @@ private fun YadanSettingItemPreview() {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 YadanSettingItem(
-                    title = "예매 일자 알림",
-                    supportingText = "응원 구단 예매가 열리면 알려드려요",
-                    checked = ticketNotificationEnabled,
+                    title = "친구 알림",
+                    supportingText = "친구 신청과 수락 소식을 알려드려요",
+                    checked = friendNotificationEnabled,
                     onCheckedChange = {
-                        ticketNotificationEnabled = it
+                        friendNotificationEnabled = it
                     },
                 )
 
@@ -325,26 +322,11 @@ private fun YadanSettingItemPreview() {
                 )
 
                 YadanSettingItem(
-                    title = "방문 인증 리마인드",
-                    supportingText =
-                        "아침·점심·저녁, 관광지 인증을 잊지 않게 알려드려요",
-                    checked = certificationNotificationEnabled,
+                    title = "경기 일정 알림",
+                    supportingText = "매주 월요일 오전 9시에 응원 팀의 경기 일정을 알려드려요",
+                    checked = weeklyScheduleNotificationEnabled,
                     onCheckedChange = {
-                        certificationNotificationEnabled = it
-                    },
-                )
-
-                HorizontalDivider(
-                    thickness = 1.5.dp,
-                    color = YadanOutline,
-                )
-
-                YadanSettingItem(
-                    title = "지역 경기 알림",
-                    supportingText = "선호 지역 근처에서 경기가 열릴 때",
-                    checked = nearbyGameNotificationEnabled,
-                    onCheckedChange = {
-                        nearbyGameNotificationEnabled = it
+                        weeklyScheduleNotificationEnabled = it
                     },
                 )
             }

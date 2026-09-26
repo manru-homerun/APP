@@ -1,12 +1,14 @@
 package com.manruhomerun.yadanbeopseok.baseball.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manruhomerun.yadanbeopseok.baseball.screen.BaseballScheduleScreen
 import com.manruhomerun.yadanbeopseok.baseball.viewmodel.BaseballScheduleViewModel
+import com.manruhomerun.yadanbeopseok.model.KboTeam
 
 /**
  * A·05 경기 일정 화면과 [BaseballScheduleViewModel]을 연결합니다.
@@ -18,14 +20,23 @@ import com.manruhomerun.yadanbeopseok.baseball.viewmodel.BaseballScheduleViewMod
  */
 @Composable
 fun BaseballScheduleRoute(
+    initialTeamId: Long? = null,
+    onBackClick: (() -> Unit)? = null,
     onPlanClick: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
     viewModel: BaseballScheduleViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    LaunchedEffect(initialTeamId) {
+        initialTeamId
+            ?.let(KboTeam::findByServerId)
+            ?.let(viewModel::selectTeam)
+    }
+
     BaseballScheduleScreen(
         uiState = uiState,
+        onBackClick = onBackClick,
         onTeamSelected = viewModel::selectTeam,
         onPlanClick = onPlanClick,
         onRetryClick = viewModel::retry,

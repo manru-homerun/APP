@@ -20,11 +20,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manruhomerun.yadanbeopseok.friend.screen.FriendManagementScreen
+import com.manruhomerun.yadanbeopseok.friend.viewmodel.FriendManagementTab
 import com.manruhomerun.yadanbeopseok.friend.viewmodel.FriendManagementViewModel
 
 /** F·01·F·02 화면과 친구 관리 ViewModel, 내비게이션 콜백을 연결합니다. */
 @Composable
 fun FriendManagementRoute(
+    initialTab: FriendManagementTab,
     onBackClick: () -> Unit,
     onSearchClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -32,6 +34,10 @@ fun FriendManagementRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(initialTab) {
+        viewModel.selectTab(initialTab)
+    }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.onResume()

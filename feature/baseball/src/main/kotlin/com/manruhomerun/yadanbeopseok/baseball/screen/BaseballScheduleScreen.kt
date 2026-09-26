@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.baseball.viewmodel.BaseballScheduleUiState
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanButton
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanMainHeader
+import com.manruhomerun.yadanbeopseok.designsystem.component.YadanTopAppBar
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOutline
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
@@ -56,6 +57,7 @@ import kotlinx.datetime.toJavaLocalDate
 @Composable
 fun BaseballScheduleScreen(
     uiState: BaseballScheduleUiState,
+    onBackClick: (() -> Unit)? = null,
     onTeamSelected: (KboTeam) -> Unit,
     onPlanClick: ((String) -> Unit)?,
     onRetryClick: () -> Unit,
@@ -69,10 +71,18 @@ fun BaseballScheduleScreen(
             .fillMaxSize()
             .background(YadanBackground),
     ) {
-        YadanMainHeader(
-            title = "경기 일정",
-            modifier = Modifier.statusBarsPadding(),
-        )
+        if (onBackClick == null) {
+            YadanMainHeader(
+                title = "경기 일정",
+                modifier = Modifier.statusBarsPadding(),
+            )
+        } else {
+            YadanTopAppBar(
+                title = "경기 일정",
+                onNavigationClick = onBackClick,
+                modifier = Modifier.statusBarsPadding(),
+            )
+        }
 
         LazyColumn(
             modifier = Modifier

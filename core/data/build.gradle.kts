@@ -5,7 +5,6 @@ plugins {
 }
 
 android {
-    testOptions.unitTests.isIncludeAndroidResources = true
     namespace = "com.manruhomerun.yadanbeopseok.data"
 }
 

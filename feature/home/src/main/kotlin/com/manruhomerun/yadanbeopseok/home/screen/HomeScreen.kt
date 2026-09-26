@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -51,7 +53,6 @@ import com.manruhomerun.yadanbeopseok.designsystem.component.YadanPageIndicator
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanSectionCountBadge
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanSectionHeader
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
-import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanError
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryTint
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanShapes
@@ -68,6 +69,7 @@ import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
 import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
 import com.manruhomerun.yadanbeopseok.model.TravelSummary
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelCard
+import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelCardDefaults
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelRegionDropdown
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotCard
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotCategoryFilters
@@ -91,6 +93,7 @@ fun HomeScreen(
     onRefreshClick: () -> Unit,
     onTravelSpotClick: (String) -> Unit,
     onDibsClick: (String) -> Unit,
+    initialTravelPage: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     val displayedTravels = uiState.displayedTravels
@@ -102,7 +105,6 @@ fun HomeScreen(
             .background(YadanBackground),
     ) {
         HomeHeader(
-            hasUnreadNotifications = uiState.hasUnreadNotifications,
             onNotificationClick = onNotificationClick,
         )
 
@@ -143,6 +145,7 @@ fun HomeScreen(
                     isLoading = uiState.isLoading,
                     onTravelClick = onTravelClick,
                     onGameScheduleClick = onGameScheduleClick,
+                    initialPage = initialTravelPage,
                 )
             }
 
@@ -227,7 +230,6 @@ fun HomeScreen(
  */
 @Composable
 private fun HomeHeader(
-    hasUnreadNotifications: Boolean,
     onNotificationClick: () -> Unit,
 ) {
     YadanMainHeader(
@@ -235,38 +237,13 @@ private fun HomeHeader(
         style = YadanMainHeaderStyle.BRAND,
         modifier = Modifier.statusBarsPadding(),
         trailingContent = {
-            Box {
-                YadanIconButton(
-                    onClick = onNotificationClick,
-                    enabled = false,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription =
-                            if (hasUnreadNotifications) {
-                                "알림, 읽지 않은 알림 있음"
-                            } else {
-                                "알림"
-                            },
-                    )
-                }
-
-                if (hasUnreadNotifications) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(
-                                    top = 6.dp,
-                                    end = 6.dp,
-                                )
-                                .size(7.dp)
-                                .background(
-                                    color = YadanError,
-                                    shape = YadanShapes.extraLarge,
-                                ),
-                    )
-                }
+            YadanIconButton(
+                onClick = onNotificationClick,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Notifications,
+                    contentDescription = "알림",
+                )
             }
         },
     )
@@ -282,6 +259,7 @@ private fun HomeTravelContent(
     isLoading: Boolean,
     onTravelClick: (String) -> Unit,
     onGameScheduleClick: () -> Unit,
+    initialPage: Int,
 ) {
     when {
         isLoading && travels.isEmpty() -> {
@@ -293,6 +271,7 @@ private fun HomeTravelContent(
                 travels = travels,
                 currentDate = currentDate,
                 onTravelClick = onTravelClick,
+                initialPage = initialPage,
             )
         }
 
@@ -305,22 +284,14 @@ private fun HomeTravelContent(
                 onClick = {
                     onTravelClick(travel.id)
                 },
-                modifier =
-                    Modifier.padding(
-                        horizontal = 20.dp,
-                        vertical = 6.dp,
-                    ),
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
             )
         }
 
         else -> {
             HomeEmptyTravelCard(
                 onGameScheduleClick = onGameScheduleClick,
-                modifier =
-                    Modifier.padding(
-                        horizontal = 20.dp,
-                        vertical = 6.dp,
-                    ),
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
             )
         }
     }
@@ -334,9 +305,11 @@ private fun HomeTravelPager(
     travels: List<TravelSummary>,
     currentDate: LocalDate,
     onTravelClick: (String) -> Unit,
+    initialPage: Int,
 ) {
     val pagerState =
         rememberPagerState(
+            initialPage = initialPage,
             pageCount = travels::size,
         )
 
@@ -349,11 +322,8 @@ private fun HomeTravelPager(
                 Modifier
                     .fillMaxWidth()
                     .height(276.dp),
-            contentPadding =
-                PaddingValues(
-                    start = 20.dp,
-                    end = 48.dp,
-                ),
+            contentPadding = PaddingValues(horizontal = 24.dp),
+            pageSize = PageSize.Fill,
             pageSpacing = 10.dp,
             key = { page ->
                 travels[page].id
@@ -391,13 +361,13 @@ private fun HomeEmptyTravelCard(
     modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .background(
-                    color = YadanPrimaryTint,
-                    shape = YadanShapes.large,
-                ),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(YadanTravelCardDefaults.Height)
+            .background(
+                color = YadanPrimaryTint,
+                shape = YadanShapes.large,
+            ),
     ) {
         Canvas(
             modifier = Modifier.matchParentSize(),
@@ -437,11 +407,11 @@ private fun HomeEmptyTravelCard(
         }
 
         Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
             Surface(
                 shape = YadanShapes.medium,
@@ -487,7 +457,9 @@ private fun HomeEmptyTravelCard(
             YadanButton(
                 text = "경기 일정에서 시작",
                 onClick = onGameScheduleClick,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .widthIn(max = 280.dp)
+                    .fillMaxWidth(),
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
@@ -566,7 +538,7 @@ private fun HomeTravelLoadingContent() {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(236.dp),
+                .height(276.dp),
         contentAlignment = Alignment.Center,
     ) {
         CircularProgressIndicator(
@@ -641,24 +613,7 @@ private fun HomeEmptySpotContent() {
 
 private class HomeUiStatePreviewProvider :
     PreviewParameterProvider<HomeUiState> {
-    private val activeTravel =
-        previewTravel(
-            id = "travel-active",
-            name = "부산 사직 직관 여행",
-            isLeader = true,
-            startDate = LocalDate(2026, 5, 20),
-            endDate = LocalDate(2026, 5, 21),
-            verifiedSpotsCount = 1,
-        )
-
-    private val upcomingTravel =
-        previewTravel(
-            id = "travel-upcoming",
-            name = "주말 부산 야구 여행",
-            isLeader = true,
-            startDate = LocalDate(2026, 5, 23),
-            endDate = LocalDate(2026, 5, 24),
-        )
+    private val pagerTravels = previewPagerTravels()
 
     private val guestTravel =
         previewTravel(
@@ -669,35 +624,15 @@ private class HomeUiStatePreviewProvider :
             endDate = LocalDate(2026, 5, 24),
         )
 
-    private val secondUpcomingTravel =
-        previewTravel(
-            id = "travel-gwangju",
-            name = "광주 야구 원정 여행",
-            isLeader = true,
-            region = Region.GWANGJU,
-            startDate = LocalDate(2026, 6, 6),
-            endDate = LocalDate(2026, 6, 7),
-        )
-
     override val values: Sequence<HomeUiState> =
         sequenceOf(
             HomeUiState(
-                travels =
-                    listOf(
-                        activeTravel,
-                        upcomingTravel,
-                        secondUpcomingTravel,
-                    ),
+                travels = pagerTravels,
                 popularTravelSpots = previewPopularSpots(),
-                hasUnreadNotifications = true,
                 isLoading = false,
             ),
             HomeUiState(
-                travels =
-                    listOf(
-                        upcomingTravel,
-                        secondUpcomingTravel,
-                    ),
+                travels = pagerTravels.drop(1),
                 popularTravelSpots = previewPopularSpots(),
                 isLoading = false,
             ),
@@ -712,6 +647,38 @@ private class HomeUiStatePreviewProvider :
             ),
         )
 }
+
+private fun previewPagerTravels(): List<TravelSummary> = listOf(
+    previewActiveTravel(),
+    previewUpcomingTravel(),
+    previewSecondUpcomingTravel(),
+)
+
+private fun previewActiveTravel(): TravelSummary = previewTravel(
+    id = "travel-active",
+    name = "부산 사직 직관 여행",
+    isLeader = true,
+    startDate = LocalDate(2026, 5, 20),
+    endDate = LocalDate(2026, 5, 21),
+    verifiedSpotsCount = 1,
+)
+
+private fun previewUpcomingTravel(): TravelSummary = previewTravel(
+    id = "travel-upcoming",
+    name = "주말 부산 야구 여행",
+    isLeader = true,
+    startDate = LocalDate(2026, 5, 23),
+    endDate = LocalDate(2026, 5, 24),
+)
+
+private fun previewSecondUpcomingTravel(): TravelSummary = previewTravel(
+    id = "travel-gwangju",
+    name = "광주 야구 원정 여행",
+    isLeader = true,
+    region = Region.GWANGJU,
+    startDate = LocalDate(2026, 6, 6),
+    endDate = LocalDate(2026, 6, 7),
+)
 
 private fun previewTravel(
     id: String,
@@ -786,6 +753,59 @@ private fun HomeScreenPreview(
     @PreviewParameter(HomeUiStatePreviewProvider::class)
     uiState: HomeUiState,
 ) {
+    HomeScreenPreviewContent(uiState = uiState)
+}
+
+@Preview(
+    name = "홈 전체 - 여행 1번째",
+    showBackground = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 390,
+    heightDp = 844,
+)
+@Composable
+private fun HomeScreenFirstTravelPreview() {
+    HomeScreenTravelPagePreviewContent(initialPage = 0)
+}
+
+@Preview(
+    name = "홈 전체 - 여행 2번째",
+    showBackground = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 390,
+    heightDp = 844,
+)
+@Composable
+private fun HomeScreenSecondTravelPreview() {
+    HomeScreenTravelPagePreviewContent(initialPage = 1)
+}
+
+@Preview(
+    name = "홈 전체 - 여행 3번째",
+    showBackground = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 390,
+    heightDp = 844,
+)
+@Composable
+private fun HomeScreenThirdTravelPreview() {
+    HomeScreenTravelPagePreviewContent(initialPage = 2)
+}
+
+@Composable
+private fun HomeScreenTravelPagePreviewContent(initialPage: Int) {
+    HomeScreenPreviewContent(
+        uiState = HomeUiState(
+            travels = previewPagerTravels(),
+            popularTravelSpots = previewPopularSpots(),
+            isLoading = false,
+        ),
+        initialTravelPage = initialPage,
+    )
+}
+
+@Composable
+private fun HomeScreenPreviewContent(uiState: HomeUiState, initialTravelPage: Int = 0) {
     YadanbeopseokTheme {
         HomeScreen(
             uiState = uiState,
@@ -798,6 +818,7 @@ private fun HomeScreenPreview(
             onRefreshClick = {},
             onTravelSpotClick = {},
             onDibsClick = {},
+            initialTravelPage = initialTravelPage,
         )
     }
 }

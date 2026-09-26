@@ -10,5 +10,10 @@ android {
 dependencies {
     api(projects.core.model)
     implementation(projects.core.common)
-    compileOnly(platform(libs.androidx.compose.bom))
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.cloud.messaging)
+    implementation(libs.firebase.installations)
+    implementation(libs.androidx.core.ktx)
+
+    testImplementation(libs.junit)
 }

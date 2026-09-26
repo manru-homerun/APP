@@ -13,11 +13,15 @@ import com.manruhomerun.yadanbeopseok.model.Travel
 import com.manruhomerun.yadanbeopseok.model.TravelCourse
 import com.manruhomerun.yadanbeopseok.model.TravelPlace
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
+import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
 import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
 import com.manruhomerun.yadanbeopseok.model.TravelStatus
+import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotQueryStateHolder
+import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotSelectionTab
 import com.manruhomerun.yadanbeopseok.travel.util.TravelCourseTimelineItem
 import com.manruhomerun.yadanbeopseok.travel.util.toTimelineItems
 import com.manruhomerun.yadanbeopseok.travel.util.toTravelErrorMessage
+import com.manruhomerun.yadanbeopseok.travel.util.toggleTravelSpotSelection
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -30,10 +34,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
-import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotQueryStateHolder
-import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotSelectionTab
-import com.manruhomerun.yadanbeopseok.travel.util.toggleTravelSpotSelection
+
+private const val DAILY_PLACE_LIMIT_ERROR_MESSAGE = "하루 일정에는 장소를 최대 6개까지 넣을 수 있습니다."
 
 /**
  * 여행 일정 편집 과정에서 발생하는 일회성 이벤트입니다.
@@ -124,6 +126,7 @@ class TravelCourseEditViewModel @Inject constructor(
             companionCount = params.friendIds.size,
             baseballGame = baseballGame,
             course = params.course,
+            errorMessage = params.course.dailyPlaceLimitErrorMessage,
         )
     }
 
@@ -184,14 +187,23 @@ class TravelCourseEditViewModel @Inject constructor(
         if (!_uiState.value.canEditContent) return
 
         val course = _uiState.value.course ?: return
-        if (course.days.none { it.day == day }) return
+        val targetTravelDay = course.days.firstOrNull { it.day == day } ?: return
+        val maxSelectableCount = (MAX_TRAVEL_PLACE_COUNT_PER_DAY - targetTravelDay.places.size).coerceAtLeast(0)
+
+        if (maxSelectableCount == 0) {
+            showDailyPlaceLimitError()
+            return
+        }
 
         val suggestionParams = travelSpotSuggestionParams
             ?.copy(travelSpotIds = course.travelSpotIds())
             ?: return
 
         resetTravelSpotSelection()
-        _spotSelectionUiState.value = TravelCourseSpotSelectionUiState(targetDay = day)
+        _spotSelectionUiState.value = TravelCourseSpotSelectionUiState(
+            targetDay = day,
+            maxSelectableCount = maxSelectableCount,
+        )
         spotQuery.initializeTravelSpotSelection(suggestionParams)
     }
 
@@ -211,6 +223,11 @@ class TravelCourseEditViewModel @Inject constructor(
         }
         if (isAlreadyInCourse) return
 
+        val isSelected = currentState.selectedTravelSpots.any { selectedSpot ->
+            selectedSpot.id == travelSpot.id
+        }
+        if (!isSelected && !currentState.canAddMoreSpots) return
+
         _spotSelectionUiState.update {
             val selectedSpots = it.selectedTravelSpots.toggleTravelSpotSelection(travelSpot)
             it.copy(selectedTravelSpots = selectedSpots)
@@ -226,11 +243,14 @@ class TravelCourseEditViewModel @Inject constructor(
 
         if (!_uiState.value.canEditContent || spotQuery.uiState.value.isLoading) return
 
-        addTravelSpots(
+        val wasAdded = addTravelSpots(
             day = targetDay,
             travelSpots = currentState.selectedTravelSpots,
         )
-        resetTravelSpotSelection()
+
+        if (wasAdded) {
+            resetTravelSpotSelection()
+        }
     }
 
     /**
@@ -261,7 +281,7 @@ class TravelCourseEditViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 travelName = name,
-                errorMessage = null,
+                errorMessage = it.course?.dailyPlaceLimitErrorMessage,
             )
         }
     }
@@ -272,11 +292,12 @@ class TravelCourseEditViewModel @Inject constructor(
      * 이미 일정에 포함된 관광지는 중복으로 추가하지 않습니다.
      * 추가한 관광지는 해당 일차의 야구 경기 뒤에 배치됩니다.
      */
-    fun addTravelSpots(day: Int, travelSpots: List<TravelSpot>) {
-        if (!_uiState.value.canEditContent) return
+    fun addTravelSpots(day: Int, travelSpots: List<TravelSpot>): Boolean {
+        if (!_uiState.value.canEditContent) return false
 
-        val course = _uiState.value.course ?: return
-        val timelineItems = course.toTimelineItems(day) ?: return
+        val course = _uiState.value.course ?: return false
+        val targetTravelDay = course.days.firstOrNull { it.day == day } ?: return false
+        val timelineItems = course.toTimelineItems(day) ?: return false
 
         val existingSpotIds = course.days
             .flatMap { travelDay -> travelDay.places }
@@ -286,7 +307,12 @@ class TravelCourseEditViewModel @Inject constructor(
             .distinctBy { spot -> spot.id }
             .filter { spot -> spot.id !in existingSpotIds }
 
-        if (newSpots.isEmpty()) return
+        if (newSpots.isEmpty()) return true
+
+        if (targetTravelDay.places.size + newSpots.size > MAX_TRAVEL_PLACE_COUNT_PER_DAY) {
+            showDailyPlaceLimitError()
+            return false
+        }
 
         val addedItems = newSpots.map { spot ->
             TravelCourseTimelineItem.Place(
@@ -299,6 +325,7 @@ class TravelCourseEditViewModel @Inject constructor(
 
         timelineItems.addAll(addedItems)
         updateCourse(course.updateTimeline(day, timelineItems))
+        return true
     }
 
     /**
@@ -372,6 +399,12 @@ class TravelCourseEditViewModel @Inject constructor(
             return
         }
 
+        val targetTravelDay = course.days.firstOrNull { it.day == targetDay } ?: return
+        if (targetTravelDay.places.size >= MAX_TRAVEL_PLACE_COUNT_PER_DAY) {
+            showDailyPlaceLimitError()
+            return
+        }
+
         val targetTimeline = course.toTimelineItems(targetDay) ?: return
         if (targetIndex !in 0..targetTimeline.size) return
 
@@ -414,11 +447,20 @@ class TravelCourseEditViewModel @Inject constructor(
                     course = course,
                 )
 
-                _uiState.update {
-                    it.copy(
-                        course = alignedCourse,
-                        isAligning = false,
-                    )
+                if (alignedCourse.hasExceededDailyPlaceLimit()) {
+                    _uiState.update {
+                        it.copy(
+                            isAligning = false,
+                            errorMessage = DAILY_PLACE_LIMIT_ERROR_MESSAGE,
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            course = alignedCourse,
+                            isAligning = false,
+                        )
+                    }
                 }
             } catch (exception: CancellationException) {
                 throw exception
@@ -447,10 +489,16 @@ class TravelCourseEditViewModel @Inject constructor(
      */
     fun saveTravel() {
         val currentState = _uiState.value
+        val course = currentState.course ?: return
+
+        if (course.hasExceededDailyPlaceLimit()) {
+            showDailyPlaceLimitError()
+            return
+        }
+
         if (!currentState.canSave) return
 
         val travelName = currentState.travelName.trim()
-        val course = currentState.course ?: return
         val travelId = currentState.travelId
 
         _uiState.update {
@@ -559,6 +607,7 @@ class TravelCourseEditViewModel @Inject constructor(
 
                 val baseballGame = baseballRepository.getGame(travel.baseballGame.id)
                 val companionCount = (travel.friends.size - 1).coerceAtLeast(0)
+                val course = travel.toTravelCourse()
 
                 travelSpotSuggestionParams = SuggestTravelSpotsParams(
                     startDate = travel.startDate,
@@ -579,7 +628,8 @@ class TravelCourseEditViewModel @Inject constructor(
                     endDate = travel.endDate,
                     companionCount = companionCount,
                     baseballGame = baseballGame,
-                    course = travel.toTravelCourse(),
+                    course = course,
+                    errorMessage = course.dailyPlaceLimitErrorMessage,
                 )
             } catch (exception: CancellationException) {
                 throw exception
@@ -605,8 +655,15 @@ class TravelCourseEditViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 course = course,
-                errorMessage = null,
+                errorMessage = course.dailyPlaceLimitErrorMessage,
             )
+        }
+    }
+
+    /** 하루 장소 제한을 초과한 편집 동작을 사용자에게 안내합니다. */
+    private fun showDailyPlaceLimitError() {
+        _uiState.update {
+            it.copy(errorMessage = DAILY_PLACE_LIMIT_ERROR_MESSAGE)
         }
     }
 
@@ -655,6 +712,9 @@ private fun TravelCourse.updateTimeline(
         days = updatedDays,
     )
 }
+
+private val TravelCourse.dailyPlaceLimitErrorMessage: String?
+    get() = DAILY_PLACE_LIMIT_ERROR_MESSAGE.takeIf { hasExceededDailyPlaceLimit() }
 
 /** 저장된 여행 상세 모델을 편집 가능한 여행 코스로 변환합니다. */
 private fun Travel.toTravelCourse(): TravelCourse =

@@ -51,7 +51,6 @@ import com.manruhomerun.yadanbeopseok.designsystem.component.YadanMainHeader
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanMainHeaderStyle
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanPageIndicator
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanSectionCountBadge
-import com.manruhomerun.yadanbeopseok.designsystem.component.YadanSectionHeader
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryTint
@@ -116,26 +115,28 @@ fun HomeScreen(
             contentPadding = PaddingValues(bottom = 24.dp),
         ) {
             item {
-                YadanSectionHeader(
-                    title = "내 원정 여행",
-                    modifier =
-                        Modifier.padding(
-                            start = 20.dp,
-                            top = 4.dp,
-                            end = 20.dp,
-                            bottom = 10.dp,
+                Row(
+                    modifier = Modifier.padding(
+                        start = 20.dp,
+                        top = 4.dp,
+                        end = 20.dp,
+                        bottom = 10.dp,
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "내 원정 여행",
+                        style = YadanTypography.titleSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
                         ),
-                    trailingContent =
-                        if (!uiState.isLoading && displayedTravels.isNotEmpty()) {
-                            {
-                                YadanSectionCountBadge(
-                                    count = displayedTravels.size,
-                                )
-                            }
-                        } else {
-                            null
-                        },
-                )
+                        color = YadanTextPrimary,
+                    )
+
+                    if (!uiState.isLoading && displayedTravels.isNotEmpty()) {
+                        YadanSectionCountBadge(count = displayedTravels.size)
+                    }
+                }
             }
 
             item {

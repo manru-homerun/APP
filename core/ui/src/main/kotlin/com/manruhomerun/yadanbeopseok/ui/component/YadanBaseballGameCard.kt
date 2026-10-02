@@ -286,12 +286,12 @@ private fun YadanGamePlanButton(
             ),
         )
 
-        Spacer(modifier = Modifier.width(3.dp))
+        Spacer(modifier = Modifier.width(4.dp))
 
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
             contentDescription = null,
-            modifier = Modifier.size(12.dp),
+            modifier = Modifier.size(15.dp),
         )
     }
 }

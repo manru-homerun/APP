@@ -16,6 +16,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.component.YadanSectionHeader
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanSectionMetaText
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
+import com.manruhomerun.yadanbeopseok.model.MAX_PREFERRED_TRAVEL_REGION_COUNT
 import com.manruhomerun.yadanbeopseok.model.ProfileRegion
 import com.manruhomerun.yadanbeopseok.model.TravelStyleScore
 
@@ -66,7 +67,7 @@ fun YadanTravelPreferenceForm(
         YadanSectionHeader(
             title = "선호 여행 지역",
             trailingContent = {
-                YadanSectionMetaText(text = "복수 선택 가능")
+                YadanSectionMetaText(text = "최대 ${MAX_PREFERRED_TRAVEL_REGION_COUNT}개 선택")
             },
         )
 
@@ -100,14 +101,18 @@ private fun PreferredTravelRegionGrid(
                     horizontalArrangement = Arrangement.spacedBy(REGION_GRID_SPACING),
                 ) {
                     regions.forEach { region ->
+                        val isSelected = region in selectedRegions
+                        val isRegionEnabled = enabled &&
+                            (isSelected || selectedRegions.size < MAX_PREFERRED_TRAVEL_REGION_COUNT)
+
                         YadanPreferredTravelRegionItem(
                             region = region,
-                            selected = region in selectedRegions,
+                            selected = isSelected,
                             onClick = {
                                 onRegionToggle(region)
                             },
                             modifier = Modifier.weight(1f),
-                            enabled = enabled,
+                            enabled = isRegionEnabled,
                         )
                     }
 

@@ -50,8 +50,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 /**
  * 야단법석 메인 화면에서 사용하는 공통 하단 내비게이션입니다.
  *
- * 중앙 버튼의 자리를 제외한 일반 탭은 아래쪽 Row에 배치하고,
- * 중앙 버튼은 전체 내비게이션 위에 별도로 겹쳐 표시합니다.
+ * 일반 탭과 중앙 버튼을 하나의 Row에 배치합니다.
  *
  * 실제 화면 경로와 NavController는 알지 않으며
  * 선택 상태와 클릭 이벤트를 전달받아 시각적인 구성만 담당합니다.
@@ -75,7 +74,7 @@ fun YadanBottomNavigation(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(BOTTOM_NAVIGATION_HEIGHT),
+                .height(NAVIGATION_CONTAINER_HEIGHT),
     ) {
         /*
          * HTML의 반투명 배경과 위쪽 구분선입니다.
@@ -124,33 +123,16 @@ fun YadanBottomNavigation(
         ) {
             startItems()
 
-            /*
-             * 중앙 버튼 자리도 일반 탭과 같은 weight를 사용합니다.
-             */
-            Spacer(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                contentAlignment = Alignment.Center,
+            ) {
+                centerAction()
+            }
 
             endItems()
-        }
-
-        /*
-         * 중앙 버튼은 일반 탭 Row 밖에서 배치합니다.
-         *
-         * 부모가 58dp 정사각형을 보장하므로 버튼이 높이 제약으로
-         * 눌리지 않고 CircleShape가 정확한 원으로 표시됩니다.
-         */
-        Box(
-            modifier =
-                Modifier
-                    .align(Alignment.TopCenter)
-                    .size(CENTER_ACTION_OUTER_SIZE),
-            contentAlignment = Alignment.Center,
-        ) {
-            centerAction()
         }
     }
 }
@@ -267,8 +249,8 @@ fun RowScope.YadanBottomNavigationItem(
 /**
  * 하단 내비게이션 중앙에 표시하는 여행 추가 버튼입니다.
  *
- * HTML의 `.tab.add .plus`처럼 내비게이션 위로 돌출된 원형 버튼입니다.
- * 일반 탭 Row와 분리되어 항상 58dp 정사각형으로 측정됩니다.
+ * 일반 탭과 동일한 Row의 중앙 슬롯에 표시하는 원형 버튼입니다.
+ * 부모가 58dp 정사각형을 보장하여 CircleShape가 정확한 원으로 표시됩니다.
  *
  * 여행 만들기 화면으로 이동하는 처리는 [onClick]에서 담당합니다.
  *
@@ -328,13 +310,9 @@ fun YadanBottomNavigationCenterAction(
 }
 
 /*
- * HTML의 tabbar 높이와 중앙 버튼의 22px 돌출 영역입니다.
+ * 하단 내비게이션의 실제 표시 높이입니다.
  */
 private val NAVIGATION_CONTAINER_HEIGHT = 62.dp
-private val CENTER_ACTION_PROTRUSION = 22.dp
-
-private val BOTTOM_NAVIGATION_HEIGHT =
-    NAVIGATION_CONTAINER_HEIGHT + CENTER_ACTION_PROTRUSION
 
 /*
  * HTML의 tabbar 내부 여백입니다.
@@ -367,7 +345,7 @@ private const val DISABLED_ALPHA = 0.42f
     showBackground = true,
     backgroundColor = 0xFFFAFAFA,
     widthDp = 390,
-    heightDp = 84,
+    heightDp = 62,
 )
 @Composable
 private fun YadanBottomNavigationPreview() {

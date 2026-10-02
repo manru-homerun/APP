@@ -2,6 +2,7 @@ package com.manruhomerun.yadanbeopseok.auth.viewmodel
 
 import com.manruhomerun.yadanbeopseok.model.Gender
 import com.manruhomerun.yadanbeopseok.model.KboTeam
+import com.manruhomerun.yadanbeopseok.model.MAX_PREFERRED_TRAVEL_REGION_COUNT
 import com.manruhomerun.yadanbeopseok.model.NICKNAME_MAX_LENGTH
 import com.manruhomerun.yadanbeopseok.model.NICKNAME_MIN_LENGTH
 import com.manruhomerun.yadanbeopseok.model.ProfileRegion
@@ -98,7 +99,7 @@ data class OnboardingUiState(
     val isTravelProfileStartEnabled: Boolean
         get() =
             residenceRegion != null &&
-                preferredTravelRegions.isNotEmpty()
+                preferredTravelRegions.size in 1..MAX_PREFERRED_TRAVEL_REGION_COUNT
 
     /** 온보딩 전체 필수 입력이 완료됐는지 나타냅니다. */
     val isOnboardingReadyToSubmit: Boolean

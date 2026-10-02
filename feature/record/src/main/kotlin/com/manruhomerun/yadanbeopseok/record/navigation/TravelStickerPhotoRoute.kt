@@ -1,14 +1,15 @@
 package com.manruhomerun.yadanbeopseok.record.navigation
 
+import android.app.Activity
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -33,7 +34,7 @@ import kotlinx.coroutines.withContext
 /**
  * D04 스티커 사진 편집 화면을 ViewModel과 Android 시스템 기능에 연결합니다.
  *
- * Photo Picker 실행, 스티커 편집 콜백 연결, 캔버스 캡처와
+ * 갤러리 사진 선택 실행, 스티커 편집 콜백 연결, 캔버스 캡처와
  * 갤러리 저장을 담당합니다.
  */
 @Composable
@@ -47,11 +48,13 @@ fun TravelStickerPhotoRoute(
     val context = LocalContext.current.applicationContext
     val graphicsLayer = rememberGraphicsLayer()
 
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(),
-    ) { photoUri ->
-        if (photoUri != null) {
-            viewModel.selectPhoto(photoUri.toString())
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.data?.let { photoUri ->
+                viewModel.selectPhoto(photoUri.toString())
+            }
         }
     }
 
@@ -114,10 +117,13 @@ fun TravelStickerPhotoRoute(
         uiState = uiState,
         onBackClick = navigator::navigateBack,
         onPhotoSelectClick = {
-            photoPickerLauncher.launch(
-                PickVisualMediaRequest(
-                    ActivityResultContracts.PickVisualMedia.ImageOnly,
-                ),
+            galleryLauncher.launch(
+                Intent(
+                    Intent.ACTION_PICK,
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                ).apply {
+                    type = IMAGE_PICKER_MIME_TYPE
+                },
             )
         },
         onPhotoResetClick = viewModel::clearPhoto,
@@ -209,5 +215,6 @@ private fun saveBitmapToGallery(
 }
 
 private const val IMAGE_MIME_TYPE = "image/png"
+private const val IMAGE_PICKER_MIME_TYPE = "image/*"
 private const val GALLERY_DIRECTORY_NAME = "Yadanbeopseok"
 private const val PNG_QUALITY = 100

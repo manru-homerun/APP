@@ -73,7 +73,7 @@ fun YadanTravelRegionDropdown(
             Icon(
                 imageVector = Icons.Default.KeyboardArrowDown,
                 contentDescription = "지역 선택",
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(20.dp),
             )
         }
 

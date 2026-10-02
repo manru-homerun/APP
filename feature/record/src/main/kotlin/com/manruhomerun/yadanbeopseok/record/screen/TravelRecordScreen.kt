@@ -426,7 +426,7 @@ private fun TravelRecordMapCaption(
         )
 
         Text(
-            text = "원 크기 = 도시별 방문 횟수",
+            text = "원 크기와 숫자 = 도시별 완료 여행 횟수",
             style = YadanTypography.labelSmall.copy(
                 fontWeight = FontWeight.SemiBold,
             ),

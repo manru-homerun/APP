@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyRow
@@ -107,7 +106,6 @@ fun TravelStickerRewardScreen(
                     Icon(
                         imageVector = Icons.Default.AutoAwesome,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
                     )
                 },
             )
@@ -174,7 +172,6 @@ private fun StickerRewardImages(stickerPack: StickerPack) {
                 sticker = stickers.first(),
                 contentDescription = "${stickerPack.name} 스티커",
                 size = YadanStickerSize.LARGE,
-                showFrame = false,
             )
         }
         return
@@ -196,7 +193,6 @@ private fun StickerRewardImages(stickerPack: StickerPack) {
                 sticker = sticker,
                 contentDescription = "${stickerPack.name} 스티커",
                 size = YadanStickerSize.LARGE,
-                showFrame = false,
             )
         }
     }

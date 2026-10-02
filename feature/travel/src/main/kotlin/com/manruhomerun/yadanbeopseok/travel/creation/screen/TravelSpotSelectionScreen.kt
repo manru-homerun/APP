@@ -204,7 +204,6 @@ private fun TravelSpotSelectionBottomButton(
                     Icons.Outlined.AutoAwesome
                 },
                 contentDescription = null,
-                modifier = Modifier.size(20.dp),
             )
         },
     )

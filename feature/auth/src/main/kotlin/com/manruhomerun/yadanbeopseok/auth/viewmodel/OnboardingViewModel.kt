@@ -13,6 +13,7 @@ import com.manruhomerun.yadanbeopseok.data.repository.SaveOnboardingParams
 import com.manruhomerun.yadanbeopseok.data.repository.UserRepository
 import com.manruhomerun.yadanbeopseok.model.Gender
 import com.manruhomerun.yadanbeopseok.model.KboTeam
+import com.manruhomerun.yadanbeopseok.model.MAX_PREFERRED_TRAVEL_REGION_COUNT
 import com.manruhomerun.yadanbeopseok.model.ProfileRegion
 import com.manruhomerun.yadanbeopseok.model.TravelStyleScore
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -229,24 +230,28 @@ class OnboardingViewModel @Inject constructor(
     }
 
     /** 선호 여행 지역의 선택 여부를 전환합니다. */
-    fun togglePreferredTravelRegion(
-        region: ProfileRegion,
-    ) {
+    fun togglePreferredTravelRegion(region: ProfileRegion) {
         require(region.isAvailableForPreferredTravel) {
             "Region is not available for preferred travel: ${region.code}"
         }
 
         _uiState.update { currentState ->
-            val selectedRegions =
-                currentState.preferredTravelRegions
+            val selectedRegions = currentState.preferredTravelRegions
+            val isSelected = region in selectedRegions
+
+            if (!isSelected && selectedRegions.size >= MAX_PREFERRED_TRAVEL_REGION_COUNT) {
+                return@update currentState.copy(
+                    errorMessage = PREFERRED_TRAVEL_REGION_LIMIT_MESSAGE,
+                )
+            }
 
             currentState.copy(
-                preferredTravelRegions =
-                    if (region in selectedRegions) {
-                        selectedRegions - region
-                    } else {
-                        selectedRegions + region
-                    },
+                preferredTravelRegions = if (isSelected) {
+                    selectedRegions - region
+                } else {
+                    selectedRegions + region
+                },
+                errorMessage = null,
             )
         }
     }
@@ -310,6 +315,8 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 }
+
+private const val PREFERRED_TRAVEL_REGION_LIMIT_MESSAGE = "최소 1개, 최대 3개까지만 저장 가능합니다"
 
 /**
  * 현재 온보딩 상태를 Repository 요청 모델로 변환합니다.

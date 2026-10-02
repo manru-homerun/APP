@@ -357,7 +357,6 @@ private fun TravelDetailEditBottomBar(
                 onShareImageClick?.invoke()
             },
             modifier = Modifier.weight(1.15f),
-            iconSize = 24.dp,
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp),
             reserveOppositeIconSpace = false,
             trailingIcon = {

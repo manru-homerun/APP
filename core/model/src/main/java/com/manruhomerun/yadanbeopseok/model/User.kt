@@ -9,6 +9,9 @@ const val NICKNAME_MIN_LENGTH = 2
 /** 야단법석에서 허용하는 닉네임의 최대 길이입니다. */
 const val NICKNAME_MAX_LENGTH = 12
 
+/** 사용자가 선택할 수 있는 선호 여행 지역의 최대 개수입니다. */
+const val MAX_PREFERRED_TRAVEL_REGION_COUNT = 3
+
 /**
  * 앱 내부에서 사용하는 사용자 프로필 모델입니다.
  *

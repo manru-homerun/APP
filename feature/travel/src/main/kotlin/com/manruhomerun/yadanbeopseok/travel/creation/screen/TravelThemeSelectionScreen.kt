@@ -104,7 +104,6 @@ fun TravelThemeSelectionScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
                     )
                 },
             )

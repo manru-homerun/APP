@@ -15,7 +15,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,7 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOnPrimary
@@ -68,12 +70,11 @@ enum class YadanButtonStyle {
  * @param style 버튼의 색상 및 테두리 유형입니다.
  * @param enabled 버튼 활성화 여부입니다.
  * @param isLoading 진행 상태 표시 여부입니다. 로딩 중에는 중복 클릭을 막습니다.
- * @param iconSize 아이콘과 반대편 예약 공간의 크기입니다.
  * @param contentPadding 버튼 내부 콘텐츠의 여백입니다.
  * @param reserveOppositeIconSpace 한쪽에만 아이콘이 있을 때
  * 반대편 공간을 예약할지 결정합니다.
- * @param leadingIcon 텍스트 앞에 표시할 아이콘입니다.
- * @param trailingIcon 텍스트 뒤에 표시할 아이콘입니다.
+ * @param leadingIcon 텍스트 앞에 표시할 아이콘입니다. 크기는 버튼이 관리합니다.
+ * @param trailingIcon 텍스트 뒤에 표시할 아이콘입니다. 크기는 버튼이 관리합니다.
  */
 @Composable
 fun YadanButton(
@@ -83,7 +84,6 @@ fun YadanButton(
     style: YadanButtonStyle = YadanButtonStyle.PRIMARY,
     enabled: Boolean = true,
     isLoading: Boolean = false,
-    iconSize: Dp = DEFAULT_ICON_SIZE,
     contentPadding: PaddingValues = DEFAULT_CONTENT_PADDING,
     reserveOppositeIconSpace: Boolean = true,
     leadingIcon: (@Composable () -> Unit)? = null,
@@ -175,13 +175,14 @@ fun YadanButton(
 
         if (showLeadingSlot) {
             Box(
-                modifier = Modifier.size(iconSize),
+                modifier = Modifier.size(BUTTON_ICON_SIZE),
                 contentAlignment = Alignment.Center,
+                propagateMinConstraints = true,
             ) {
                 when {
                     isLoading -> {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(iconSize),
+                            modifier = Modifier.size(BUTTON_ICON_SIZE),
                             color = LocalContentColor.current,
                             strokeWidth = 2.dp,
                         )
@@ -209,8 +210,9 @@ fun YadanButton(
             Spacer(modifier = Modifier.width(ICON_SPACING))
 
             Box(
-                modifier = Modifier.size(iconSize),
+                modifier = Modifier.size(BUTTON_ICON_SIZE),
                 contentAlignment = Alignment.Center,
+                propagateMinConstraints = true,
             ) {
                 if (hasTrailingContent) {
                     trailingIcon()
@@ -222,7 +224,7 @@ fun YadanButton(
 
 private val BUTTON_MIN_HEIGHT = 52.dp
 private val BUTTON_CORNER_RADIUS = 16.dp
-private val DEFAULT_ICON_SIZE = 20.dp
+private val BUTTON_ICON_SIZE = 20.dp
 private val DEFAULT_CONTENT_PADDING = PaddingValues(horizontal = 20.dp, vertical = 14.dp)
 private val ICON_SPACING = 8.dp
 private const val DISABLED_ALPHA = 0.42f
@@ -270,6 +272,42 @@ private fun YadanButtonPreview() {
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                    )
+                },
+            )
+
+            YadanButton(
+                text = "이미지로 공유",
+                onClick = {},
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.PhotoLibrary,
+                        contentDescription = null,
+                    )
+                },
+            )
+
+            YadanButton(
+                text = "이미지 저장",
+                onClick = {},
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Download,
+                        contentDescription = null,
+                    )
+                },
+            )
+
+            YadanButton(
+                text = "사진에 붙이기",
+                onClick = {},
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
                         contentDescription = null,
                     )
                 },

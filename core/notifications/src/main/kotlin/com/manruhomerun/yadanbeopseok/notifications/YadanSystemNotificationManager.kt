@@ -82,6 +82,7 @@ object YadanSystemNotificationManager {
 
         val notification = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(R.drawable.core_notifications_ic_notification)
+            .setColor(ContextCompat.getColor(context, R.color.core_notifications_primary))
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))

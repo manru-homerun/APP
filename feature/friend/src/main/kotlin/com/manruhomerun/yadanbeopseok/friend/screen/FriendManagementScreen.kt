@@ -463,11 +463,11 @@ private fun FriendRequestContent(
                         user = request.user,
                         trailingContent = {
                             FriendActionButton(
-                                text = "대기중",
+                                text = if (isProcessing) "취소 중" else "요청 취소",
                                 onClick = {
                                     onCancelRequest(request.id)
                                 },
-                                style = FriendActionButtonStyle.WAITING,
+                                style = FriendActionButtonStyle.OUTLINED,
                                 enabled = !isProcessing,
                             )
                         },
@@ -778,6 +778,35 @@ private fun FriendManagementRequestsPreview() {
                 receivedRequestCount = 2,
                 sentRequestCount = 1,
                 isFriendsLoading = false,
+            ),
+            onBackClick = {},
+            onSearchClick = {},
+            onTabSelected = {},
+            onAcceptRequest = {},
+            onRejectRequest = {},
+            onCancelRequest = {},
+            onDeleteFriend = {},
+            onRetryFriends = {},
+            onRetryReceivedRequests = {},
+            onRetrySentRequests = {},
+        )
+    }
+}
+
+@Preview(name = "F02 요청 취소 중", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun FriendManagementCancellingRequestPreview() {
+    YadanbeopseokTheme {
+        FriendManagementScreen(
+            uiState = FriendManagementUiState(
+                selectedTab = FriendManagementTab.REQUESTS,
+                receivedRequests = previewReceivedRequests,
+                sentRequests = previewSentRequests,
+                friendCount = 4,
+                receivedRequestCount = 2,
+                sentRequestCount = 1,
+                isFriendsLoading = false,
+                processingRequestIds = setOf(previewSentRequests.first().id),
             ),
             onBackClick = {},
             onSearchClick = {},

@@ -30,10 +30,10 @@ data class FriendListResponseDto(
 data class FriendResponseDto(
     val friendId: Long,
     val userId: String,
-    val nickname: String,
+    val nickname: String? = null,
     val profileImageUrl: String? = null,
-    val favoriteTeamId: Long,
-    val favoriteTeamName: String,
+    val favoriteTeamId: Long? = null,
+    val favoriteTeamName: String? = null,
 )
 
 /**
@@ -43,10 +43,10 @@ data class FriendResponseDto(
 data class FriendRequestItemResponseDto(
     val friendRequestId: Long,
     val userId: String,
-    val nickname: String,
+    val nickname: String? = null,
     val profileImageUrl: String? = null,
-    val favoriteTeamId: Long,
-    val favoriteTeamName: String,
+    val favoriteTeamId: Long? = null,
+    val favoriteTeamName: String? = null,
 )
 
 /**

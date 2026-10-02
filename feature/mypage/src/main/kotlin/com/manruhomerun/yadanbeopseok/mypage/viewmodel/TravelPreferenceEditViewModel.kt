@@ -6,6 +6,7 @@ import com.manruhomerun.yadanbeopseok.common.NetworkConnectionException
 import com.manruhomerun.yadanbeopseok.common.NetworkTimeoutException
 import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.repository.UserRepository
+import com.manruhomerun.yadanbeopseok.model.MAX_PREFERRED_TRAVEL_REGION_COUNT
 import com.manruhomerun.yadanbeopseok.model.ProfileRegion
 import com.manruhomerun.yadanbeopseok.model.TravelStyleScore
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -85,7 +86,15 @@ class TravelPreferenceEditViewModel @Inject constructor(
         if (currentState.isLoading || currentState.isSaving) return
         if (!region.isAvailableForPreferredTravel) return
 
-        val updatedRegions = if (region in currentState.preferredTravelRegions) {
+        val isSelected = region in currentState.preferredTravelRegions
+        if (!isSelected && currentState.preferredTravelRegions.size >= MAX_PREFERRED_TRAVEL_REGION_COUNT) {
+            _uiState.update {
+                it.copy(errorMessage = PREFERRED_TRAVEL_REGION_LIMIT_MESSAGE)
+            }
+            return
+        }
+
+        val updatedRegions = if (isSelected) {
             currentState.preferredTravelRegions - region
         } else {
             currentState.preferredTravelRegions + region
@@ -105,6 +114,16 @@ class TravelPreferenceEditViewModel @Inject constructor(
         if (!currentState.isSaveEnabled) return
 
         val originalPreference = currentState.originalPreference ?: return
+        if (currentState.preferredTravelRegions.size !in 1..MAX_PREFERRED_TRAVEL_REGION_COUNT) {
+            _uiState.update {
+                it.copy(
+                    preferredTravelRegions = originalPreference.preferredTravelRegions,
+                    errorMessage = PREFERRED_TRAVEL_REGION_LIMIT_MESSAGE,
+                )
+            }
+            return
+        }
+
         val residenceRegion = currentState.residenceRegion ?: return
         val updatedPreference = originalPreference.copy(
             residenceRegion = residenceRegion,
@@ -205,6 +224,8 @@ class TravelPreferenceEditViewModel @Inject constructor(
         }
     }
 }
+
+private const val PREFERRED_TRAVEL_REGION_LIMIT_MESSAGE = "최소 1개, 최대 3개까지만 저장 가능합니다"
 
 /** 내부 예외 정보를 노출하지 않는 취향 수정 오류 문구로 변환합니다. */
 private fun Exception.toTravelPreferenceEditErrorMessage(defaultMessage: String): String =

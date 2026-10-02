@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -110,6 +111,10 @@ fun TravelCreationRoute(
 
     var currentStep by rememberSaveable(directGameId) { mutableStateOf(initialStep) }
     var isNameEditDialogVisible by rememberSaveable { mutableStateOf(false) }
+    var generationAttemptId by rememberSaveable(directGameId) { mutableIntStateOf(0) }
+    var isGenerationPresentationFinished by rememberSaveable(directGameId) {
+        mutableStateOf(true)
+    }
 
     var shouldRefreshTravelSpotSelection by rememberSaveable(directGameId) {
         mutableStateOf(false)
@@ -132,7 +137,14 @@ fun TravelCreationRoute(
 
     val selectedStartDate = uiState.startDate
     val selectedEndDate = uiState.endDate
-    val isRequestInProgress = uiState.isGenerating || uiState.isSaving
+    val isGeneratedCourseReady = generatedCourse != null &&
+        selectedGame != null &&
+        selectedStartDate != null &&
+        selectedEndDate != null
+    val isGenerationPresentationPending =
+        isGeneratedCourseReady && !isGenerationPresentationFinished
+    val isGenerationScreenVisible = uiState.isGenerating || isGenerationPresentationPending
+    val isRequestInProgress = isGenerationScreenVisible || uiState.isSaving
     val isEditing = editUiState.hasContent
     val isDirectGameLoading = directGameId != null &&
         selectedGame == null &&
@@ -302,11 +314,8 @@ fun TravelCreationRoute(
         isSaved -> TravelCreationPage.SAVED
         isEditing && uiState.isSaving -> TravelCreationPage.EDIT_SAVING
         isEditing -> TravelCreationPage.EDIT
-        uiState.isGenerating -> TravelCreationPage.GENERATING
-        generatedCourse != null &&
-            selectedGame != null &&
-            selectedStartDate != null &&
-            selectedEndDate != null -> TravelCreationPage.RESULT
+        isGenerationScreenVisible -> TravelCreationPage.GENERATING
+        isGeneratedCourseReady -> TravelCreationPage.RESULT
 
         else -> currentStep.toTravelCreationPage()
     }
@@ -378,6 +387,13 @@ fun TravelCreationRoute(
                 TravelCreationPage.GENERATING -> {
                     TravelCourseGeneratingScreen(
                         regionName = selectedGame?.stadium?.region?.displayName.orEmpty(),
+                        generationAttemptId = generationAttemptId,
+                        isGeneratedCourseReady = isGeneratedCourseReady,
+                        onPresentationFinished = {
+                            if (isGeneratedCourseReady) {
+                                isGenerationPresentationFinished = true
+                            }
+                        },
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -514,7 +530,11 @@ fun TravelCreationRoute(
                         },
                         onTravelSpotToggle = viewModel::toggleTravelSpot,
                         onBackClick = ::navigateBackWithinCreation,
-                        onGenerateClick = viewModel::generateTravelCourse,
+                        onGenerateClick = {
+                            generationAttemptId += 1
+                            isGenerationPresentationFinished = false
+                            viewModel.generateTravelCourse()
+                        },
                         onRetryClick = viewModel::retryTravelSpotSelection,
                         onLoadNextDibsPage = viewModel::loadNextTravelSpotDibsPage,
                         modifier = Modifier.fillMaxSize(),

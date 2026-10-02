@@ -507,7 +507,7 @@ private fun HomeRecommendationHeader(
         ) {
             if (isRefreshing) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(14.dp),
+                    modifier = Modifier.size(16.dp),
                     color = YadanPrimary,
                     strokeWidth = 2.dp,
                 )
@@ -515,7 +515,7 @@ private fun HomeRecommendationHeader(
                 Icon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = null,
-                    modifier = Modifier.size(14.dp),
+                    modifier = Modifier.size(16.dp),
                 )
             }
 

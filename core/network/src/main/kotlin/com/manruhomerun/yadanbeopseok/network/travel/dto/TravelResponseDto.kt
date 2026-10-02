@@ -163,7 +163,7 @@ data class TravelSpotVerifyResponseDto(
 /**
  * 특정 여행에서 획득한 스티커 조회 응답입니다.
  *
- * 공통 ApiResponseDto로 감싸지 않는 직접 응답입니다.
+ * 서버가 응답 Body로 직접 반환하는 데이터입니다.
  * 미획득 상태에서는 hasSticker가 false이고 stickerPack이 null입니다.
  */
 @Serializable

@@ -148,7 +148,6 @@ fun TravelRecordDetailScreen(
                     Icon(
                         imageVector = Icons.Default.AutoAwesome,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
                     )
                 },
             )

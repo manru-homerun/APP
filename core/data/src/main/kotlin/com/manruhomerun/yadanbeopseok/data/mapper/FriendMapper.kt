@@ -57,7 +57,7 @@ internal fun UserSearchResponseDto.toFriendSearchResult(): FriendSearchResult = 
 /**
  * 개별 친구 응답을 앱 내부 친구 모델로 변환합니다.
  *
- * 응원 구단은 기존 구단 ID 변환 함수를 재사용합니다.
+ * 응원 구단 정보가 없거나 앱이 모르는 값이어도 친구 목록은 유지합니다.
  */
 private fun FriendResponseDto.toFriend(): Friend = Friend(
     id = friendId.toString(),
@@ -65,7 +65,7 @@ private fun FriendResponseDto.toFriend(): Friend = Friend(
         id = userId,
         nickname = nickname,
         profileImageUrl = profileImageUrl,
-        favoriteTeam = favoriteTeamId.toKboTeam("favoriteTeamId"),
+        favoriteTeam = favoriteTeamId.toKboTeamOrNull(favoriteTeamName),
     ),
 )
 
@@ -78,7 +78,7 @@ private fun FriendRequestItemResponseDto.toFriendRequest(): FriendRequest = Frie
         id = userId,
         nickname = nickname,
         profileImageUrl = profileImageUrl,
-        favoriteTeam = favoriteTeamId.toKboTeam("favoriteTeamId"),
+        favoriteTeam = favoriteTeamId.toKboTeamOrNull(favoriteTeamName),
     ),
 )
 
@@ -94,6 +94,11 @@ private fun UserSearchItemResponseDto.toFriendSearchUser(): FriendSearchUser = F
     ),
     relationshipStatus = friendStatus.toFriendRelationshipStatus(),
 )
+
+/** 서버 구단 ID를 우선 사용하고, 변환할 수 없으면 구단명으로 다시 찾습니다. */
+private fun Long?.toKboTeamOrNull(favoriteTeamName: String?): KboTeam? =
+    this?.let(KboTeam::findByServerId)
+        ?: favoriteTeamName?.toKboTeamOrNull()
 
 /**
  * 서버 구단명을 앱이 알고 있는 짧은 이름 또는 전체 이름과 비교합니다.

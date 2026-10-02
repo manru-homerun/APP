@@ -361,18 +361,23 @@ private fun CourseEditContent(
                         contentColor = YadanPrimaryInk,
                     ),
                 ) {
-                    if (uiState.isAligning) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            color = YadanPrimary,
-                            strokeWidth = 2.dp,
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Sort,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                        )
+                    Box(
+                        modifier = Modifier.size(18.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (uiState.isAligning) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = YadanPrimary,
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Sort,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.width(4.dp))

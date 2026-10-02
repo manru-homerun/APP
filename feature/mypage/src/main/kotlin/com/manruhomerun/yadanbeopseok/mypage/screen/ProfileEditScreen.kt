@@ -288,7 +288,6 @@ private fun ProfileEditContent(
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp),
                 )
             },
         )

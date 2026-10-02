@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -128,7 +127,6 @@ fun TravelCourseSpotSelectionScreen(
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp),
                 )
             },
         )

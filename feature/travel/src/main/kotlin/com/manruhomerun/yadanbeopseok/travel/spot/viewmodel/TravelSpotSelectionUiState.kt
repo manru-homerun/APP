@@ -32,6 +32,12 @@ data class TravelSpotSelectionUiState(
     /** 현재 검색어와 일치하는 관광지 검색 결과입니다. */
     val searchResults: List<TravelSpot> = emptyList(),
 
+    /** 마지막으로 불러온 검색 결과 페이지 번호입니다. */
+    val searchPageNumber: Int = 0,
+
+    /** 검색 결과의 전체 페이지 수입니다. */
+    val searchTotalPages: Int = 0,
+
     /** 관광지 검색창에 입력한 검색어입니다. */
     val searchQuery: String = "",
 
@@ -59,11 +65,17 @@ data class TravelSpotSelectionUiState(
     /** 관광지를 검색하고 있는지 나타냅니다. */
     val isSearchLoading: Boolean = false,
 
+    /** 검색 결과의 다음 페이지를 불러오고 있는지 나타냅니다. */
+    val isSearchLoadingMore: Boolean = false,
+
     /** 관광지 조회 또는 검색 중 표시할 안내 문구입니다. */
     val errorMessage: String? = null,
 
     /** 찜 목록의 다음 페이지 조회 실패 문구입니다. */
     val dibsLoadMoreErrorMessage: String? = null,
+
+    /** 검색 결과의 다음 페이지 조회 실패 문구입니다. */
+    val searchLoadMoreErrorMessage: String? = null,
 ) {
     /** 검색어가 입력되어 검색 결과 화면을 표시해야 하는지 나타냅니다. */
     val isSearchMode: Boolean
@@ -94,4 +106,8 @@ data class TravelSpotSelectionUiState(
     /** 찜 목록에 조회할 다음 페이지가 있는지 나타냅니다. */
     val hasNextDibsPage: Boolean
         get() = dibsPageNumber < dibsTotalPages
+
+    /** 검색 결과에 조회할 다음 페이지가 있는지 나타냅니다. */
+    val hasNextSearchPage: Boolean
+        get() = searchPageNumber < searchTotalPages
 }

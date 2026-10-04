@@ -26,9 +26,14 @@ interface TravelSpotRepository {
     /**
      * 입력한 검색어와 일치하는 관광지를 조회합니다.
      *
-     * 서버 기본 페이지에 포함된 선택 지역의 관광지 목록을 반환합니다.
+     * 선택 지역의 검색 결과와 서버 페이지 정보를 함께 반환합니다.
      */
-    suspend fun searchTravelSpots(searchKeyword: String, region: Region): List<TravelSpot>
+    suspend fun searchTravelSpots(
+        searchKeyword: String,
+        region: Region,
+        pageNumber: Int = 1,
+        pageSize: Int = 10,
+    ): TravelSpotListPage
 
     /**
      * 관광지의 상세 정보와 갤러리 이미지 목록을 조회합니다.

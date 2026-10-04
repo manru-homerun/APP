@@ -12,6 +12,7 @@ import com.manruhomerun.yadanbeopseok.data.repository.TravelRepository
 import com.manruhomerun.yadanbeopseok.data.repository.TravelSpotRepository
 import com.manruhomerun.yadanbeopseok.model.BaseballGame
 import com.manruhomerun.yadanbeopseok.model.KboTeam
+import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelCompanionCondition
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
@@ -306,6 +307,8 @@ class TravelCreationViewModel @Inject constructor(
     }
 
     fun loadNextTravelSpotDibsPage() = spotQuery.loadNextDibsPage()
+
+    fun loadNextTravelSpotSearchPage() = spotQuery.loadNextSearchPage()
 
     /** 필수 포함 관광지를 선택·해제하고 이전 생성 결과를 초기화합니다. */
     fun toggleTravelSpot(travelSpot: TravelSpot) {
@@ -786,7 +789,23 @@ internal fun isValidDateRange(
 
 /** 선택 경기를 기준으로 기본 여행 이름을 생성합니다. */
 private fun BaseballGame.toDefaultTravelName(): String {
-    return "${stadium.region.displayName} ${stadium.name} 직관 여행"
+    val regionName = when (stadium.region) {
+        Region.SEOUL -> "서울"
+        Region.INCHEON -> "인천"
+        else -> stadium.region.displayName
+    }
+    val stadiumName = stadium.name
+        .trim()
+        .removePrefix(stadium.region.displayName)
+        .trimStart(' ', '-')
+        .removePrefix(regionName)
+        .trimStart(' ', '-')
+        .removeSuffix("야구장")
+        .trim()
+
+    return listOf(regionName, stadiumName, "직관 여행")
+        .filter(String::isNotBlank)
+        .joinToString(" ")
 }
 
 internal const val MAX_COMPANION_COUNT = 2

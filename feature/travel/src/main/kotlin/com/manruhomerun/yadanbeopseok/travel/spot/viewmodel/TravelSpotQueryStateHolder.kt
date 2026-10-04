@@ -3,6 +3,7 @@ package com.manruhomerun.yadanbeopseok.travel.spot.viewmodel
 import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.repository.SuggestTravelSpotsParams
 import com.manruhomerun.yadanbeopseok.data.repository.TravelSpotRepository
+import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
 import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
@@ -91,8 +92,11 @@ internal class TravelSpotQueryStateHolder(
             it.copy(
                 searchQuery = query,
                 searchResults = emptyList(),
+                searchPageNumber = 0,
+                searchTotalPages = 0,
                 selectedCategory = if (query.isBlank()) null else it.selectedCategory,
                 errorMessage = null,
+                searchLoadMoreErrorMessage = null,
             )
         }
 
@@ -113,15 +117,18 @@ internal class TravelSpotQueryStateHolder(
 
         val region = currentSuggestionParams?.region ?: return
 
-        if (state.isSearchLoading) return
+        if (state.isSearchLoading || state.isSearchLoadingMore) return
 
         cancelQuery()
         _uiState.update {
             it.copy(
                 searchQuery = searchKeyword,
                 searchResults = emptyList(),
+                searchPageNumber = 0,
+                searchTotalPages = 0,
                 isSearchLoading = true,
                 errorMessage = null,
+                searchLoadMoreErrorMessage = null,
             )
         }
 
@@ -131,10 +138,26 @@ internal class TravelSpotQueryStateHolder(
                 repository.searchTravelSpots(
                     searchKeyword = searchKeyword,
                     region = region,
+                    pageNumber = FIRST_PAGE_NUMBER,
+                    pageSize = TRAVEL_SPOT_PAGE_SIZE,
                 )
             },
-            onSuccess = { spots ->
-                _uiState.update { it.copy(searchResults = spots) }
+            onSuccess = { page ->
+                if (isCurrentSearchRequest(searchKeyword = searchKeyword, region = region)) {
+                    _uiState.update {
+                        it.copy(
+                            searchResults = page.travelSpots,
+                            searchPageNumber = page.pageNumber,
+                            searchTotalPages = page.totalPages,
+                            searchLoadMoreErrorMessage = null,
+                        )
+                    }
+                }
+            },
+            onError = { message ->
+                if (isCurrentSearchRequest(searchKeyword = searchKeyword, region = region)) {
+                    _uiState.update { it.copy(errorMessage = message) }
+                }
             },
         )
     }
@@ -180,7 +203,8 @@ internal class TravelSpotQueryStateHolder(
     /**
      * 관광지 상세 화면에서 돌아온 경우 현재 목록을 다시 조회합니다.
      *
-     * 검색 중이면 동일한 검색어로 검색 결과를 갱신하고,
+     * 검색 중이면 현재 검색 결과와 스크롤을 유지하고 찜 목록 캐시만 무효화합니다.
+     * 최초 검색 실패 상태라면 같은 검색어로 다시 조회하고,
      * 추천 또는 찜 탭이면 캐시 여부와 관계없이 현재 탭을 갱신합니다.
      */
     fun refreshTravelSpotSelection() {
@@ -191,7 +215,11 @@ internal class TravelSpotQueryStateHolder(
         }
 
         if (state.isSearchMode) {
-            searchTravelSpots()
+            if (state.errorMessage != null) {
+                searchTravelSpots()
+            } else {
+                loadedTabs.remove(TravelSpotSelectionTab.DIBS)
+            }
         } else {
             loadSelectedTab(forceRefresh = true)
         }
@@ -201,11 +229,67 @@ internal class TravelSpotQueryStateHolder(
     fun retryTravelSpotSelection() {
         val state = _uiState.value
 
-        if (state.dibsLoadMoreErrorMessage != null) {
+        if (state.searchLoadMoreErrorMessage != null) {
+            loadNextSearchPage()
+        } else if (state.dibsLoadMoreErrorMessage != null) {
             loadNextDibsPage()
         } else {
             refreshTravelSpotSelection()
         }
+    }
+
+    /** 검색 결과의 다음 페이지를 조회하여 기존 결과 뒤에 추가합니다. */
+    fun loadNextSearchPage() {
+        val suggestionParams = currentSuggestionParams ?: return
+        val state = _uiState.value
+        val canLoadNextPage = state.isSearchMode &&
+            !state.isSearchLoading &&
+            !state.isSearchLoadingMore &&
+            state.hasNextSearchPage &&
+            queryJob?.isActive != true
+
+        if (!canLoadNextPage) return
+
+        val region = suggestionParams.region
+        val searchKeyword = state.searchQuery.trim()
+        val nextPageNumber = state.searchPageNumber + 1
+
+        _uiState.update {
+            it.copy(
+                isSearchLoadingMore = true,
+                searchLoadMoreErrorMessage = null,
+            )
+        }
+
+        launchSpotQuery(
+            fallbackMessage = "다음 검색 결과를 불러오지 못했습니다.",
+            request = {
+                repository.searchTravelSpots(
+                    searchKeyword = searchKeyword,
+                    region = region,
+                    pageNumber = nextPageNumber,
+                    pageSize = TRAVEL_SPOT_PAGE_SIZE,
+                )
+            },
+            onSuccess = { page ->
+                if (isCurrentSearchRequest(searchKeyword = searchKeyword, region = region)) {
+                    _uiState.update { current ->
+                        current.copy(
+                            searchResults = (current.searchResults + page.travelSpots)
+                                .distinctBy { travelSpot -> travelSpot.id },
+                            searchPageNumber = page.pageNumber,
+                            searchTotalPages = page.totalPages,
+                            searchLoadMoreErrorMessage = null,
+                        )
+                    }
+                }
+            },
+            onError = { message ->
+                if (isCurrentSearchRequest(searchKeyword = searchKeyword, region = region)) {
+                    _uiState.update { it.copy(searchLoadMoreErrorMessage = message) }
+                }
+            },
+        )
     }
 
     /** 찜 탭 목록의 다음 페이지를 조회합니다. */
@@ -239,7 +323,7 @@ internal class TravelSpotQueryStateHolder(
                     region = region,
                     category = dibsCategory,
                     pageNumber = nextPageNumber,
-                    pageSize = DIBS_PAGE_SIZE,
+                    pageSize = TRAVEL_SPOT_PAGE_SIZE,
                 )
             },
             onSuccess = { page ->
@@ -324,7 +408,7 @@ internal class TravelSpotQueryStateHolder(
                             region = region,
                             category = dibsCategory,
                             pageNumber = FIRST_PAGE_NUMBER,
-                            pageSize = DIBS_PAGE_SIZE,
+                            pageSize = TRAVEL_SPOT_PAGE_SIZE,
                         )
                     },
                     onSuccess = { page ->
@@ -396,10 +480,15 @@ internal class TravelSpotQueryStateHolder(
                 isDibsSpotsLoading = false,
                 isDibsSpotsLoadingMore = false,
                 isSearchLoading = false,
+                isSearchLoadingMore = false,
             )
         }
     }
+
+    private fun isCurrentSearchRequest(searchKeyword: String, region: Region): Boolean =
+        currentSuggestionParams?.region == region &&
+            _uiState.value.searchQuery.trim() == searchKeyword
 }
 
 private const val FIRST_PAGE_NUMBER = 1
-private const val DIBS_PAGE_SIZE = 10
+private const val TRAVEL_SPOT_PAGE_SIZE = 10

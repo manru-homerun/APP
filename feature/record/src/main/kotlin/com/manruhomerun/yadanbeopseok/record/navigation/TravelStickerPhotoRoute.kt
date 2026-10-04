@@ -5,6 +5,8 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
+import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
@@ -14,6 +16,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -29,6 +35,8 @@ import com.manruhomerun.yadanbeopseok.record.viewmodel.TravelStickerPhotoViewMod
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -47,13 +55,43 @@ fun TravelStickerPhotoRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current.applicationContext
     val graphicsLayer = rememberGraphicsLayer()
+    val coroutineScope = rememberCoroutineScope()
+    var photoMetadataJob by remember {
+        mutableStateOf<Job?>(null)
+    }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.data?.let { photoUri ->
-                viewModel.selectPhoto(photoUri.toString())
+                photoMetadataJob?.cancel()
+                photoMetadataJob = coroutineScope.launch {
+                    try {
+                        val aspectRatio = withContext(Dispatchers.IO) {
+                            readPhotoAspectRatio(context, photoUri)
+                        }
+
+                        if (aspectRatio == null) {
+                            Toast.makeText(
+                                context,
+                                "사진 정보를 확인할 수 없습니다. 다른 사진을 선택해주세요.",
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                            return@launch
+                        }
+
+                        viewModel.selectPhoto(photoUri.toString(), aspectRatio)
+                    } catch (exception: CancellationException) {
+                        throw exception
+                    } catch (_: Exception) {
+                        Toast.makeText(
+                            context,
+                            "사진 정보를 확인할 수 없습니다. 다른 사진을 선택해주세요.",
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                }
             }
         }
     }
@@ -145,6 +183,44 @@ fun TravelStickerPhotoRoute(
             drawLayer(graphicsLayer)
         },
     )
+}
+
+/** 선택한 사진의 회전 방향을 반영한 가로세로 비율을 반환합니다. */
+private fun readPhotoAspectRatio(
+    context: Context,
+    photoUri: Uri,
+): Float? {
+    val metadataRetriever = MediaMetadataRetriever()
+
+    return try {
+        metadataRetriever.setDataSource(context, photoUri)
+
+        val width = metadataRetriever
+            .extractMetadata(MediaMetadataRetriever.METADATA_KEY_IMAGE_WIDTH)
+            ?.toIntOrNull()
+            ?: return null
+        val height = metadataRetriever
+            .extractMetadata(MediaMetadataRetriever.METADATA_KEY_IMAGE_HEIGHT)
+            ?.toIntOrNull()
+            ?: return null
+        val rotation = metadataRetriever
+            .extractMetadata(MediaMetadataRetriever.METADATA_KEY_IMAGE_ROTATION)
+            ?.toIntOrNull()
+            ?: 0
+
+        if (width <= 0 || height <= 0) return null
+
+        val hasQuarterTurn = rotation == 90 || rotation == 270
+        val displayWidth = if (hasQuarterTurn) height else width
+        val displayHeight = if (hasQuarterTurn) width else height
+        val aspectRatio = displayWidth.toFloat() / displayHeight.toFloat()
+
+        aspectRatio.takeIf {
+            it.isFinite() && it > 0f
+        }
+    } finally {
+        metadataRetriever.release()
+    }
 }
 
 /**

@@ -35,6 +35,8 @@ interface TravelSpotApi {
     suspend fun searchTravelSpots(
         @Query("searchKeyword") searchKeyword: String,
         @Query("region") region: Region,
+        @Query("pageNumber") pageNumber: Int = 1,
+        @Query("pageSize") pageSize: Int = 10,
     ): TravelSpotPageResponseDto
 
     /**

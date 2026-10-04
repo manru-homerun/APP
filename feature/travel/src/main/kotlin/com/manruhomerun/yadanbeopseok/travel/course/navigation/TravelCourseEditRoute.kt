@@ -195,6 +195,7 @@ fun TravelCourseEditRoute(
                     onBackClick = ::navigateBackWithinEdit,
                     onDoneClick = viewModel::confirmTravelSpotSelection,
                     onRetryClick = viewModel::retryTravelSpotSelection,
+                    onLoadNextSearchPage = viewModel::loadNextTravelSpotSearchPage,
                     onLoadNextDibsPage = viewModel::loadNextTravelSpotDibsPage,
                     modifier = Modifier.fillMaxSize(),
                 )

@@ -55,6 +55,7 @@ fun TravelCourseSpotSelectionScreen(
     onBackClick: () -> Unit,
     onDoneClick: () -> Unit,
     onRetryClick: () -> Unit,
+    onLoadNextSearchPage: () -> Unit,
     onLoadNextDibsPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -104,6 +105,7 @@ fun TravelCourseSpotSelectionScreen(
                 onTravelSpotClick = onTravelSpotClick,
                 onTravelSpotToggle = onTravelSpotToggle,
                 onRetryClick = onRetryClick,
+                onLoadNextSearchPage = onLoadNextSearchPage,
                 onLoadNextDibsPage = onLoadNextDibsPage,
                 searchPlaceholder = "관광지·음식을 검색해서 추가",
                 disabledSpotIds = disabledSpotIds,
@@ -200,6 +202,26 @@ private fun TravelCourseSpotSearchPreview() {
 }
 
 @Preview(
+    name = "C01c 필터 결과 다음 페이지 조회",
+    showBackground = true,
+    widthDp = 390,
+    heightDp = 844,
+)
+@Composable
+private fun TravelCourseSpotSearchNextPagePreview() {
+    TravelCourseSpotSelectionPreview(
+        selectionState = TravelSpotSelectionUiState(
+            searchQuery = "전포",
+            selectedCategory = TravelSpotCategory.CULTURE,
+            searchResults = previewCourseSpots,
+            searchPageNumber = 1,
+            searchTotalPages = 3,
+            isSearchLoadingMore = true,
+        ),
+    )
+}
+
+@Preview(
     name = "C01c 검색 결과 없음",
     showBackground = true,
     widthDp = 390,
@@ -267,6 +289,7 @@ private fun TravelCourseSpotSelectionPreview(
             onBackClick = {},
             onDoneClick = {},
             onRetryClick = {},
+            onLoadNextSearchPage = {},
             onLoadNextDibsPage = {},
         )
     }

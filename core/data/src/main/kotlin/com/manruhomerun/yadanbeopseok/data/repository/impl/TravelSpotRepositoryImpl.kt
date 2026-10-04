@@ -52,17 +52,22 @@ internal class TravelSpotRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun searchTravelSpots(searchKeyword: String, region: Region): List<TravelSpot> {
+    override suspend fun searchTravelSpots(
+        searchKeyword: String,
+        region: Region,
+        pageNumber: Int,
+        pageSize: Int,
+    ): TravelSpotListPage {
         val response = apiCallExecutor.execute {
             travelSpotApi.searchTravelSpots(
                 searchKeyword = searchKeyword,
                 region = region,
+                pageNumber = pageNumber,
+                pageSize = pageSize,
             )
         }
 
-        return response.contents.map { dto ->
-            dto.toTravelSpot()
-        }
+        return response.toTravelSpotListPage()
     }
 
     override suspend fun getTravelSpotDetail(spotId: String): TravelSpotDetail {

@@ -3,6 +3,7 @@ package com.manruhomerun.yadanbeopseok.record.screen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -47,7 +48,7 @@ import com.manruhomerun.yadanbeopseok.ui.component.YadanStickerView
 /**
  * D04 스티커 사진 편집 전체 화면입니다.
  *
- * Photo Picker 실행과 완성된 이미지의 갤러리 저장은 Route에서 처리합니다.
+ * 갤러리 실행과 완성된 이미지의 갤러리 저장은 Route에서 처리합니다.
  * 이 화면은 현재 상태를 표시하고 사용자의 동작을 콜백으로 전달합니다.
  *
  * [canvasModifier]는 사진과 스티커가 표시되는 캔버스를 캡처할 때 사용합니다.
@@ -74,7 +75,7 @@ fun TravelStickerPhotoScreen(
     modifier: Modifier = Modifier,
     canvasModifier: Modifier = Modifier,
 ) {
-    val hasPhoto = !uiState.photoUri.isNullOrBlank()
+    val hasPhoto = uiState.hasSelectedPhoto
     val isEditingEnabled = !uiState.isExporting
 
     Column(
@@ -103,20 +104,48 @@ fun TravelStickerPhotoScreen(
                     bottom = 20.dp,
                 ),
         ) {
-            TravelStickerPhotoCanvas(
-                photoUri = uiState.photoUri,
-                placedStickers = uiState.placedStickers,
-                selectedStickerId = uiState.selectedStickerId,
-                onPhotoSelectClick = onPhotoSelectClick,
-                onClearStickerSelection = onClearStickerSelection,
-                onStickerSelect = onStickerSelect,
-                onStickerTransform = onStickerTransform,
-                onDeleteSelectedSticker = onDeleteSelectedSticker,
-                isEditingEnabled = isEditingEnabled,
-                modifier = canvasModifier
+            BoxWithConstraints(
+                modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-            )
+                contentAlignment = Alignment.Center,
+            ) {
+                val photoAspectRatio = uiState.photoAspectRatio
+                val hasAvailableSpace = maxWidth > 0.dp && maxHeight > 0.dp
+                val photoCanvasModifier =
+                    if (hasPhoto && photoAspectRatio != null && hasAvailableSpace) {
+                        val availableAspectRatio = maxWidth.value / maxHeight.value
+
+                        if (photoAspectRatio >= availableAspectRatio) {
+                            Modifier.size(
+                                width = maxWidth,
+                                height = maxWidth / photoAspectRatio,
+                            )
+                        } else {
+                            Modifier.size(
+                                width = maxHeight * photoAspectRatio,
+                                height = maxHeight,
+                            )
+                        }
+                    } else {
+                        Modifier.fillMaxSize()
+                    }
+
+                TravelStickerPhotoCanvas(
+                    photoUri = uiState.photoUri,
+                    placedStickers = uiState.placedStickers,
+                    selectedStickerId = uiState.selectedStickerId,
+                    onPhotoSelectClick = onPhotoSelectClick,
+                    onClearStickerSelection = onClearStickerSelection,
+                    onStickerSelect = onStickerSelect,
+                    onStickerTransform = onStickerTransform,
+                    onDeleteSelectedSticker = onDeleteSelectedSticker,
+                    isEditingEnabled = isEditingEnabled,
+                    modifier = photoCanvasModifier.then(
+                        if (hasPhoto) canvasModifier else Modifier,
+                    ),
+                )
+            }
 
             Spacer(modifier = Modifier.height(13.dp))
 
@@ -331,37 +360,53 @@ private fun PhotoActionButtons(
 )
 @Composable
 private fun TravelStickerPhotoScreenEmptyPreview() {
-    YadanbeopseokTheme {
-        TravelStickerPhotoScreen(
-            uiState = stickerPhotoPreviewState(photoSelected = false),
-            onBackClick = {},
-            onPhotoSelectClick = {},
-            onStickerClick = {},
-            onClearStickerSelection = {},
-            onStickerSelect = {},
-            onStickerTransform = { _, _, _, _, _ -> },
-            onDeleteSelectedSticker = {},
-            onRetryClick = {},
-            onSaveClick = {},
-            onPhotoResetClick = {}
-        )
-    }
+    TravelStickerPhotoScreenPreview(photoAspectRatio = null)
 }
 
 @Preview(
-    name = "D04 전체 화면 · 편집 중",
+    name = "D04 전체 화면 · 가로 사진",
     showBackground = true,
     backgroundColor = 0xFF0F0C0B,
     widthDp = 360,
     heightDp = 800,
 )
 @Composable
-private fun TravelStickerPhotoScreenEditingPreview() {
+private fun TravelStickerPhotoScreenLandscapePreview() {
+    TravelStickerPhotoScreenPreview(photoAspectRatio = 16f / 9f)
+}
+
+@Preview(
+    name = "D04 전체 화면 · 세로 사진",
+    showBackground = true,
+    backgroundColor = 0xFF0F0C0B,
+    widthDp = 360,
+    heightDp = 800,
+)
+@Composable
+private fun TravelStickerPhotoScreenPortraitPreview() {
+    TravelStickerPhotoScreenPreview(photoAspectRatio = 3f / 4f)
+}
+
+@Preview(
+    name = "D04 전체 화면 · 정사각형 사진",
+    showBackground = true,
+    backgroundColor = 0xFF0F0C0B,
+    widthDp = 360,
+    heightDp = 800,
+)
+@Composable
+private fun TravelStickerPhotoScreenSquarePreview() {
+    TravelStickerPhotoScreenPreview(photoAspectRatio = 1f)
+}
+
+@Composable
+private fun TravelStickerPhotoScreenPreview(photoAspectRatio: Float?) {
     YadanbeopseokTheme {
         TravelStickerPhotoScreen(
-            uiState = stickerPhotoPreviewState(photoSelected = true),
+            uiState = stickerPhotoPreviewState(photoAspectRatio),
             onBackClick = {},
             onPhotoSelectClick = {},
+            onPhotoResetClick = {},
             onStickerClick = {},
             onClearStickerSelection = {},
             onStickerSelect = {},
@@ -369,12 +414,11 @@ private fun TravelStickerPhotoScreenEditingPreview() {
             onDeleteSelectedSticker = {},
             onRetryClick = {},
             onSaveClick = {},
-            onPhotoResetClick = {}
         )
     }
 }
 
-private fun stickerPhotoPreviewState(photoSelected: Boolean): TravelStickerPhotoUiState {
+private fun stickerPhotoPreviewState(photoAspectRatio: Float?): TravelStickerPhotoUiState {
     val stickerPack = StickerPack(
         id = "pack-busan",
         name = "사직 한정 스티커팩",
@@ -397,7 +441,7 @@ private fun stickerPhotoPreviewState(photoSelected: Boolean): TravelStickerPhoto
         ),
     )
 
-    val placedStickers = if (photoSelected) {
+    val placedStickers = if (photoAspectRatio != null) {
         listOf(
             PlacedSticker(
                 id = 1L,
@@ -413,11 +457,12 @@ private fun stickerPhotoPreviewState(photoSelected: Boolean): TravelStickerPhoto
 
     return TravelStickerPhotoUiState(
         stickerPack = stickerPack,
-        photoUri = if (photoSelected) {
+        photoUri = if (photoAspectRatio != null) {
             "preview://selected-photo"
         } else {
             null
         },
+        photoAspectRatio = photoAspectRatio,
         placedStickers = placedStickers,
         selectedStickerId = placedStickers.firstOrNull()?.id,
         isLoading = false,

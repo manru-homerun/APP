@@ -13,6 +13,9 @@ data class TravelStickerPhotoUiState(
     /** 사용자가 선택한 사진의 URI 문자열입니다. */
     val photoUri: String? = null,
 
+    /** 회전 방향을 반영한 선택 사진의 가로세로 비율입니다. */
+    val photoAspectRatio: Float? = null,
+
     /** 사진 위에 추가된 스티커 인스턴스 목록입니다. */
     val placedStickers: List<PlacedSticker> = emptyList(),
 
@@ -32,9 +35,14 @@ data class TravelStickerPhotoUiState(
     val availableStickers: List<Sticker>
         get() = stickerPack?.stickers.orEmpty()
 
+    /** URI와 가로세로 비율이 모두 유효한 사진을 선택했는지 나타냅니다. */
+    val hasSelectedPhoto: Boolean
+        get() = !photoUri.isNullOrBlank() &&
+            photoAspectRatio?.let { it.isFinite() && it > 0f } == true
+
     /** 사진을 저장하거나 공유할 수 있는 상태인지 나타냅니다. */
     val canExport: Boolean
-        get() = photoUri != null && !isLoading && !isExporting
+        get() = hasSelectedPhoto && !isLoading && !isExporting
 }
 
 /**

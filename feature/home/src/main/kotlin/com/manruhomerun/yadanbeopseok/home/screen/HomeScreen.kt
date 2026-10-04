@@ -31,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -107,118 +108,123 @@ fun HomeScreen(
             onNotificationClick = onNotificationClick,
         )
 
-        LazyColumn(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-            contentPadding = PaddingValues(bottom = 24.dp),
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = onRefreshClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
         ) {
-            item {
-                Row(
-                    modifier = Modifier.padding(
-                        start = 20.dp,
-                        top = 4.dp,
-                        end = 20.dp,
-                        bottom = 10.dp,
-                    ),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "내 원정 여행",
-                        style = YadanTypography.titleSmall.copy(
-                            fontWeight = FontWeight.ExtraBold,
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 24.dp),
+            ) {
+                item {
+                    Row(
+                        modifier = Modifier.padding(
+                            start = 20.dp,
+                            top = 4.dp,
+                            end = 20.dp,
+                            bottom = 10.dp,
                         ),
-                        color = YadanTextPrimary,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "내 원정 여행",
+                            style = YadanTypography.titleSmall.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                            ),
+                            color = YadanTextPrimary,
+                        )
+
+                        if (!uiState.isLoading && displayedTravels.isNotEmpty()) {
+                            YadanSectionCountBadge(count = displayedTravels.size)
+                        }
+                    }
+                }
+
+                item {
+                    HomeTravelContent(
+                        travels = displayedTravels,
+                        currentDate = currentDate,
+                        isLoading = uiState.isLoading,
+                        onTravelClick = onTravelClick,
+                        onGameScheduleClick = onGameScheduleClick,
+                        initialPage = initialTravelPage,
                     )
-
-                    if (!uiState.isLoading && displayedTravels.isNotEmpty()) {
-                        YadanSectionCountBadge(count = displayedTravels.size)
-                    }
-                }
-            }
-
-            item {
-                HomeTravelContent(
-                    travels = displayedTravels,
-                    currentDate = currentDate,
-                    isLoading = uiState.isLoading,
-                    onTravelClick = onTravelClick,
-                    onGameScheduleClick = onGameScheduleClick,
-                    initialPage = initialTravelPage,
-                )
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            item {
-                HomeRecommendationHeader(
-                    selectedRegion = uiState.selectedRegion,
-                    isRefreshing = uiState.isRefreshing,
-                    onRegionSelected = onRegionSelected,
-                    onRefreshClick = onRefreshClick,
-                )
-            }
-
-            item {
-                YadanTravelSpotCategoryFilters(
-                    selectedCategory = uiState.selectedCategory,
-                    onCategorySelected = onCategorySelected,
-                    enabled = !uiState.isRefreshing,
-                    contentPadding = PaddingValues(horizontal = 20.dp),
-                )
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            when {
-                isPopularSpotLoading -> {
-                    item {
-                        HomeLoadingContent()
-                    }
                 }
 
-                uiState.travelSpotErrorMessage != null -> {
-                    item {
-                        HomeSpotErrorContent(
-                            message = uiState.travelSpotErrorMessage,
-                            onRetryClick = onRefreshClick,
-                        )
-                    }
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                uiState.popularTravelSpots.isEmpty() -> {
-                    item {
-                        HomeEmptySpotContent()
-                    }
+                item {
+                    HomeRecommendationHeader(
+                        selectedRegion = uiState.selectedRegion,
+                        isRefreshing = uiState.isRefreshing,
+                        onRegionSelected = onRegionSelected,
+                        onRefreshClick = onRefreshClick,
+                    )
                 }
 
-                else -> {
-                    items(
-                        items = uiState.popularTravelSpots,
-                        key = { spot -> spot.id },
-                    ) { spot ->
-                        YadanTravelSpotCard(
-                            spot = spot,
-                            onClick = {
-                                onTravelSpotClick(spot.id)
-                            },
-                            onActionClick = {
-                                onDibsClick(spot.id)
-                            },
-                            modifier =
-                                Modifier.padding(
-                                    start = 20.dp,
-                                    end = 20.dp,
-                                    bottom = 10.dp,
-                                ),
-                            enabled = spot.id !in uiState.updatingDibsSpotIds,
-                        )
+                item {
+                    YadanTravelSpotCategoryFilters(
+                        selectedCategory = uiState.selectedCategory,
+                        onCategorySelected = onCategorySelected,
+                        enabled = !uiState.isRefreshing,
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                    )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
+                when {
+                    isPopularSpotLoading -> {
+                        item {
+                            HomeLoadingContent()
+                        }
+                    }
+
+                    uiState.travelSpotErrorMessage != null -> {
+                        item {
+                            HomeSpotErrorContent(
+                                message = uiState.travelSpotErrorMessage,
+                                onRetryClick = onRefreshClick,
+                            )
+                        }
+                    }
+
+                    uiState.popularTravelSpots.isEmpty() -> {
+                        item {
+                            HomeEmptySpotContent()
+                        }
+                    }
+
+                    else -> {
+                        items(
+                            items = uiState.popularTravelSpots,
+                            key = { spot -> spot.id },
+                        ) { spot ->
+                            YadanTravelSpotCard(
+                                spot = spot,
+                                onClick = {
+                                    onTravelSpotClick(spot.id)
+                                },
+                                onActionClick = {
+                                    onDibsClick(spot.id)
+                                },
+                                modifier =
+                                    Modifier.padding(
+                                        start = 20.dp,
+                                        end = 20.dp,
+                                        bottom = 10.dp,
+                                    ),
+                                enabled = spot.id !in uiState.updatingDibsSpotIds,
+                            )
+                        }
                     }
                 }
             }

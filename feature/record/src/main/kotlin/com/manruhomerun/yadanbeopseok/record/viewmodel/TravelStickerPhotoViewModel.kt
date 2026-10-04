@@ -70,19 +70,21 @@ class TravelStickerPhotoViewModel @Inject constructor(
         requestStickerPack(travelId)
     }
 
-    /** 선택한 사진을 저장하고 기존 스티커 편집 상태를 초기화합니다. */
-    fun selectPhoto(photoUri: String) {
+    /** 선택한 사진과 비율을 저장하고 기존 스티커 편집 상태를 초기화합니다. */
+    fun selectPhoto(photoUri: String, aspectRatio: Float) {
         val normalizedPhotoUri = photoUri.trim()
-        if (normalizedPhotoUri.isEmpty()) return
+        val hasInvalidAspectRatio = !aspectRatio.isFinite() || aspectRatio <= 0f
+
+        if (normalizedPhotoUri.isEmpty() || hasInvalidAspectRatio) return
 
         nextPlacedStickerId = 0L
 
         _uiState.update {
             it.copy(
                 photoUri = normalizedPhotoUri,
+                photoAspectRatio = aspectRatio,
                 placedStickers = emptyList(),
                 selectedStickerId = null,
-                errorMessage = null,
             )
         }
     }
@@ -90,7 +92,7 @@ class TravelStickerPhotoViewModel @Inject constructor(
     /** 하단 목록에서 선택한 스티커를 사진 중앙에 추가합니다. */
     fun addSticker(sticker: Sticker) {
         val state = _uiState.value
-        if (state.photoUri == null) return
+        if (!state.hasSelectedPhoto) return
 
         val availableSticker = state.availableStickers.firstOrNull {
             it.id == sticker.id
@@ -136,6 +138,7 @@ class TravelStickerPhotoViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 photoUri = null,
+                photoAspectRatio = null,
                 placedStickers = emptyList(),
                 selectedStickerId = null,
             )

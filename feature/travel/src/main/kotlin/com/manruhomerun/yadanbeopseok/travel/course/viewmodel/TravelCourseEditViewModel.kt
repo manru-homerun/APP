@@ -273,6 +273,7 @@ class TravelCourseEditViewModel @Inject constructor(
     fun refreshTravelSpotSelection() = spotQuery.refreshTravelSpotSelection()
     fun retryTravelSpotSelection() = spotQuery.retryTravelSpotSelection()
     fun loadNextTravelSpotDibsPage() = spotQuery.loadNextDibsPage()
+    fun loadNextTravelSpotSearchPage() = spotQuery.loadNextSearchPage()
 
     /** C01에서 여행 이름을 변경합니다. */
     fun updateTravelName(name: String) {

@@ -73,6 +73,7 @@ fun TravelSpotSelectionScreen(
     onBackClick: () -> Unit,
     onGenerateClick: () -> Unit,
     onRetryClick: () -> Unit,
+    onLoadNextSearchPage: () -> Unit,
     onLoadNextDibsPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -121,6 +122,7 @@ fun TravelSpotSelectionScreen(
             onTravelSpotClick = onTravelSpotClick,
             onTravelSpotToggle = onTravelSpotToggle,
             onRetryClick = onRetryClick,
+            onLoadNextSearchPage = onLoadNextSearchPage,
             onLoadNextDibsPage = onLoadNextDibsPage,
             canAddMoreSpots = canAddMoreSpots,
             selectedSpotsContent = {
@@ -341,6 +343,44 @@ private fun TravelSpotSelectionSearchPreview() {
 }
 
 @Preview(
+    name = "B06b 검색 결과 추가 로딩",
+    showBackground = true,
+    widthDp = 390,
+    heightDp = 844,
+)
+@Composable
+private fun TravelSpotSelectionSearchLoadingMorePreview() {
+    TravelSpotSelectionPreview(
+        uiState = TravelSpotSelectionUiState(
+            searchQuery = "감천",
+            searchResults = previewSearchSpots,
+            searchPageNumber = 1,
+            searchTotalPages = 3,
+            isSearchLoadingMore = true,
+        ),
+    )
+}
+
+@Preview(
+    name = "B06b 검색 결과 추가 조회 오류",
+    showBackground = true,
+    widthDp = 390,
+    heightDp = 844,
+)
+@Composable
+private fun TravelSpotSelectionSearchLoadMoreErrorPreview() {
+    TravelSpotSelectionPreview(
+        uiState = TravelSpotSelectionUiState(
+            searchQuery = "감천",
+            searchResults = previewSearchSpots,
+            searchPageNumber = 1,
+            searchTotalPages = 3,
+            searchLoadMoreErrorMessage = "다음 검색 결과를 불러오지 못했습니다.",
+        ),
+    )
+}
+
+@Preview(
     name = "B06 관광지 로딩",
     showBackground = true,
     widthDp = 390,
@@ -393,6 +433,7 @@ private fun TravelSpotSelectionPreview(
             onBackClick = {},
             onGenerateClick = {},
             onRetryClick = {},
+            onLoadNextSearchPage = {},
             onLoadNextDibsPage = {},
         )
     }

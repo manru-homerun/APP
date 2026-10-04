@@ -48,6 +48,7 @@ import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotCategoryFilter
  * @param canAddMoreSpots 선택되지 않은 관광지를 추가할 수 있는지 나타냅니다.
  * @param selectedSpotsContent 검색 중이 아닐 때 검색창과 추천 탭 사이에 표시할 영역입니다.
  * @param searchResultHeader 검색 중 카테고리 필터 아래에 표시할 제목 영역입니다.
+ * @param onLoadNextSearchPage 검색 결과의 다음 페이지를 불러오는 콜백입니다.
  */
 internal fun LazyListScope.travelSpotSelectionContent(
     uiState: TravelSpotSelectionUiState,
@@ -60,6 +61,7 @@ internal fun LazyListScope.travelSpotSelectionContent(
     onTravelSpotClick: (TravelSpot) -> Unit,
     onTravelSpotToggle: (TravelSpot) -> Unit,
     onRetryClick: () -> Unit,
+    onLoadNextSearchPage: () -> Unit,
     onLoadNextDibsPage: () -> Unit,
     searchPlaceholder: String = "관광지·음식을 검색해보세요",
     disabledSpotIds: Set<String> = emptySet(),
@@ -126,7 +128,7 @@ internal fun LazyListScope.travelSpotSelectionContent(
         else -> "찜한 관광지가 없습니다"
     }
 
-    if (uiState.isLoading || uiState.errorMessage != null || spots.isEmpty()) {
+    if (uiState.isLoading || uiState.errorMessage != null) {
         item(key = "spot_list_status") {
             TravelSpotListStatus(
                 isLoading = uiState.isLoading,
@@ -134,6 +136,48 @@ internal fun LazyListScope.travelSpotSelectionContent(
                 emptyMessage = emptyMessage,
                 onRetryClick = onRetryClick,
             )
+        }
+    } else if (spots.isEmpty()) {
+        when {
+            uiState.isSearchMode && uiState.isSearchLoadingMore -> {
+                item(key = "search_loading_more_empty") {
+                    TravelSpotLoadMoreProgress()
+                }
+            }
+
+            uiState.isSearchMode && uiState.searchLoadMoreErrorMessage != null -> {
+                item(key = "search_load_more_error_empty") {
+                    TravelSpotLoadMoreError(
+                        message = uiState.searchLoadMoreErrorMessage,
+                        onRetryClick = onRetryClick,
+                    )
+                }
+            }
+
+            uiState.isSearchMode && uiState.hasNextSearchPage -> {
+                item(key = "search_load_next_page_empty") {
+                    LaunchedEffect(
+                        uiState.searchQuery,
+                        uiState.selectedCategory,
+                        uiState.searchPageNumber,
+                    ) {
+                        onLoadNextSearchPage()
+                    }
+
+                    TravelSpotLoadMoreProgress()
+                }
+            }
+
+            else -> {
+                item(key = "spot_list_empty") {
+                    TravelSpotListStatus(
+                        isLoading = false,
+                        errorMessage = null,
+                        emptyMessage = emptyMessage,
+                        onRetryClick = onRetryClick,
+                    )
+                }
+            }
         }
     } else {
         items(
@@ -158,7 +202,36 @@ internal fun LazyListScope.travelSpotSelectionContent(
             )
         }
 
-        if (!uiState.isSearchMode && uiState.selectedTab == TravelSpotSelectionTab.DIBS) {
+        if (uiState.isSearchMode) {
+            when {
+                uiState.isSearchLoadingMore -> {
+                    item(key = "search_loading_more") {
+                        TravelSpotLoadMoreProgress()
+                    }
+                }
+
+                uiState.searchLoadMoreErrorMessage != null -> {
+                    item(key = "search_load_more_error") {
+                        TravelSpotLoadMoreError(
+                            message = uiState.searchLoadMoreErrorMessage,
+                            onRetryClick = onRetryClick,
+                        )
+                    }
+                }
+
+                uiState.hasNextSearchPage -> {
+                    item(key = "search_load_next_page") {
+                        LaunchedEffect(
+                            uiState.searchQuery,
+                            uiState.selectedCategory,
+                            uiState.searchPageNumber,
+                        ) {
+                            onLoadNextSearchPage()
+                        }
+                    }
+                }
+            }
+        } else if (uiState.selectedTab == TravelSpotSelectionTab.DIBS) {
             when {
                 uiState.isDibsSpotsLoadingMore -> {
                     item(key = "dibs_loading_more") {
@@ -187,7 +260,7 @@ internal fun LazyListScope.travelSpotSelectionContent(
     }
 }
 
-/** 찜 목록의 다음 페이지를 조회하는 동안 하단 진행 상태를 표시합니다. */
+/** 관광지 목록의 다음 페이지를 조회하는 동안 하단 진행 상태를 표시합니다. */
 @Composable
 private fun TravelSpotLoadMoreProgress() {
     Column(
@@ -204,7 +277,7 @@ private fun TravelSpotLoadMoreProgress() {
     }
 }
 
-/** 찜 목록의 다음 페이지 조회 실패 문구와 재시도 동작을 표시합니다. */
+/** 관광지 목록의 다음 페이지 조회 실패 문구와 재시도 동작을 표시합니다. */
 @Composable
 private fun TravelSpotLoadMoreError(
     message: String,

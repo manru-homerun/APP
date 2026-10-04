@@ -114,7 +114,7 @@ fun TravelStickerPhotoCanvas(
                 contentDescription = "선택한 사진",
                 modifier = Modifier.matchParentSize(),
                 shape = RectangleShape,
-                contentScale = ContentScale.Crop,
+                contentScale = ContentScale.Fit,
             )
 
             if (isEditingEnabled) {

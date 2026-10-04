@@ -787,19 +787,28 @@ internal fun isValidDateRange(
     return game.gameDateTime.date in startDate..endDate
 }
 
-/** 선택 경기를 기준으로 기본 여행 이름을 생성합니다. */
+/** 지역명, 분리된 팀명 접두사와 야구장 접미사를 정리해 기본 여행 이름을 생성합니다. */
 private fun BaseballGame.toDefaultTravelName(): String {
     val regionName = when (stadium.region) {
         Region.SEOUL -> "서울"
         Region.INCHEON -> "인천"
         else -> stadium.region.displayName
     }
-    val stadiumName = stadium.name
+    val normalizedStadiumName = stadium.name
         .trim()
         .removePrefix(stadium.region.displayName)
-        .trimStart(' ', '-')
+        .trimStart { it.isWhitespace() || it == '-' }
         .removePrefix(regionName)
-        .trimStart(' ', '-')
+        .trimStart { it.isWhitespace() || it == '-' }
+    val teamPrefix = KboTeam.entries.firstOrNull { team ->
+        val teamName = team.displayName
+        val nextCharacter = normalizedStadiumName.getOrNull(teamName.length)
+        normalizedStadiumName.startsWith(teamName, ignoreCase = true) &&
+            (nextCharacter == null || nextCharacter.isWhitespace() || nextCharacter == '-')
+    }?.displayName.orEmpty()
+    val stadiumName = normalizedStadiumName
+        .drop(teamPrefix.length)
+        .trimStart { it.isWhitespace() || it == '-' }
         .removeSuffix("야구장")
         .trim()
 

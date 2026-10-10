@@ -18,13 +18,15 @@ data class NotificationResponseDto(
 data class NotificationSettingResponseDto(
     val friendNotificationEnabled: Boolean,
     val weeklyTeamScheduleNotificationEnabled: Boolean,
+    val travelNotificationEnabled: Boolean,
 )
 
-/** 친구 알림과 주간 경기 일정 알림 설정 수정 요청입니다. */
+/** 친구, 주간 경기 일정, 여행 알림 설정 수정 요청입니다. */
 @Serializable
 data class NotificationSettingUpdateRequestDto(
     val friendNotificationEnabled: Boolean,
     val weeklyTeamScheduleNotificationEnabled: Boolean,
+    val travelNotificationEnabled: Boolean,
 )
 
 /** FCM 수신을 위한 앱 설치 등록 요청입니다. */

@@ -48,6 +48,7 @@ fun NotificationSettingScreen(
     onBackClick: () -> Unit,
     onFriendNotificationChange: (Boolean) -> Unit,
     onWeeklyScheduleNotificationChange: (Boolean) -> Unit,
+    onTravelNotificationChange: (Boolean) -> Unit,
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -89,6 +90,7 @@ fun NotificationSettingScreen(
                     enabled = interactionEnabled && !uiState.isUpdating,
                     onFriendNotificationChange = onFriendNotificationChange,
                     onWeeklyScheduleNotificationChange = onWeeklyScheduleNotificationChange,
+                    onTravelNotificationChange = onTravelNotificationChange,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -102,6 +104,7 @@ private fun NotificationSettingContent(
     enabled: Boolean,
     onFriendNotificationChange: (Boolean) -> Unit,
     onWeeklyScheduleNotificationChange: (Boolean) -> Unit,
+    onTravelNotificationChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -134,6 +137,19 @@ private fun NotificationSettingContent(
                 supportingText = "매주 월요일 오전 9시에 응원 팀의 경기 일정을 알려드려요",
                 checked = setting.weeklyTeamScheduleNotificationEnabled,
                 onCheckedChange = onWeeklyScheduleNotificationChange,
+                enabled = enabled,
+            )
+
+            HorizontalDivider(
+                thickness = 1.dp,
+                color = YadanDivider,
+            )
+
+            YadanSettingItem(
+                title = "여행 알림",
+                supportingText = "여행 시작 3일 전 오후 8시에 일정과 준비물을 확인하도록 알려드려요",
+                checked = setting.travelNotificationEnabled,
+                onCheckedChange = onTravelNotificationChange,
                 enabled = enabled,
             )
         }
@@ -195,13 +211,18 @@ private fun NotificationSettingScreenPreview(@PreviewParameter(NotificationSetti
             onBackClick = {},
             onFriendNotificationChange = {},
             onWeeklyScheduleNotificationChange = {},
+            onTravelNotificationChange = {},
             onRetryClick = {},
         )
     }
 }
 
 private class NotificationSettingPreviewProvider : PreviewParameterProvider<NotificationSettingUiState> {
-    private val setting = NotificationSetting(friendNotificationEnabled = true, weeklyTeamScheduleNotificationEnabled = false)
+    private val setting = NotificationSetting(
+        friendNotificationEnabled = true,
+        weeklyTeamScheduleNotificationEnabled = false,
+        travelNotificationEnabled = true,
+    )
     override val values = sequenceOf(
         NotificationSettingUiState(setting = setting, isLoading = false),
         NotificationSettingUiState(setting = setting, isLoading = false, isUpdating = true),
@@ -232,6 +253,7 @@ private fun NotificationSettingScreenErrorPreview() {
             onBackClick = {},
             onFriendNotificationChange = {},
             onWeeklyScheduleNotificationChange = {},
+            onTravelNotificationChange = {},
             onRetryClick = {},
         )
     }

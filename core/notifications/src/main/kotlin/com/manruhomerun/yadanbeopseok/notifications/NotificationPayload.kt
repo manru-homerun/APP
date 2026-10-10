@@ -15,6 +15,8 @@ sealed interface NotificationDestination {
 
     data class TeamSchedule(val teamId: Long) : NotificationDestination
 
+    data class TravelDetail(val travelId: String) : NotificationDestination
+
     data object NotificationCenter : NotificationDestination
 }
 
@@ -72,6 +74,15 @@ fun resolveNotificationDestination(type: NotificationType, referenceId: String?)
             val teamId = referenceId?.toLongOrNull()
             if (teamId != null && KboTeam.findByServerId(teamId) != null) {
                 NotificationDestination.TeamSchedule(teamId)
+            } else {
+                NotificationDestination.NotificationCenter
+            }
+        }
+
+        NotificationType.TRAVEL_REMINDER_D3 -> {
+            val travelId = referenceId?.trim()
+            if (!travelId.isNullOrEmpty()) {
+                NotificationDestination.TravelDetail(travelId)
             } else {
                 NotificationDestination.NotificationCenter
             }

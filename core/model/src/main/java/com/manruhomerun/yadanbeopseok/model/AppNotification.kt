@@ -20,6 +20,7 @@ enum class NotificationType {
     FRIEND_REQUEST,
     FRIEND_REQUEST_ACCEPTED,
     WEEKLY_TEAM_SCHEDULE,
+    TRAVEL_REMINDER_D3,
     UNKNOWN,
     ;
 
@@ -39,4 +40,5 @@ enum class NotificationType {
 data class NotificationSetting(
     val friendNotificationEnabled: Boolean,
     val weeklyTeamScheduleNotificationEnabled: Boolean,
+    val travelNotificationEnabled: Boolean,
 )

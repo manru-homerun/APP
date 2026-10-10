@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PersonAdd
@@ -226,6 +227,15 @@ private fun NotificationType.visuals(): YadanNotificationVisuals = when (this) {
             destinationIcon = Icons.Default.SportsBaseball,
         )
 
+    NotificationType.TRAVEL_REMINDER_D3 ->
+        YadanNotificationVisuals(
+            icon = Icons.Default.CalendarMonth,
+            iconContainerColor = YadanPrimaryTint,
+            iconContentColor = YadanPrimaryInk,
+            destinationText = "여행 일정",
+            destinationIcon = Icons.Default.CalendarMonth,
+        )
+
     NotificationType.UNKNOWN ->
         YadanNotificationVisuals(
             icon = Icons.Default.Notifications,
@@ -282,6 +292,15 @@ private fun YadanNotificationItemPreview() {
         createdAt = LocalDateTime(2026, 5, 23, 9, 0),
     )
 
+    val travelNotification = AppNotification(
+        id = 1004,
+        type = NotificationType.TRAVEL_REMINDER_D3,
+        title = "여행이 3일 남았어요!",
+        body = "서울 잠실 직관 여행 일정과 준비물을 미리 확인해 보세요.",
+        referenceId = "travel-1004",
+        createdAt = LocalDateTime(2026, 5, 22, 20, 0),
+    )
+
     YadanbeopseokTheme {
         Column(
             modifier = Modifier
@@ -305,6 +324,12 @@ private fun YadanNotificationItemPreview() {
             YadanNotificationItem(
                 notification = scheduleNotification,
                 timeText = "5시간 전",
+                onClick = {},
+            )
+
+            YadanNotificationItem(
+                notification = travelNotification,
+                timeText = "어제",
                 onClick = {},
             )
         }

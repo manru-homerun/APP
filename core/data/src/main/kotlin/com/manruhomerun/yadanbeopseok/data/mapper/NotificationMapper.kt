@@ -22,6 +22,7 @@ internal fun NotificationResponseDto.toAppNotification(): AppNotification = AppN
 internal fun NotificationSettingResponseDto.toNotificationSetting(): NotificationSetting = NotificationSetting(
     friendNotificationEnabled = friendNotificationEnabled,
     weeklyTeamScheduleNotificationEnabled = weeklyTeamScheduleNotificationEnabled,
+    travelNotificationEnabled = travelNotificationEnabled,
 )
 
 /** 앱 내부 알림 설정을 서버 수정 요청으로 변환합니다. */
@@ -29,4 +30,5 @@ internal fun NotificationSetting.toUpdateRequest(): NotificationSettingUpdateReq
     NotificationSettingUpdateRequestDto(
         friendNotificationEnabled = friendNotificationEnabled,
         weeklyTeamScheduleNotificationEnabled = weeklyTeamScheduleNotificationEnabled,
+        travelNotificationEnabled = travelNotificationEnabled,
     )

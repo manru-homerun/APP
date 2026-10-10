@@ -56,6 +56,9 @@ fun NotificationSettingRoute(
 
             NotificationSettingTarget.WEEKLY_SCHEDULE ->
                 viewModel.updateWeeklyTeamScheduleNotification(enabled)
+
+            NotificationSettingTarget.TRAVEL ->
+                viewModel.updateTravelNotification(enabled)
         }
     }
 
@@ -117,7 +120,8 @@ fun NotificationSettingRoute(
 
         val setting = uiState.setting ?: return@LaunchedEffect
         val hasEnabledSetting = setting.friendNotificationEnabled ||
-            setting.weeklyTeamScheduleNotificationEnabled
+            setting.weeklyTeamScheduleNotificationEnabled ||
+            setting.travelNotificationEnabled
 
         if (
             hasEnabledSetting &&
@@ -148,6 +152,9 @@ fun NotificationSettingRoute(
                     enabled,
                 )
             },
+            onTravelNotificationChange = { enabled ->
+                updateNotificationSetting(NotificationSettingTarget.TRAVEL, enabled)
+            },
             onRetryClick = viewModel::retry,
             modifier = Modifier.fillMaxSize(),
         )
@@ -168,4 +175,5 @@ fun NotificationSettingRoute(
 private enum class NotificationSettingTarget {
     FRIEND,
     WEEKLY_SCHEDULE,
+    TRAVEL,
 }

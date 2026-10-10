@@ -46,6 +46,12 @@ class NotificationSettingViewModel @Inject constructor(private val notificationR
         )
     }
 
+    /** 여행 시작 3일 전 오후 8시에 발송되는 여행 알림을 설정합니다. */
+    fun updateTravelNotification(enabled: Boolean) {
+        val currentSetting = _uiState.value.setting ?: return
+        updateSetting(currentSetting.copy(travelNotificationEnabled = enabled))
+    }
+
     fun clearUserMessage() {
         _uiState.update { currentState ->
             currentState.copy(userMessage = null)

@@ -161,7 +161,7 @@ private fun NotificationEmptyContent(modifier: Modifier = Modifier) {
         )
 
         Text(
-            text = "친구 소식과 응원 팀 경기 일정을 알려드릴게요.",
+            text = "친구 소식과 경기 일정, 다가오는 여행을 알려드릴게요.",
             modifier = Modifier.padding(top = 6.dp),
             style = YadanTypography.bodySmall,
             color = YadanTextSecondary,
@@ -356,5 +356,16 @@ private fun notificationPreviewItems(): List<NotificationListItem> = listOf(
             createdAt = LocalDateTime(2026, 9, 21, 9, 0),
         ),
         timeText = "5시간 전",
+    ),
+    NotificationListItem(
+        notification = AppNotification(
+            id = 1004,
+            type = NotificationType.TRAVEL_REMINDER_D3,
+            title = "여행이 3일 남았어요!",
+            body = "서울 잠실 직관 여행 일정과 준비물을 미리 확인해 보세요.",
+            referenceId = "travel-1004",
+            createdAt = LocalDateTime(2026, 9, 20, 20, 0),
+        ),
+        timeText = "어제",
     ),
 )

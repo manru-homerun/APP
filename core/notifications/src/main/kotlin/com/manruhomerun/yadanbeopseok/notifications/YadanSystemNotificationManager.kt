@@ -25,7 +25,7 @@ object YadanSystemNotificationManager {
             "야단법석 알림",
             NotificationManager.IMPORTANCE_DEFAULT,
         ).apply {
-            description = "친구 소식과 응원 구단의 주간 경기 일정 알림"
+            description = "친구 소식, 응원 구단의 주간 경기 일정과 여행 알림"
         }
 
         notificationManager.createNotificationChannel(channel)

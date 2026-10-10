@@ -6,9 +6,11 @@ import com.manruhomerun.yadanbeopseok.navigation.Navigator
 import com.manruhomerun.yadanbeopseok.navigation.route.FriendManagementInitialTab
 import com.manruhomerun.yadanbeopseok.navigation.route.FriendManagementNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.GameScheduleNavKey
+import com.manruhomerun.yadanbeopseok.navigation.route.HomeNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.MyPageNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.NotificationNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.NotificationSettingNavKey
+import com.manruhomerun.yadanbeopseok.navigation.route.TravelDetailNavKey
 import com.manruhomerun.yadanbeopseok.notifications.NotificationDestination
 import com.manruhomerun.yadanbeopseok.notifications.resolveNotificationDestination
 
@@ -62,6 +64,11 @@ fun Navigator.navigateToNotificationDestination(destination: NotificationDestina
                     returnToPrevious = true,
                 ),
             )
+        }
+
+        is NotificationDestination.TravelDetail -> {
+            navigateToTopLevelRoot(HomeNavKey)
+            navigate(TravelDetailNavKey(destination.travelId))
         }
 
         NotificationDestination.NotificationCenter -> {

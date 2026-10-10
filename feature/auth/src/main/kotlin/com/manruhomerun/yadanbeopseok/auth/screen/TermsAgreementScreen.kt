@@ -2,7 +2,9 @@ package com.manruhomerun.yadanbeopseok.auth.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -15,6 +17,8 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -31,6 +35,8 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanButton
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanCard
@@ -80,10 +86,11 @@ fun TermsAgreementScreen(
             onNavigationClick = onBackClick,
         )
 
-        Column(
+        BoxWithConstraints(
             modifier =
                 Modifier
-                    .fillMaxSize()
+                    .weight(1f)
+                    .fillMaxWidth()
                     .padding(
                         start = 24.dp,
                         end = 24.dp,
@@ -91,73 +98,62 @@ fun TermsAgreementScreen(
                         bottom = 26.dp,
                     ),
         ) {
-            Text(
-                text = "서비스 이용에 동의해주세요",
-                style =
-                    YadanTypography.displayMedium.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                    ),
-                color = YadanTextPrimary,
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            AllAgreementCard(
-                checked = isAllAgreed,
-                onCheckedChange = onAllAgreementChange,
-            )
-
             Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(top = 13.dp),
-                verticalArrangement = Arrangement.spacedBy(11.dp),
+                modifier = Modifier.fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .heightIn(min = maxHeight),
+                verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                RequiredAgreementCard(
-                    title = "서비스 이용약관",
-                    checked = isServiceTermsAgreed,
-                    onCheckedChange = onServiceTermsAgreementChange,
-                    onDetailClick = onServiceTermsDetailClick,
-                )
-
-                RequiredAgreementCard(
-                    title = "개인정보 수집·이용",
-                    checked = isPrivacyAgreementAgreed,
-                    onCheckedChange = onPrivacyAgreementChange,
-                    onDetailClick = onPrivacyPolicyDetailClick,
-                )
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-            Spacer(modifier = Modifier.height(18.dp))
-
-            YadanButton(
-                text = "동의하고 계속",
-                onClick = onContinueClick,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = isAllAgreed,
-                trailingIcon = {
-                    Icon(
-                        imageVector =
-                            Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
+                Column {
+                    Text(
+                        text = "서비스 이용에 동의해주세요",
+                        style = YadanTypography.displayMedium.copy(fontWeight = FontWeight.ExtraBold),
+                        color = YadanTextPrimary,
                     )
-                },
-            )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    AllAgreementCard(checked = isAllAgreed, onCheckedChange = onAllAgreementChange)
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(top = 13.dp),
+                        verticalArrangement = Arrangement.spacedBy(11.dp),
+                    ) {
+                        RequiredAgreementCard(
+                            title = "서비스 이용약관",
+                            checked = isServiceTermsAgreed,
+                            onCheckedChange = onServiceTermsAgreementChange,
+                            onDetailClick = onServiceTermsDetailClick,
+                        )
+                        RequiredAgreementCard(
+                            title = "개인정보 수집·이용",
+                            checked = isPrivacyAgreementAgreed,
+                            onCheckedChange = onPrivacyAgreementChange,
+                            onDetailClick = onPrivacyPolicyDetailClick,
+                        )
+                    }
+                }
 
-            Spacer(modifier = Modifier.height(13.dp))
-
-            Text(
-                text = "만 14세 이상만 가입할 수 있어요 · 필수 항목 동의 시 가입 완료",
-                modifier = Modifier.fillMaxWidth(),
-                style =
-                    YadanTypography.bodySmall.copy(
-                        fontWeight = FontWeight.SemiBold,
-                    ),
-                color = YadanTextMuted,
-                textAlign = TextAlign.Center,
-            )
+                Column(modifier = Modifier.padding(top = 18.dp)) {
+                    YadanButton(
+                        text = "동의하고 계속",
+                        onClick = onContinueClick,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = isAllAgreed,
+                        trailingIcon = {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                            )
+                        },
+                    )
+                    Spacer(modifier = Modifier.height(13.dp))
+                    Text(
+                        text = "만 14세 이상만 가입할 수 있어요.\n약관 동의 후 회원 정보 입력이 이어져요.",
+                        modifier = Modifier.fillMaxWidth(),
+                        style = YadanTypography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = YadanTextMuted,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
         }
     }
 }
@@ -271,9 +267,11 @@ private fun RequiredAgreementCard(
                     size = YadanCheckboxSize.SMALL,
                 )
 
-                Row(
+                FlowRow(
+                    modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(7.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    itemVerticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = title,
@@ -312,12 +310,16 @@ private fun RequiredAgreementCard(
     widthDp = 390,
     heightDp = 844,
 )
+@Preview(name = "약관 - 좁은 화면", showBackground = true, widthDp = 320, heightDp = 640)
+@Preview(name = "약관 - 큰 글꼴", showBackground = true, widthDp = 320, heightDp = 640, fontScale = 1.5f)
+@Preview(name = "약관 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 640, fontScale = 2f)
+@Preview(name = "약관 - 낮은 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
 @Composable
-private fun TermsAgreementScreenPreview() {
+private fun TermsAgreementScreenPreview(@PreviewParameter(TermsAgreementPreviewProvider::class) agreements: Pair<Boolean, Boolean>) {
     YadanbeopseokTheme {
         TermsAgreementScreen(
-            isServiceTermsAgreed = true,
-            isPrivacyAgreementAgreed = true,
+            isServiceTermsAgreed = agreements.first,
+            isPrivacyAgreementAgreed = agreements.second,
             onServiceTermsAgreementChange = {},
             onPrivacyAgreementChange = {},
             onAllAgreementChange = {},
@@ -327,4 +329,8 @@ private fun TermsAgreementScreenPreview() {
             onPrivacyPolicyDetailClick = {},
         )
     }
+}
+
+private class TermsAgreementPreviewProvider : PreviewParameterProvider<Pair<Boolean, Boolean>> {
+    override val values = sequenceOf(false to false, true to false, true to true)
 }

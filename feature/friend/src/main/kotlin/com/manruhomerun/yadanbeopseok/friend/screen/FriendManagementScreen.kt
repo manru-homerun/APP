@@ -43,7 +43,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -56,8 +55,10 @@ import com.manruhomerun.yadanbeopseok.designsystem.component.YadanTabRow
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanTopAppBar
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanDivider
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOnPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOutline
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryInk
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextMuted
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextSecondary
@@ -517,8 +518,8 @@ internal fun FriendActionButton(
                 shape = shape,
                 contentPadding = contentPadding,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = YadanPrimary,
-                    contentColor = Color.White,
+                    containerColor = YadanPrimaryInk,
+                    contentColor = YadanOnPrimary,
                 ),
             ) {
                 FriendActionButtonText(text)

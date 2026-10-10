@@ -55,6 +55,7 @@ fun FriendSearchScreen(
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
     onSendFriendRequest: (String) -> Unit,
+    onReceivedRequestsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -109,6 +110,7 @@ fun FriendSearchScreen(
                 FriendSearchResultContent(
                     uiState = uiState,
                     onSendFriendRequest = onSendFriendRequest,
+                    onReceivedRequestsClick = onReceivedRequestsClick,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -120,6 +122,7 @@ fun FriendSearchScreen(
 private fun FriendSearchResultContent(
     uiState: FriendSearchUiState,
     onSendFriendRequest: (String) -> Unit,
+    onReceivedRequestsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -160,6 +163,7 @@ private fun FriendSearchResultContent(
                 result = result,
                 isRequesting = result.user.id in uiState.requestingUserIds,
                 onSendFriendRequest = onSendFriendRequest,
+                onReceivedRequestsClick = onReceivedRequestsClick,
             )
 
             HorizontalDivider(
@@ -181,18 +185,20 @@ private fun FriendSearchResultRow(
     result: FriendSearchUser,
     isRequesting: Boolean,
     onSendFriendRequest: (String) -> Unit,
+    onReceivedRequestsClick: () -> Unit,
 ) {
-    val (buttonText, buttonStyle) =
-        when (result.relationshipStatus) {
-            FriendRelationshipStatus.NONE -> "친구 신청" to FriendActionButtonStyle.PRIMARY
-            FriendRelationshipStatus.REQUEST_SENT -> "요청됨" to FriendActionButtonStyle.WAITING
-            FriendRelationshipStatus.REQUEST_RECEIVED -> "받은 요청" to FriendActionButtonStyle.WAITING
-            FriendRelationshipStatus.FRIEND -> "친구" to FriendActionButtonStyle.WAITING
-            FriendRelationshipStatus.UNKNOWN -> "확인 불가" to FriendActionButtonStyle.WAITING
-        }
+    val (buttonText, buttonStyle) = when (result.relationshipStatus) {
+        FriendRelationshipStatus.NONE -> "친구 신청" to FriendActionButtonStyle.PRIMARY
+        FriendRelationshipStatus.REQUEST_SENT -> "요청됨" to FriendActionButtonStyle.WAITING
+        FriendRelationshipStatus.REQUEST_RECEIVED -> "받은 요청 보기" to FriendActionButtonStyle.OUTLINED
+        FriendRelationshipStatus.FRIEND -> "친구" to FriendActionButtonStyle.WAITING
+        FriendRelationshipStatus.UNKNOWN -> "확인 불가" to FriendActionButtonStyle.WAITING
+    }
 
-    val canSendRequest =
-        result.relationshipStatus == FriendRelationshipStatus.NONE && !isRequesting
+    val canAct = !isRequesting && (
+        result.relationshipStatus == FriendRelationshipStatus.NONE ||
+            result.relationshipStatus == FriendRelationshipStatus.REQUEST_RECEIVED
+        )
 
     YadanUserListItem(
         user = result.user,
@@ -200,10 +206,14 @@ private fun FriendSearchResultRow(
             FriendActionButton(
                 text = if (isRequesting) "요청 중" else buttonText,
                 onClick = {
-                    onSendFriendRequest(result.user.id)
+                    when (result.relationshipStatus) {
+                        FriendRelationshipStatus.NONE -> onSendFriendRequest(result.user.id)
+                        FriendRelationshipStatus.REQUEST_RECEIVED -> onReceivedRequestsClick()
+                        else -> Unit
+                    }
                 },
                 style = buttonStyle,
-                enabled = canSendRequest,
+                enabled = canAct,
             )
         },
     )
@@ -286,6 +296,7 @@ private fun FriendSearchScreenPreview() {
             onQueryChange = {},
             onSearch = {},
             onSendFriendRequest = {},
+            onReceivedRequestsClick = {},
         )
     }
 }
@@ -300,6 +311,65 @@ private fun FriendSearchInitialPreview() {
             onQueryChange = {},
             onSearch = {},
             onSendFriendRequest = {},
+            onReceivedRequestsClick = {},
+        )
+    }
+}
+
+private val previewRelationshipUsers = previewSearchUsers + listOf(
+    FriendSearchUser(
+        user = UserProfile(id = "user-3", nickname = "야구좋아하는친구", favoriteTeam = KboTeam.LOTTE),
+        relationshipStatus = FriendRelationshipStatus.REQUEST_RECEIVED,
+    ),
+    FriendSearchUser(
+        user = UserProfile(id = "user-4", nickname = "지민", favoriteTeam = KboTeam.SSG),
+        relationshipStatus = FriendRelationshipStatus.FRIEND,
+    ),
+    FriendSearchUser(
+        user = UserProfile(id = "user-5", nickname = "서준", favoriteTeam = KboTeam.LOTTE),
+        relationshipStatus = FriendRelationshipStatus.UNKNOWN,
+    ),
+)
+
+@Preview(name = "친구 찾기 관계 상태", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "친구 찾기 좁은 화면", showBackground = true, widthDp = 320, heightDp = 640)
+@Preview(name = "친구 찾기 큰 글꼴", showBackground = true, widthDp = 320, heightDp = 640, fontScale = 1.5f)
+@Composable
+private fun FriendSearchRelationshipPreview() {
+    YadanbeopseokTheme {
+        FriendSearchScreen(
+            uiState = FriendSearchUiState(
+                query = "친구",
+                searchedQuery = "친구",
+                users = previewRelationshipUsers,
+                resultCount = previewRelationshipUsers.size,
+            ),
+            onBackClick = {},
+            onQueryChange = {},
+            onSearch = {},
+            onSendFriendRequest = {},
+            onReceivedRequestsClick = {},
+        )
+    }
+}
+
+@Preview(name = "친구 찾기 신청 처리 중", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun FriendSearchRequestingPreview() {
+    YadanbeopseokTheme {
+        FriendSearchScreen(
+            uiState = FriendSearchUiState(
+                query = "한별",
+                searchedQuery = "한별",
+                users = previewSearchUsers,
+                resultCount = previewSearchUsers.size,
+                requestingUserIds = setOf("user-1"),
+            ),
+            onBackClick = {},
+            onQueryChange = {},
+            onSearch = {},
+            onSendFriendRequest = {},
+            onReceivedRequestsClick = {},
         )
     }
 }

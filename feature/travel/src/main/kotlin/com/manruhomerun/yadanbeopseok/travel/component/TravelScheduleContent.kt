@@ -1,7 +1,9 @@
 package com.manruhomerun.yadanbeopseok.travel.component
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,15 +13,18 @@ import androidx.compose.foundation.lazy.LazyListLayoutInfo
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -38,9 +43,16 @@ import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelDaySelector
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelHeader
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelPlaceItemMode
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelProgress
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
 
 private const val TRAVEL_DAY_KEY_PREFIX = "travel_day_"
+private const val TRAVEL_DAY_SELECTOR_KEY = "travel_day_selector"
 
 /**
  * 여행 결과, 여행 상세와 일정 편집 화면에서 재사용하는 일정 본문입니다.
@@ -51,12 +63,15 @@ private const val TRAVEL_DAY_KEY_PREFIX = "travel_day_"
  * [visibleTravelDays]에 전체 일차를 전달하면 모든 일정을 하나의 목록으로 표시할 수 있습니다.
  * 특정 일차만 전달하면 여행 중 화면처럼 선택한 일차만 표시할 수도 있습니다.
  *
- * [scrollToSelectedDay]가 true이면 [selectedDay]가 변경될 때
- * 해당 일차의 시작 위치로 자동 스크롤합니다.
+ * [pinDaySelector]가 true이면 일차 선택기를 상단에 고정합니다.
+ * 선택기에는 전달받은 선택 콜백을 연결하여 탭 클릭과 스크롤 갱신을 구분합니다.
+ * [scrollToSelectedDay]가 true이면 탭 선택 시 해당 일차의 시작 위치로 이동합니다.
+ * 고정하지 않는 기존 화면은 [selectedDay] 변경에 따른 이동 방식을 유지합니다.
  *
  * [onVisibleDayChanged]를 전달하면 사용자가 직접 스크롤했을 때
  * 현재 화면에 보이는 일차 번호를 전달합니다.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun TravelScheduleContent(
     title: String,
@@ -68,10 +83,12 @@ internal fun TravelScheduleContent(
     sectionTitle: String? = null,
     onRenameClick: (() -> Unit)? = null,
     progressContent: (@Composable () -> Unit)? = null,
-    daySelectorContent: (@Composable () -> Unit)? = null,
+    daySelectorContent: (@Composable (onDaySelected: (Int) -> Unit) -> Unit)? = null,
     selectedDay: Int? = null,
     scrollToSelectedDay: Boolean = false,
     onVisibleDayChanged: ((Int) -> Unit)? = null,
+    pinDaySelector: Boolean = false,
+    onDaySelected: ((Int) -> Unit)? = onVisibleDayChanged,
     placeItemMode: YadanTravelPlaceItemMode = YadanTravelPlaceItemMode.VIEW,
     onPlaceClick: ((TravelPlace) -> Unit)? = null,
     supportingText: (TravelPlace) -> String? = { null },
@@ -94,6 +111,9 @@ internal fun TravelScheduleContent(
     }
 
     val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    var daySelectorHeightPx by remember { mutableIntStateOf(0) }
+    var dayScrollJob by remember { mutableStateOf<Job?>(null) }
     var requestedDay by remember(visibleTravelDays) {
         mutableStateOf<Int?>(null)
     }
@@ -102,6 +122,7 @@ internal fun TravelScheduleContent(
     }
 
     val currentSelectedDay by rememberUpdatedState(selectedDay)
+    val currentOnDaySelected by rememberUpdatedState(onDaySelected)
     val currentOnVisibleDayChanged by rememberUpdatedState(onVisibleDayChanged)
 
     val daySectionStartIndex =
@@ -109,6 +130,44 @@ internal fun TravelScheduleContent(
             (if (progressContent != null) 1 else 0) +
             (if (daySelectorContent != null) 1 else 0) +
             (if (!sectionTitle.isNullOrBlank()) 1 else 0)
+
+    /** 고정 탭의 클릭만 자동 이동으로 처리하며 상태 복원은 이동을 발생시키지 않습니다. */
+    fun requestDay(day: Int) {
+        if (!pinDaySelector || !scrollToSelectedDay) {
+            currentOnDaySelected?.invoke(day)
+            return
+        }
+
+        if (!enabled || day == currentSelectedDay) return
+        val dayIndex = orderedTravelDays.indexOfFirst { it.day == day }
+        if (dayIndex < 0) return
+
+        dayScrollJob?.cancel()
+        coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            val requestJob = currentCoroutineContext().job
+            dayScrollJob = requestJob
+            requestedDay = day
+
+            try {
+                currentOnDaySelected?.invoke(day)
+                val selectorHeight = snapshotFlow { daySelectorHeightPx }.first { it > 0 }
+                listState.animateScrollToItem(
+                    index = daySectionStartIndex + dayIndex,
+                    scrollOffset = -selectorHeight,
+                )
+            } finally {
+                // 취소된 이전 이동이 새 이동의 선택 상태를 해제하지 않게 합니다.
+                if (dayScrollJob === requestJob) {
+                    dayScrollJob = null
+                    requestedDay = null
+                }
+            }
+        }
+    }
+
+    DisposableEffect(orderedTravelDays, daySectionStartIndex, pinDaySelector, scrollToSelectedDay) {
+        onDispose { dayScrollJob?.cancel() }
+    }
 
     /*
      * 탭 선택으로 selectedDay가 변경되면 해당 일차의 LazyColumn 항목으로 이동합니다.
@@ -122,7 +181,7 @@ internal fun TravelScheduleContent(
         orderedTravelDays,
         daySectionStartIndex,
     ) {
-        if (!scrollToSelectedDay || selectedDay == null) {
+        if (pinDaySelector || !scrollToSelectedDay || selectedDay == null) {
             return@LaunchedEffect
         }
 
@@ -157,21 +216,44 @@ internal fun TravelScheduleContent(
      * 바뀌지 않도록 requestedDay가 null인 경우에만 콜백을 호출합니다.
      */
     if (onVisibleDayChanged != null) {
-        LaunchedEffect(listState, orderedTravelDays) {
-            snapshotFlow {
-                requestedDay to listState.layoutInfo.visibleTravelDay()
-            }
-                .distinctUntilChanged()
-                .collect { (scrollingToDay, visibleDay) ->
-                    if (
-                        scrollingToDay == null &&
-                        visibleDay != null &&
-                        visibleDay != currentSelectedDay
-                    ) {
-                        lastObservedDay = visibleDay
-                        currentOnVisibleDayChanged?.invoke(visibleDay)
+        LaunchedEffect(listState, orderedTravelDays, pinDaySelector) {
+            if (pinDaySelector) {
+                var wasUserScrolling = false
+
+                snapshotFlow {
+                    val visibleDay = if (!listState.canScrollForward && listState.canScrollBackward) {
+                        orderedTravelDays.lastOrNull()?.day
+                    } else {
+                        listState.layoutInfo.visibleTravelDayBelowSelector()
                     }
+                    Triple(requestedDay, listState.isScrollInProgress, visibleDay)
                 }
+                    .distinctUntilChanged()
+                    .collect { (scrollingToDay, isScrolling, visibleDay) ->
+                        // 최초 레이아웃·복귀·자동 이동 완료는 수동 스크롤로 취급하지 않습니다.
+                        val shouldUpdateDay = scrollingToDay == null && (isScrolling || wasUserScrolling)
+                        wasUserScrolling = scrollingToDay == null && isScrolling
+
+                        if (shouldUpdateDay && visibleDay != null && visibleDay != currentSelectedDay) {
+                            currentOnVisibleDayChanged?.invoke(visibleDay)
+                        }
+                    }
+            } else {
+                snapshotFlow {
+                    requestedDay to listState.layoutInfo.visibleTravelDay()
+                }
+                    .distinctUntilChanged()
+                    .collect { (scrollingToDay, visibleDay) ->
+                        if (
+                            scrollingToDay == null &&
+                            visibleDay != null &&
+                            visibleDay != currentSelectedDay
+                        ) {
+                            lastObservedDay = visibleDay
+                            currentOnVisibleDayChanged?.invoke(visibleDay)
+                        }
+                    }
+            }
         }
     }
 
@@ -203,8 +285,22 @@ internal fun TravelScheduleContent(
         }
 
         if (daySelectorContent != null) {
-            item(key = "travel_day_selector") {
-                daySelectorContent()
+            if (pinDaySelector) {
+                stickyHeader(key = TRAVEL_DAY_SELECTOR_KEY) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(YadanBackground)
+                            .onSizeChanged { daySelectorHeightPx = it.height }
+                            .padding(vertical = 8.dp),
+                    ) {
+                        daySelectorContent(::requestDay)
+                    }
+                }
+            } else {
+                item(key = TRAVEL_DAY_SELECTOR_KEY) {
+                    daySelectorContent(::requestDay)
+                }
             }
         }
 
@@ -289,6 +385,18 @@ private fun LazyListLayoutInfo.visibleTravelDay(): Int? =
         }
         .firstOrNull()
 
+/** 고정 탭에 가려지지 않은 일정 중 가장 위에 보이는 일차를 반환합니다. */
+private fun LazyListLayoutInfo.visibleTravelDayBelowSelector(): Int? {
+    val selector = visibleItemsInfo.firstOrNull { it.key == TRAVEL_DAY_SELECTOR_KEY }
+    val visibleTop = maxOf(viewportStartOffset, selector?.let { it.offset + it.size } ?: viewportStartOffset)
+
+    return visibleItemsInfo
+        .asSequence()
+        .filter { it.offset + it.size > visibleTop && it.offset < viewportEndOffset }
+        .mapNotNull { it.key.toTravelDayNumber() }
+        .firstOrNull()
+}
+
 @Preview(
     name = "공통 일정 본문 - 전체 일정",
     showBackground = true,
@@ -350,15 +458,13 @@ private fun TravelScheduleDayScrollPreview() {
             modifier = Modifier
                 .fillMaxSize()
                 .background(YadanBackground),
-            daySelectorContent = {
+            daySelectorContent = { onDaySelected ->
                 YadanTravelDaySelector(
                     dayNumbers = travelDays.map { travelDay ->
                         travelDay.day
                     },
                     selectedDay = selectedDay,
-                    onDaySelected = { day ->
-                        selectedDay = day
-                    },
+                    onDaySelected = onDaySelected,
                     modifier = Modifier.fillMaxWidth(),
                 )
             },
@@ -410,19 +516,18 @@ private fun ActiveTravelScheduleContentPreview() {
                     modifier = Modifier.fillMaxWidth(),
                 )
             },
-            daySelectorContent = {
+            daySelectorContent = { onDaySelected ->
                 YadanTravelDaySelector(
                     dayNumbers = travelDays.map { travelDay ->
                         travelDay.day
                     },
                     selectedDay = selectedDay,
-                    onDaySelected = { day ->
-                        selectedDay = day
-                    },
+                    onDaySelected = onDaySelected,
                     modifier = Modifier.fillMaxWidth(),
                 )
             },
             placeItemMode = YadanTravelPlaceItemMode.ACTIVE,
+            onDaySelected = { selectedDay = it },
             onVerifyClick = {},
         )
     }

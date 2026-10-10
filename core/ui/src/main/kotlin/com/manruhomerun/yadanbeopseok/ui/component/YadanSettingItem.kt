@@ -94,6 +94,8 @@ fun YadanSettingItem(
                     onValueChange = onCheckedChange,
                 ),
         verticalPadding = 13.dp,
+        titleMaxLines = Int.MAX_VALUE,
+        supportingTextMaxLines = Int.MAX_VALUE,
         trailingContent = {
             /*
              * 행 전체에서 토글 동작과 접근성을 처리하므로 Switch에는
@@ -209,6 +211,8 @@ private fun YadanSettingItemContent(
     supportingText: String?,
     modifier: Modifier,
     verticalPadding: Dp,
+    titleMaxLines: Int = 1,
+    supportingTextMaxLines: Int = 2,
     leadingContent: (@Composable () -> Unit)? = null,
     trailingContent: (@Composable () -> Unit)? = null,
 ) {
@@ -247,7 +251,7 @@ private fun YadanSettingItemContent(
                         fontWeight = FontWeight.ExtraBold,
                     ),
                 color = YadanTextPrimary,
-                maxLines = 1,
+                maxLines = titleMaxLines,
                 overflow = TextOverflow.Ellipsis,
             )
 
@@ -261,7 +265,7 @@ private fun YadanSettingItemContent(
                                 fontWeight = FontWeight.SemiBold,
                             ),
                         color = YadanTextMuted,
-                        maxLines = 2,
+                        maxLines = supportingTextMaxLines,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }

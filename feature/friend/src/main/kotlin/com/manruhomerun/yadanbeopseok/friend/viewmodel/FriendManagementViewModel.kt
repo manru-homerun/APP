@@ -13,10 +13,12 @@ import java.net.HttpURLConnection.HTTP_NOT_FOUND
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -30,8 +32,16 @@ class FriendManagementViewModel @Inject constructor(private val friendRepository
     private var friendsJob: Job? = null
     private var receivedRequestsJob: Job? = null
     private var sentRequestsJob: Job? = null
+    private var friendsRequestGeneration = 0L
+    private var receivedRequestsGeneration = 0L
+    private var sentRequestsGeneration = 0L
+    private var receivedCountRequestGeneration = 0L
+    private var pendingFriendsRefresh = false
+    private var pendingReceivedRequestsRefresh = false
+    private var pendingSentRequestsRefresh = false
     private var hasLoadedRequests = false
     private var hasHandledFirstResume = false
+    private var hasExpiredSession = false
 
     init {
         loadFriends()
@@ -86,20 +96,30 @@ class FriendManagementViewModel @Inject constructor(private val friendRepository
 
         viewModelScope.launch {
             try {
+                ensureActive()
+                if (hasExpiredSession) return@launch
                 friendRepository.acceptFriendRequest(requestId)
+                ensureActive()
+                if (hasExpiredSession) return@launch
                 removeReceivedRequest(requestId)
                 loadFriends()
                 loadReceivedRequests()
             } catch (exception: CancellationException) {
                 throw exception
             } catch (_: SessionExpiredException) {
-                // 전역 세션 관찰자가 로그인 화면 이동을 처리합니다.
+                handleSessionExpired()
             } catch (exception: Exception) {
-                handleRequestActionFailure(
-                    exception = exception,
-                    message = "친구 요청을 수락하지 못했습니다.",
-                    refresh = ::loadReceivedRequests,
-                )
+                ensureActive()
+                if (!hasExpiredSession) {
+                    handleRequestActionFailure(
+                        exception = exception,
+                        message = "친구 요청을 수락하지 못했습니다.",
+                        refresh = {
+                            loadFriends()
+                            loadReceivedRequests()
+                        },
+                    )
+                }
             } finally {
                 finishRequestAction(requestId)
             }
@@ -112,19 +132,26 @@ class FriendManagementViewModel @Inject constructor(private val friendRepository
 
         viewModelScope.launch {
             try {
+                ensureActive()
+                if (hasExpiredSession) return@launch
                 friendRepository.rejectFriendRequest(requestId)
+                ensureActive()
+                if (hasExpiredSession) return@launch
                 removeReceivedRequest(requestId)
                 loadReceivedRequests()
             } catch (exception: CancellationException) {
                 throw exception
             } catch (_: SessionExpiredException) {
-                // 전역 세션 관찰자가 로그인 화면 이동을 처리합니다.
+                handleSessionExpired()
             } catch (exception: Exception) {
-                handleRequestActionFailure(
-                    exception = exception,
-                    message = "친구 요청을 거절하지 못했습니다.",
-                    refresh = ::loadReceivedRequests,
-                )
+                ensureActive()
+                if (!hasExpiredSession) {
+                    handleRequestActionFailure(
+                        exception = exception,
+                        message = "친구 요청을 거절하지 못했습니다.",
+                        refresh = ::loadReceivedRequests,
+                    )
+                }
             } finally {
                 finishRequestAction(requestId)
             }
@@ -137,19 +164,26 @@ class FriendManagementViewModel @Inject constructor(private val friendRepository
 
         viewModelScope.launch {
             try {
+                ensureActive()
+                if (hasExpiredSession) return@launch
                 friendRepository.cancelFriendRequest(requestId)
+                ensureActive()
+                if (hasExpiredSession) return@launch
                 removeSentRequest(requestId)
                 loadSentRequests()
             } catch (exception: CancellationException) {
                 throw exception
             } catch (_: SessionExpiredException) {
-                // 전역 세션 관찰자가 로그인 화면 이동을 처리합니다.
+                handleSessionExpired()
             } catch (exception: Exception) {
-                handleRequestActionFailure(
-                    exception = exception,
-                    message = "친구 요청을 취소하지 못했습니다.",
-                    refresh = ::loadSentRequests,
-                )
+                ensureActive()
+                if (!hasExpiredSession) {
+                    handleRequestActionFailure(
+                        exception = exception,
+                        message = "친구 요청을 취소하지 못했습니다.",
+                        refresh = ::loadSentRequests,
+                    )
+                }
             } finally {
                 finishRequestAction(requestId)
             }
@@ -158,7 +192,7 @@ class FriendManagementViewModel @Inject constructor(private val friendRepository
 
     /** 선택한 친구를 목록에서 삭제합니다. */
     fun deleteFriend(friendId: String) {
-        if (_uiState.value.deletingFriendId != null) return
+        if (hasExpiredSession || _uiState.value.deletingFriendId != null) return
 
         _uiState.update { currentState ->
             currentState.copy(
@@ -166,27 +200,35 @@ class FriendManagementViewModel @Inject constructor(private val friendRepository
                 userMessage = null,
             )
         }
+        invalidateReadRequests()
 
         viewModelScope.launch {
             try {
+                ensureActive()
+                if (hasExpiredSession) return@launch
                 friendRepository.deleteFriend(friendId)
+                ensureActive()
+                if (hasExpiredSession) return@launch
                 removeFriend(friendId)
                 loadFriends()
             } catch (exception: CancellationException) {
                 throw exception
             } catch (_: SessionExpiredException) {
-                // 전역 세션 관찰자가 로그인 화면 이동을 처리합니다.
+                handleSessionExpired()
             } catch (exception: Exception) {
-                if (exception.isStaleFriendState()) {
-                    loadFriends()
-                }
+                ensureActive()
+                if (!hasExpiredSession) {
+                    if (exception.isStaleFriendState()) {
+                        loadFriends()
+                    }
 
-                _uiState.update { currentState ->
-                    currentState.copy(
-                        userMessage = exception.toFriendErrorMessage(
-                            defaultMessage = "친구를 삭제하지 못했습니다.",
-                        ),
-                    )
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            userMessage = exception.toFriendErrorMessage(
+                                defaultMessage = "친구를 삭제하지 못했습니다.",
+                            ),
+                        )
+                    }
                 }
             } finally {
                 _uiState.update { currentState ->
@@ -196,6 +238,7 @@ class FriendManagementViewModel @Inject constructor(private val friendRepository
                         currentState
                     }
                 }
+                refreshPendingLists()
             }
         }
     }
@@ -207,7 +250,7 @@ class FriendManagementViewModel @Inject constructor(private val friendRepository
     }
 
     private fun loadFriends() {
-        if (friendsJob?.isActive == true) return
+        if (hasExpiredSession) return
 
         _uiState.update { currentState ->
             currentState.copy(
@@ -216,40 +259,58 @@ class FriendManagementViewModel @Inject constructor(private val friendRepository
             )
         }
 
+        if (hasPendingChanges()) {
+            pendingFriendsRefresh = true
+            return
+        }
+
+        val generation = ++friendsRequestGeneration
+        val countGeneration = ++receivedCountRequestGeneration
+        friendsJob?.cancel()
         friendsJob = viewModelScope.launch {
             try {
                 val result = friendRepository.getFriends()
+                ensureActive()
+                if (!isCurrentFriendsRequest(generation)) return@launch
 
                 _uiState.update { currentState ->
                     currentState.copy(
                         friends = result.friends,
                         friendCount = result.friendCount,
-                        receivedRequestCount = result.receivedRequestCount,
-                        isFriendsLoading = false,
+                        receivedRequestCount = if (countGeneration == receivedCountRequestGeneration) {
+                            result.receivedRequestCount
+                        } else {
+                            currentState.receivedRequestCount
+                        },
                         friendsErrorMessage = null,
                     )
                 }
             } catch (exception: CancellationException) {
                 throw exception
             } catch (_: SessionExpiredException) {
-                _uiState.update { currentState ->
-                    currentState.copy(isFriendsLoading = false)
-                }
+                handleSessionExpired()
             } catch (exception: Exception) {
-                _uiState.update { currentState ->
-                    currentState.copy(
-                        isFriendsLoading = false,
-                        friendsErrorMessage = exception.toFriendErrorMessage(
-                            defaultMessage = "친구 목록을 불러오지 못했습니다.",
-                        ),
-                    )
+                ensureActive()
+                if (isCurrentFriendsRequest(generation)) {
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            friendsErrorMessage = exception.toFriendErrorMessage(
+                                defaultMessage = "친구 목록을 불러오지 못했습니다.",
+                            ),
+                        )
+                    }
+                }
+            } finally {
+                if (generation == friendsRequestGeneration) {
+                    friendsJob = null
+                    _uiState.update { it.copy(isFriendsLoading = false) }
                 }
             }
         }
     }
 
     private fun loadReceivedRequests() {
-        if (receivedRequestsJob?.isActive == true) return
+        if (hasExpiredSession) return
 
         _uiState.update { currentState ->
             currentState.copy(
@@ -258,39 +319,57 @@ class FriendManagementViewModel @Inject constructor(private val friendRepository
             )
         }
 
+        if (hasPendingChanges()) {
+            pendingReceivedRequestsRefresh = true
+            return
+        }
+
+        val generation = ++receivedRequestsGeneration
+        val countGeneration = ++receivedCountRequestGeneration
+        receivedRequestsJob?.cancel()
         receivedRequestsJob = viewModelScope.launch {
             try {
                 val result = friendRepository.getReceivedFriendRequests()
+                ensureActive()
+                if (!isCurrentReceivedRequests(generation)) return@launch
 
                 _uiState.update { currentState ->
                     currentState.copy(
                         receivedRequests = result.requests,
-                        receivedRequestCount = result.receivedRequestCount,
-                        isReceivedRequestsLoading = false,
+                        receivedRequestCount = if (countGeneration == receivedCountRequestGeneration) {
+                            result.receivedRequestCount
+                        } else {
+                            currentState.receivedRequestCount
+                        },
                         receivedRequestsErrorMessage = null,
                     )
                 }
             } catch (exception: CancellationException) {
                 throw exception
             } catch (_: SessionExpiredException) {
-                _uiState.update { currentState ->
-                    currentState.copy(isReceivedRequestsLoading = false)
-                }
+                handleSessionExpired()
             } catch (exception: Exception) {
-                _uiState.update { currentState ->
-                    currentState.copy(
-                        isReceivedRequestsLoading = false,
-                        receivedRequestsErrorMessage = exception.toFriendErrorMessage(
-                            defaultMessage = "받은 친구 요청을 불러오지 못했습니다.",
-                        ),
-                    )
+                ensureActive()
+                if (isCurrentReceivedRequests(generation)) {
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            receivedRequestsErrorMessage = exception.toFriendErrorMessage(
+                                defaultMessage = "받은 친구 요청을 불러오지 못했습니다.",
+                            ),
+                        )
+                    }
+                }
+            } finally {
+                if (generation == receivedRequestsGeneration) {
+                    receivedRequestsJob = null
+                    _uiState.update { it.copy(isReceivedRequestsLoading = false) }
                 }
             }
         }
     }
 
     private fun loadSentRequests() {
-        if (sentRequestsJob?.isActive == true) return
+        if (hasExpiredSession) return
 
         _uiState.update { currentState ->
             currentState.copy(
@@ -299,39 +378,52 @@ class FriendManagementViewModel @Inject constructor(private val friendRepository
             )
         }
 
+        if (hasPendingChanges()) {
+            pendingSentRequestsRefresh = true
+            return
+        }
+
+        val generation = ++sentRequestsGeneration
+        sentRequestsJob?.cancel()
         sentRequestsJob = viewModelScope.launch {
             try {
                 val result = friendRepository.getSentFriendRequests()
+                ensureActive()
+                if (!isCurrentSentRequests(generation)) return@launch
 
                 _uiState.update { currentState ->
                     currentState.copy(
                         sentRequests = result.requests,
                         sentRequestCount = result.sentRequestCount,
-                        isSentRequestsLoading = false,
                         sentRequestsErrorMessage = null,
                     )
                 }
             } catch (exception: CancellationException) {
                 throw exception
             } catch (_: SessionExpiredException) {
-                _uiState.update { currentState ->
-                    currentState.copy(isSentRequestsLoading = false)
-                }
+                handleSessionExpired()
             } catch (exception: Exception) {
-                _uiState.update { currentState ->
-                    currentState.copy(
-                        isSentRequestsLoading = false,
-                        sentRequestsErrorMessage = exception.toFriendErrorMessage(
-                            defaultMessage = "보낸 친구 요청을 불러오지 못했습니다.",
-                        ),
-                    )
+                ensureActive()
+                if (isCurrentSentRequests(generation)) {
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            sentRequestsErrorMessage = exception.toFriendErrorMessage(
+                                defaultMessage = "보낸 친구 요청을 불러오지 못했습니다.",
+                            ),
+                        )
+                    }
+                }
+            } finally {
+                if (generation == sentRequestsGeneration) {
+                    sentRequestsJob = null
+                    _uiState.update { it.copy(isSentRequestsLoading = false) }
                 }
             }
         }
     }
 
     private fun beginRequestAction(requestId: String): Boolean {
-        if (requestId in _uiState.value.processingRequestIds) return false
+        if (hasExpiredSession || requestId in _uiState.value.processingRequestIds) return false
 
         _uiState.update { currentState ->
             currentState.copy(
@@ -339,6 +431,7 @@ class FriendManagementViewModel @Inject constructor(private val friendRepository
                 userMessage = null,
             )
         }
+        invalidateReadRequests()
         return true
     }
 
@@ -348,7 +441,76 @@ class FriendManagementViewModel @Inject constructor(private val friendRepository
                 processingRequestIds = currentState.processingRequestIds - requestId,
             )
         }
+        refreshPendingLists()
     }
+
+    private fun hasPendingChanges(): Boolean =
+        _uiState.value.processingRequestIds.isNotEmpty() || _uiState.value.deletingFriendId != null
+
+    /** 변경 전 조회를 무효화하고, 취소한 조회는 모든 변경이 끝난 뒤 다시 실행합니다. */
+    private fun invalidateReadRequests() {
+        pendingFriendsRefresh = pendingFriendsRefresh || friendsJob?.isActive == true
+        pendingReceivedRequestsRefresh = pendingReceivedRequestsRefresh || receivedRequestsJob?.isActive == true
+        pendingSentRequestsRefresh = pendingSentRequestsRefresh || sentRequestsJob?.isActive == true
+        friendsRequestGeneration++
+        receivedRequestsGeneration++
+        sentRequestsGeneration++
+        receivedCountRequestGeneration++
+        friendsJob?.cancel()
+        receivedRequestsJob?.cancel()
+        sentRequestsJob?.cancel()
+        friendsJob = null
+        receivedRequestsJob = null
+        sentRequestsJob = null
+    }
+
+    /** 마지막 변경이 끝나면 대기 중인 목록을 각각 한 번씩 다시 조회합니다. */
+    private fun refreshPendingLists() {
+        if (hasExpiredSession || hasPendingChanges() || !viewModelScope.isActive) return
+
+        val refreshFriends = pendingFriendsRefresh
+        val refreshReceivedRequests = pendingReceivedRequestsRefresh
+        val refreshSentRequests = pendingSentRequestsRefresh
+        pendingFriendsRefresh = false
+        pendingReceivedRequestsRefresh = false
+        pendingSentRequestsRefresh = false
+        if (refreshFriends) loadFriends()
+        if (refreshReceivedRequests) loadReceivedRequests()
+        if (refreshSentRequests) loadSentRequests()
+    }
+
+    /** 로그인 이동은 전역 처리에 맡기고, 만료 이후 조회와 결과 반영을 중단합니다. */
+    private fun handleSessionExpired() {
+        if (hasExpiredSession) return
+
+        hasExpiredSession = true
+        invalidateReadRequests()
+        pendingFriendsRefresh = false
+        pendingReceivedRequestsRefresh = false
+        pendingSentRequestsRefresh = false
+        _uiState.update {
+            it.copy(
+                isFriendsLoading = false,
+                isReceivedRequestsLoading = false,
+                isSentRequestsLoading = false,
+                friendsErrorMessage = null,
+                receivedRequestsErrorMessage = null,
+                sentRequestsErrorMessage = null,
+                processingRequestIds = emptySet(),
+                deletingFriendId = null,
+                userMessage = null,
+            )
+        }
+    }
+
+    private fun isCurrentFriendsRequest(generation: Long): Boolean =
+        !hasExpiredSession && generation == friendsRequestGeneration
+
+    private fun isCurrentReceivedRequests(generation: Long): Boolean =
+        !hasExpiredSession && generation == receivedRequestsGeneration
+
+    private fun isCurrentSentRequests(generation: Long): Boolean =
+        !hasExpiredSession && generation == sentRequestsGeneration
 
     private fun handleRequestActionFailure(exception: Exception, message: String, refresh: () -> Unit) {
         if (exception.isStaleFriendState()) {
@@ -364,32 +526,44 @@ class FriendManagementViewModel @Inject constructor(private val friendRepository
 
     private fun removeFriend(friendId: String) {
         _uiState.update { currentState ->
-            currentState.copy(
-                friends = currentState.friends.filterNot { friend -> friend.id == friendId },
-                friendCount = currentState.friendCount.decrementIfKnown(),
-            )
+            if (currentState.friends.none { it.id == friendId }) {
+                currentState
+            } else {
+                currentState.copy(
+                    friends = currentState.friends.filterNot { friend -> friend.id == friendId },
+                    friendCount = currentState.friendCount.decrementIfKnown(),
+                )
+            }
         }
     }
 
     private fun removeReceivedRequest(requestId: String) {
         _uiState.update { currentState ->
-            currentState.copy(
-                receivedRequests = currentState.receivedRequests.filterNot { request ->
-                    request.id == requestId
-                },
-                receivedRequestCount = currentState.receivedRequestCount.decrementIfKnown(),
-            )
+            if (currentState.receivedRequests.none { it.id == requestId }) {
+                currentState
+            } else {
+                currentState.copy(
+                    receivedRequests = currentState.receivedRequests.filterNot { request ->
+                        request.id == requestId
+                    },
+                    receivedRequestCount = currentState.receivedRequestCount.decrementIfKnown(),
+                )
+            }
         }
     }
 
     private fun removeSentRequest(requestId: String) {
         _uiState.update { currentState ->
-            currentState.copy(
-                sentRequests = currentState.sentRequests.filterNot { request ->
-                    request.id == requestId
-                },
-                sentRequestCount = currentState.sentRequestCount.decrementIfKnown(),
-            )
+            if (currentState.sentRequests.none { it.id == requestId }) {
+                currentState
+            } else {
+                currentState.copy(
+                    sentRequests = currentState.sentRequests.filterNot { request ->
+                        request.id == requestId
+                    },
+                    sentRequestCount = currentState.sentRequestCount.decrementIfKnown(),
+                )
+            }
         }
     }
 }

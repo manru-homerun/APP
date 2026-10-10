@@ -16,11 +16,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +72,30 @@ fun TravelSpotDibsScreen(
     onLoadNextPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val listState = rememberLazyListState()
+    val filterKey = "${uiState.selectedRegion.name}:${uiState.selectedCategory?.name}"
+    var previousFilter by rememberSaveable { mutableStateOf(filterKey) }
+    var previousSpots by remember { mutableStateOf(uiState.dibsSpots) }
+    val queryBusy = uiState.isLoading || uiState.isLoadingMore || uiState.isRefreshing
+    val filtersEnabled = !queryBusy && uiState.updatingDibsSpotIds.isEmpty()
+
+    SideEffect {
+        if (previousFilter != filterKey) {
+            listState.requestScrollToItem(0)
+        } else if (previousSpots != uiState.dibsSpots) {
+            val anchor = listState.layoutInfo.visibleItemsInfo.firstOrNull()
+            val oldIndex = previousSpots.indexOfFirst { it.id == anchor?.key }
+            if (oldIndex >= 0 && uiState.dibsSpots.none { it.id == anchor?.key }) {
+                val nextAnchor = (previousSpots.drop(oldIndex + 1) + previousSpots.take(oldIndex).asReversed())
+                    .firstOrNull { old -> uiState.dibsSpots.any { it.id == old.id } }
+                val newIndex = uiState.dibsSpots.indexOfFirst { it.id == nextAnchor?.id }.coerceAtLeast(0)
+                listState.requestScrollToItem(newIndex, listState.firstVisibleItemScrollOffset)
+            }
+        }
+        previousFilter = filterKey
+        previousSpots = uiState.dibsSpots
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -79,13 +111,13 @@ fun TravelSpotDibsScreen(
             selectedRegion = uiState.selectedRegion,
             onRegionSelected = onRegionSelected,
             modifier = Modifier.padding(horizontal = 18.dp),
-            enabled = !uiState.isLoading,
+            enabled = filtersEnabled,
         )
 
         YadanTravelSpotCategoryFilters(
             selectedCategory = uiState.selectedCategory,
             onCategorySelected = onCategorySelected,
-            enabled = !uiState.isLoading,
+            enabled = filtersEnabled,
             contentPadding = PaddingValues(horizontal = 18.dp),
         )
 
@@ -98,7 +130,7 @@ fun TravelSpotDibsScreen(
                 )
             }
 
-            uiState.errorMessage != null && uiState.dibsSpots.isEmpty() -> {
+            uiState.errorMessage != null && uiState.pageNumber == 0 && !uiState.isRefreshing -> {
                 TravelSpotDibsErrorContent(
                     message = uiState.errorMessage,
                     onRetryClick = onRetryClick,
@@ -112,6 +144,12 @@ fun TravelSpotDibsScreen(
                     updatingDibsSpotIds = uiState.updatingDibsSpotIds,
                     hasNextPage = uiState.hasNextPage,
                     isLoadingMore = uiState.isLoadingMore,
+                    isRefreshing = uiState.isRefreshing,
+                    refreshErrorMessage = uiState.refreshErrorMessage,
+                    pageNumber = uiState.pageNumber,
+                    filterKey = filterKey,
+                    listState = listState,
+                    actionsEnabled = !queryBusy,
                     loadMoreErrorMessage = uiState.loadMoreErrorMessage,
                     onTravelSpotClick = onTravelSpotClick,
                     onDibsClick = onDibsClick,
@@ -133,6 +171,12 @@ private fun TravelSpotDibsContent(
     updatingDibsSpotIds: Set<String>,
     hasNextPage: Boolean,
     isLoadingMore: Boolean,
+    isRefreshing: Boolean,
+    refreshErrorMessage: String?,
+    pageNumber: Int,
+    filterKey: String,
+    listState: LazyListState,
+    actionsEnabled: Boolean,
     loadMoreErrorMessage: String?,
     onTravelSpotClick: (String) -> Unit,
     onDibsClick: (String) -> Unit,
@@ -141,6 +185,7 @@ private fun TravelSpotDibsContent(
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(
             start = 18.dp,
@@ -150,7 +195,7 @@ private fun TravelSpotDibsContent(
         ),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        if (travelSpots.isEmpty()) {
+        if (travelSpots.isEmpty() && !isRefreshing && refreshErrorMessage == null && updatingDibsSpotIds.isEmpty()) {
             item(key = "empty") {
                 TravelSpotDibsEmptyContent()
             }
@@ -171,30 +216,31 @@ private fun TravelSpotDibsContent(
                     },
                     action = YadanTravelSpotAction.DIBS,
                     enabled = enabled,
+                    actionEnabled = actionsEnabled && enabled,
                 )
             }
+        }
 
-            when {
-                isLoadingMore -> {
-                    item(key = "loading-more") {
-                        TravelSpotDibsLoadMoreProgress()
-                    }
+        when {
+            isRefreshing || isLoadingMore -> {
+                item(key = "loading-more") {
+                    TravelSpotDibsLoadMoreProgress()
                 }
+            }
 
-                loadMoreErrorMessage != null -> {
-                    item(key = "load-more-error") {
-                        TravelSpotDibsLoadMoreError(
-                            message = loadMoreErrorMessage,
-                            onRetryClick = onRetryClick,
-                        )
-                    }
+            refreshErrorMessage != null || loadMoreErrorMessage != null -> {
+                item(key = "load-more-error") {
+                    TravelSpotDibsLoadMoreError(
+                        message = refreshErrorMessage ?: loadMoreErrorMessage.orEmpty(),
+                        onRetryClick = onRetryClick,
+                    )
                 }
+            }
 
-                hasNextPage -> {
-                    item(key = "load-next-page") {
-                        LaunchedEffect(travelSpots.size) {
-                            onLoadNextPage()
-                        }
+            hasNextPage && updatingDibsSpotIds.isEmpty() -> {
+                item(key = "load-next-page") {
+                    LaunchedEffect(filterKey, pageNumber) {
+                        onLoadNextPage()
                     }
                 }
             }
@@ -468,4 +514,48 @@ private fun TravelSpotDibsPreview(
             onLoadNextPage = {},
         )
     }
+}
+
+@Preview(name = "H04 기존 목록 갱신", showBackground = true, widthDp = 390, heightDp = 760)
+@Composable
+private fun TravelSpotDibsRefreshingPreview() {
+    TravelSpotDibsPreview(
+        TravelSpotDibsUiState(dibsSpots = previewDibsSpots, isLoading = false, isRefreshing = true, pageNumber = 2, totalPages = 3),
+    )
+}
+
+@Preview(name = "H04 갱신 실패 목록 유지", showBackground = true, widthDp = 390, heightDp = 760)
+@Composable
+private fun TravelSpotDibsRefreshErrorPreview() {
+    TravelSpotDibsPreview(
+        TravelSpotDibsUiState(
+            dibsSpots = previewDibsSpots,
+            isLoading = false,
+            pageNumber = 2,
+            totalPages = 3,
+            refreshErrorMessage = "찜 목록을 갱신하지 못했습니다. 다시 시도해주세요.",
+        ),
+    )
+}
+
+@Preview(name = "H04 다음 페이지 실패", showBackground = true, widthDp = 390, heightDp = 760)
+@Composable
+private fun TravelSpotDibsLoadMoreErrorPreview() {
+    TravelSpotDibsPreview(
+        TravelSpotDibsUiState(
+            dibsSpots = previewDibsSpots,
+            isLoading = false,
+            pageNumber = 1,
+            totalPages = 3,
+            loadMoreErrorMessage = "다음 찜 목록을 불러오지 못했습니다.",
+        ),
+    )
+}
+
+@Preview(name = "H04 빈 목록 갱신 실패", showBackground = true, widthDp = 390, heightDp = 760)
+@Composable
+private fun TravelSpotDibsEmptyRefreshErrorPreview() {
+    TravelSpotDibsPreview(
+        TravelSpotDibsUiState(isLoading = false, pageNumber = 1, refreshErrorMessage = "찜 목록을 갱신하지 못했습니다."),
+    )
 }

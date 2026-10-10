@@ -62,6 +62,9 @@ data class TravelSpotSelectionUiState(
     /** 찜 목록의 다음 페이지를 불러오고 있는지 나타냅니다. */
     val isDibsSpotsLoadingMore: Boolean = false,
 
+    /** 기존 찜 목록을 유지하며 조회된 페이지 범위를 갱신하는지 나타냅니다. */
+    val isDibsRefreshing: Boolean = false,
+
     /** 관광지를 검색하고 있는지 나타냅니다. */
     val isSearchLoading: Boolean = false,
 
@@ -73,6 +76,9 @@ data class TravelSpotSelectionUiState(
 
     /** 찜 목록의 다음 페이지 조회 실패 문구입니다. */
     val dibsLoadMoreErrorMessage: String? = null,
+
+    /** 기존 찜 목록을 유지하면서 재시도할 수 있는 갱신 실패 문구입니다. */
+    val dibsRefreshErrorMessage: String? = null,
 
     /** 검색 결과의 다음 페이지 조회 실패 문구입니다. */
     val searchLoadMoreErrorMessage: String? = null,

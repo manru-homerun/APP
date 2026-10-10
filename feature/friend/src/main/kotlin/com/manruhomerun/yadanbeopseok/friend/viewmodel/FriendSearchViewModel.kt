@@ -11,11 +11,14 @@ import java.net.HttpURLConnection.HTTP_CONFLICT
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** F·03의 사용자 검색과 친구 요청 상태를 관리합니다. */
 @HiltViewModel
@@ -24,13 +27,18 @@ class FriendSearchViewModel @Inject constructor(private val friendRepository: Fr
     val uiState: StateFlow<FriendSearchUiState> = _uiState.asStateFlow()
 
     private var searchJob: Job? = null
+    private var searchRequestGeneration = 0L
+    private val searchMutex = Mutex()
+    private var hasExpiredSession = false
 
     /** 검색어를 12자로 제한하고 이전 검색 결과를 초기화합니다. */
     fun updateQuery(query: String) {
+        if (hasExpiredSession) return
+
         val limitedQuery = query.take(MAX_NICKNAME_LENGTH)
         if (_uiState.value.query == limitedQuery) return
 
-        searchJob?.cancel()
+        cancelSearch()
         _uiState.update { currentState ->
             currentState.copy(
                 query = limitedQuery,
@@ -45,10 +53,12 @@ class FriendSearchViewModel @Inject constructor(private val friendRepository: Fr
 
     /** 입력한 닉네임으로 사용자를 검색합니다. */
     fun search() {
+        if (hasExpiredSession) return
+
         val normalizedQuery = _uiState.value.query.trim()
 
         if (normalizedQuery.isEmpty()) {
-            searchJob?.cancel()
+            cancelSearch()
             _uiState.update { currentState ->
                 currentState.copy(
                     query = "",
@@ -67,6 +77,8 @@ class FriendSearchViewModel @Inject constructor(private val friendRepository: Fr
 
     /** 검색 결과의 사용자에게 친구 요청을 전송합니다. */
     fun sendFriendRequest(userId: String) {
+        if (hasExpiredSession) return
+
         val currentState = _uiState.value
         val searchUser = currentState.users.firstOrNull { result -> result.user.id == userId }
 
@@ -82,26 +94,40 @@ class FriendSearchViewModel @Inject constructor(private val friendRepository: Fr
 
         viewModelScope.launch {
             try {
-                friendRepository.sendFriendRequest(userId)
-                markRequestAsSent(userId)
-                _uiState.update { state ->
-                    state.copy(userMessage = "친구 요청을 보냈습니다.")
+                // 검색과 전송 모두 API 호출부터 상태 반영까지 같은 잠금으로 보호합니다.
+                searchMutex.withLock {
+                    ensureActive()
+                    if (hasExpiredSession) return@withLock
+
+                    friendRepository.sendFriendRequest(userId)
+                    ensureActive()
+                    if (hasExpiredSession) return@withLock
+
+                    markRequestAsSent(userId)
+                    _uiState.update { state ->
+                        state.copy(userMessage = "친구 요청을 보냈습니다.")
+                    }
                 }
             } catch (exception: CancellationException) {
                 throw exception
             } catch (_: SessionExpiredException) {
-                // 전역 세션 관찰자가 로그인 화면 이동을 처리합니다.
+                handleSessionExpired()
             } catch (exception: Exception) {
-                _uiState.update { state ->
-                    state.copy(
-                        userMessage = exception.toFriendErrorMessage(
-                            defaultMessage = "친구 요청을 보내지 못했습니다.",
-                        ),
-                    )
-                }
+                ensureActive()
+                if (!hasExpiredSession) {
+                    _uiState.update { state ->
+                        state.copy(
+                            userMessage = exception.toFriendErrorMessage(
+                                defaultMessage = "친구 요청을 보내지 못했습니다.",
+                            ),
+                        )
+                    }
 
-                if (exception is ApiException && exception.statusCode == HTTP_CONFLICT) {
-                    _uiState.value.searchedQuery?.let(::loadSearchResult)
+                    if (exception is ApiException && exception.statusCode == HTTP_CONFLICT) {
+                        // 잠금 해제 후 현재 유효한 검색만 다시 조회합니다.
+                        val state = _uiState.value
+                        state.searchedQuery?.takeIf { it == state.query.trim() }?.let(::loadSearchResult)
+                    }
                 }
             } finally {
                 _uiState.update { state ->
@@ -118,6 +144,9 @@ class FriendSearchViewModel @Inject constructor(private val friendRepository: Fr
     }
 
     private fun loadSearchResult(query: String) {
+        if (hasExpiredSession) return
+
+        val generation = ++searchRequestGeneration
         searchJob?.cancel()
         _uiState.update { currentState ->
             currentState.copy(
@@ -132,43 +161,67 @@ class FriendSearchViewModel @Inject constructor(private val friendRepository: Fr
 
         searchJob = viewModelScope.launch {
             try {
-                val result = friendRepository.searchUsers(
-                    nickname = query,
-                    limit = SEARCH_RESULT_LIMIT,
-                )
+                searchMutex.withLock {
+                    ensureActive()
+                    if (!isCurrentSearch(generation, query)) return@withLock
 
-                _uiState.update { currentState ->
-                    if (currentState.searchedQuery != query) {
-                        currentState
-                    } else {
-                        currentState.copy(
-                            users = result.users,
-                            resultCount = result.resultCount,
-                            isLoading = false,
-                            errorMessage = null,
-                        )
+                    val result = friendRepository.searchUsers(
+                        nickname = query,
+                        limit = SEARCH_RESULT_LIMIT,
+                    )
+                    ensureActive()
+                    if (isCurrentSearch(generation, query)) {
+                        _uiState.update { currentState ->
+                            currentState.copy(
+                                users = result.users,
+                                resultCount = result.resultCount,
+                                errorMessage = null,
+                            )
+                        }
                     }
                 }
             } catch (exception: CancellationException) {
                 throw exception
             } catch (_: SessionExpiredException) {
-                _uiState.update { currentState ->
-                    currentState.copy(isLoading = false)
-                }
+                handleSessionExpired()
             } catch (exception: Exception) {
-                _uiState.update { currentState ->
-                    if (currentState.searchedQuery != query) {
-                        currentState
-                    } else {
+                ensureActive()
+                if (isCurrentSearch(generation, query)) {
+                    _uiState.update { currentState ->
                         currentState.copy(
-                            isLoading = false,
                             errorMessage = exception.toFriendErrorMessage(
                                 defaultMessage = "사용자를 검색하지 못했습니다.",
                             ),
                         )
                     }
                 }
+            } finally {
+                if (generation == searchRequestGeneration) {
+                    searchJob = null
+                    _uiState.update { it.copy(isLoading = false) }
+                }
             }
+        }
+    }
+
+    /** 검색만 취소하며 이미 진행 중인 친구 요청 전송은 유지합니다. */
+    private fun cancelSearch() {
+        searchRequestGeneration++
+        searchJob?.cancel()
+        searchJob = null
+    }
+
+    private fun isCurrentSearch(generation: Long, query: String): Boolean =
+        !hasExpiredSession && generation == searchRequestGeneration && _uiState.value.searchedQuery == query
+
+    /** 로그인 이동은 전역 처리에 맡기고, 만료 이후 추가 조회와 전송을 차단합니다. */
+    private fun handleSessionExpired() {
+        if (hasExpiredSession) return
+
+        hasExpiredSession = true
+        cancelSearch()
+        _uiState.update {
+            it.copy(isLoading = false, errorMessage = null, requestingUserIds = emptySet(), userMessage = null)
         }
     }
 

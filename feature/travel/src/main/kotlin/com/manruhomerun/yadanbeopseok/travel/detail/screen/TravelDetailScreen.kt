@@ -24,7 +24,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -235,11 +238,11 @@ private fun TravelDetailContent(
             dayNumbers.isNotEmpty() &&
             selectedDay != null
         ) {
-            {
+            { selectDay ->
                 YadanTravelDaySelector(
                     dayNumbers = dayNumbers,
                     selectedDay = selectedDay,
-                    onDaySelected = onDaySelected,
+                    onDaySelected = selectDay,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -248,6 +251,8 @@ private fun TravelDetailContent(
         },
 
         selectedDay = selectedDay,
+        pinDaySelector = isUpcoming,
+        onDaySelected = onDaySelected,
         scrollToSelectedDay = isUpcoming,
         onVisibleDayChanged = if (isUpcoming) {
             onDaySelected
@@ -484,6 +489,78 @@ private fun TravelDetailActivePreview() {
     )
 }
 
+@Preview(
+    name = "여행 상세 - 1일 일정",
+    showBackground = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 390,
+    heightDp = 844,
+)
+@Composable
+private fun TravelDetailSingleDayPreview() {
+    val travel = previewTravel(TravelStatus.UPCOMING, isLeader = true)
+    TravelDetailStatePreviewContent(
+        status = TravelStatus.UPCOMING,
+        travel = travel.copy(endDate = travel.startDate, days = travel.days.take(1)),
+    )
+}
+
+@Preview(
+    name = "여행 상세 - 3일 일정·짧은 마지막 일차",
+    showBackground = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 390,
+    heightDp = 844,
+)
+@Composable
+private fun TravelDetailThreeDayPreview() {
+    TravelDetailStatePreviewContent(status = TravelStatus.UPCOMING, travel = previewThreeDayTravel())
+}
+
+@Preview(
+    name = "여행 상세 - 좁은 화면·큰 글꼴",
+    showBackground = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 320,
+    heightDp = 740,
+    fontScale = 1.3f,
+)
+@Composable
+private fun TravelDetailNarrowPreview() {
+    TravelDetailStatePreviewContent(
+        status = TravelStatus.UPCOMING,
+        isLeader = false,
+        travel = previewThreeDayTravel().copy(isLeader = false),
+    )
+}
+
+@Preview(
+    name = "여행 상세 - 낮은 화면·3일 일정",
+    showBackground = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 640,
+    heightDp = 360,
+)
+@Composable
+private fun TravelDetailLandscapePreview() {
+    TravelDetailStatePreviewContent(status = TravelStatus.UPCOMING, travel = previewThreeDayTravel())
+}
+
+@Preview(
+    name = "여행 상세 - 빈 일정",
+    showBackground = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 390,
+    heightDp = 844,
+)
+@Composable
+private fun TravelDetailEmptySchedulePreview() {
+    TravelDetailStatePreviewContent(
+        status = TravelStatus.UPCOMING,
+        travel = previewTravel(TravelStatus.UPCOMING, isLeader = true).copy(days = emptyList()),
+    )
+}
+
 /**
  * 여행 진행 상태와 방장 여부에 따른 상세 화면을 Preview에 제공합니다.
  */
@@ -491,20 +568,20 @@ private fun TravelDetailActivePreview() {
 private fun TravelDetailStatePreviewContent(
     status: TravelStatus,
     isLeader: Boolean = true,
+    travel: Travel = previewTravel(status, isLeader),
 ) {
+    var selectedDay by remember(travel) { mutableStateOf(travel.days.firstOrNull()?.day) }
+
     YadanbeopseokTheme {
         TravelDetailScreen(
             uiState = TravelDetailUiState(
-                travel = previewTravel(
-                    status = status,
-                    isLeader = isLeader,
-                ),
+                travel = travel,
                 baseballGame = previewBaseballGame(),
-                selectedDay = 1,
+                selectedDay = selectedDay,
                 isLoading = false,
             ),
             onBackClick = {},
-            onDaySelected = {},
+            onDaySelected = { selectedDay = it },
             onVerifyClick = {},
             onRetryClick = {},
             onRenameClick = null,
@@ -615,6 +692,29 @@ private fun previewTravel(
         ),
         status = status,
     )
+
+/** 탭 이동과 마지막 일차 판정 확인을 위한 Preview 전용 일정입니다. */
+private fun previewThreeDayTravel(): Travel {
+    val travel = previewTravel(TravelStatus.UPCOMING, isLeader = true)
+    val fullDays = travel.days.map { day ->
+        day.copy(
+            places = List(6) { index ->
+                val place = day.places[index % day.places.size]
+                place.copy(spot = place.spot.copy(id = "preview-${day.day}-$index"), order = index + 1)
+            },
+        )
+    }
+
+    return travel.copy(
+        endDate = LocalDate(2026, 5, 24),
+        days = fullDays + TravelDay(
+            day = 3,
+            places = listOf(
+                previewPlace("preview-day-3", "해운대 해수욕장", TravelSpotCategory.NATURE, order = 1),
+            ),
+        ),
+    )
+}
 
 private fun previewPlace(
     id: String,

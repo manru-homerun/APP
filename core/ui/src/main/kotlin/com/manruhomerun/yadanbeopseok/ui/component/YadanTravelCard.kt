@@ -5,12 +5,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -31,9 +32,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanStatusChip
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanStatusChipStyle
@@ -55,7 +60,78 @@ import kotlinx.datetime.number
 /** 홈 여행 카드와 동일한 크기를 적용할 때 사용하는 기본값입니다. */
 object YadanTravelCardDefaults {
     val Height = 264.dp
+
+    /**
+     * 빈 카드와 여행 카드에 같은 높이를 배정하기 위한 비대화형 측정 슬롯입니다.
+     * 참조 문구와 실제 공통 컴포넌트를 측정만 하고 배치하지 않으며, 여행 모델을 만들지 않습니다.
+     */
+    @Composable
+    fun HeightReference(travels: List<TravelSummary>, currentDate: LocalDate) {
+        val textMeasurer = rememberTextMeasurer()
+        val widestTeam = KboTeam.entries.maxBy { team ->
+            textMeasurer.measure(team.displayName, YadanTypography.labelMedium.copy(fontWeight = FontWeight.ExtraBold)).size.width
+        }
+
+        Layout(
+            modifier = Modifier.fillMaxWidth().padding(TRAVEL_CARD_CONTENT_PADDING),
+            content = {
+                Layout(content = {
+                    YadanTravelCardHeader("여행 중 · DAY 3/3", YadanStatusChipStyle.LIVE, false, measurementOnly = true)
+                    Region.entries.forEach { region ->
+                        YadanTravelCardHeader("여행 예정 · ${region.displayName} 원정", YadanStatusChipStyle.PRIMARY, false)
+                    }
+                    travels.forEach { travel ->
+                        val dayCount = travel.totalDayCount()
+                        val visuals = travel.statusVisuals(currentDate, travel.currentDay(currentDate, dayCount), dayCount)
+                        YadanTravelCardHeader(visuals.text, visuals.style, false, measurementOnly = true)
+                    }
+                }) { measurables, constraints ->
+                    val headers = measurables.map { it.measure(constraints.copy(minHeight = 0)) }
+                    layout(constraints.maxWidth, headers.maxOf { it.height }) {}
+                }
+                Layout(content = {
+                    (listOf("\n") + travels.map { it.name }).forEach { title ->
+                        Text(
+                            text = title,
+                            modifier = Modifier.heightIn(min = TRAVEL_CARD_TITLE_MIN_HEIGHT),
+                            style = TRAVEL_CARD_TITLE_STYLE,
+                            minLines = 2,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }) { measurables, constraints ->
+                    val titles = measurables.map { it.measure(constraints.copy(minHeight = 0)) }
+                    layout(constraints.maxWidth, titles.maxOf { it.height }) {}
+                }
+                Layout(content = {
+                    YadanTravelDate("12.31(일)~12.31(일)")
+                    travels.forEach { YadanTravelDate(it.dateText()) }
+                }) { measurables, constraints ->
+                    val dates = measurables.map { it.measure(constraints.copy(minHeight = 0)) }
+                    layout(constraints.maxWidth, dates.maxOf { it.height }) {}
+                }
+                YadanTravelCardMatchup(widestTeam, widestTeam)
+                YadanTravelProgress(
+                    verifiedPlaceCount = STICKER_REQUIRED_VERIFIED_SPOT_COUNT,
+                    totalPlaceCount = STICKER_REQUIRED_VERIFIED_SPOT_COUNT,
+                    style = YadanTravelProgressStyle.ON_DARK,
+                )
+                YadanTravelScheduleButton(onClick = {}, enabled = false)
+            },
+        ) { measurables, constraints ->
+            val sizes = measurables.map { it.measure(Constraints.fixedWidth(constraints.maxWidth)) }
+            val requiredHeight = sizes[0].height + sizes[1].height + sizes[3].height + sizes[5].height +
+                maxOf(sizes[2].height, sizes[4].height) + TRAVEL_CARD_MINIMUM_GAP.roundToPx() * 4
+            layout(constraints.maxWidth, requiredHeight) {}
+        }
+    }
 }
+
+private val TRAVEL_CARD_CONTENT_PADDING = 16.dp
+private val TRAVEL_CARD_TITLE_MIN_HEIGHT = 56.dp
+private val TRAVEL_CARD_MINIMUM_GAP = 6.dp
+private val TRAVEL_CARD_TITLE_STYLE = YadanTypography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
 
 /**
  * 홈 화면에서 진행 중이거나 예정된 여행을 보여주는 카드입니다.
@@ -94,7 +170,7 @@ fun YadanTravelCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(YadanTravelCardDefaults.Height),
+            .heightIn(min = YadanTravelCardDefaults.Height),
         shape = MaterialTheme.shapes.large,
         colors =
             CardDefaults.cardColors(
@@ -113,7 +189,7 @@ fun YadanTravelCard(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
+                    .padding(TRAVEL_CARD_CONTENT_PADDING),
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
                 YadanTravelCardHeader(
@@ -124,12 +200,10 @@ fun YadanTravelCard(
 
                 Text(
                     text = travel.name,
-                    modifier = Modifier.height(56.dp),
-                    style =
-                        YadanTypography.titleLarge.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                        ),
+                    modifier = Modifier.heightIn(min = TRAVEL_CARD_TITLE_MIN_HEIGHT),
+                    style = TRAVEL_CARD_TITLE_STYLE,
                     color = YadanOnPrimary,
+                    minLines = 2,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -140,28 +214,7 @@ fun YadanTravelCard(
                     )
                 }
 
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
-                    color = Color.Black.copy(alpha = 0.16f),
-                    border =
-                        BorderStroke(
-                            width = 1.5.dp,
-                            color = YadanOnPrimary.copy(alpha = 0.14f),
-                        ),
-                ) {
-                    YadanGameMatchup(
-                        homeTeam = travel.homeTeam,
-                        awayTeam = travel.awayTeam,
-                        style = YadanGameMatchupStyle.ON_DARK,
-                        showHomeIndicator = false,
-                        modifier =
-                            Modifier.padding(
-                                horizontal = 12.dp,
-                                vertical = 9.dp,
-                            ),
-                    )
-                }
+                YadanTravelCardMatchup(travel.homeTeam, travel.awayTeam)
 
                 if (isActive) {
                     YadanTravelProgress(
@@ -186,16 +239,25 @@ private fun YadanTravelCardHeader(
     statusText: String,
     statusStyle: YadanStatusChipStyle,
     isLeader: Boolean,
+    measurementOnly: Boolean = false,
 ) {
-    Row(
+    // 배치하지 않는 측정 슬롯에서는 LIVE 칩의 무한 애니메이션을 실행하지 않습니다.
+    val staticLiveMeasurement = measurementOnly && statusStyle == YadanStatusChipStyle.LIVE
+    FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(TRAVEL_CARD_MINIMUM_GAP),
+        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         YadanStatusChip(
             text = statusText,
-            style = statusStyle,
+            style = if (staticLiveMeasurement) YadanStatusChipStyle.PRIMARY else statusStyle,
             onDark = true,
+            leadingIcon = if (staticLiveMeasurement) {
+                { Icon(imageVector = Icons.Default.Star, contentDescription = null) }
+            } else {
+                null
+            },
         )
 
         YadanStatusChip(
@@ -218,6 +280,25 @@ private fun YadanTravelCardHeader(
                     contentDescription = null,
                 )
             },
+        )
+    }
+}
+
+/** 실제 카드와 높이 측정에서 같은 대진 컴포넌트와 패딩을 사용합니다. */
+@Composable
+private fun YadanTravelCardMatchup(homeTeam: KboTeam, awayTeam: KboTeam) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = Color.Black.copy(alpha = 0.16f),
+        border = BorderStroke(1.5.dp, YadanOnPrimary.copy(alpha = 0.14f)),
+    ) {
+        YadanGameMatchup(
+            homeTeam = homeTeam,
+            awayTeam = awayTeam,
+            style = YadanGameMatchupStyle.ON_DARK,
+            showHomeIndicator = false,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
         )
     }
 }
@@ -260,7 +341,7 @@ private fun YadanTravelScheduleButton(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(44.dp),
+                .heightIn(min = 44.dp),
         enabled = enabled,
         shape = MaterialTheme.shapes.medium,
         colors =
@@ -279,6 +360,8 @@ private fun YadanTravelScheduleButton(
     ) {
         Text(
             text = "일정 보기",
+            modifier = Modifier.weight(1f, fill = false),
+            textAlign = TextAlign.Center,
             style =
                 YadanTypography.bodyMedium.copy(
                     fontWeight = FontWeight.ExtraBold,

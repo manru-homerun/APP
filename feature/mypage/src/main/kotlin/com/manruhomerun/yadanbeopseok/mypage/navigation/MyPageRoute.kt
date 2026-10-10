@@ -11,22 +11,31 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.manruhomerun.yadanbeopseok.common.LegalDocumentUrl
 import com.manruhomerun.yadanbeopseok.mypage.screen.MyPageScreen
 import com.manruhomerun.yadanbeopseok.mypage.viewmodel.MyPageViewModel
+import com.manruhomerun.yadanbeopseok.ui.LEGAL_DOCUMENT_OPEN_ERROR_MESSAGE
+import com.manruhomerun.yadanbeopseok.ui.tryOpenExternalActivity
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 /**
  * H·01 마이 화면과 [MyPageViewModel]을 연결합니다.
  *
  * 프로필과 여행 취향 상태를 수집하고 사용자 입력을 ViewModel 또는
- * 상위 내비게이션 콜백에 전달합니다.
+ * 상위 내비게이션 콜백에 전달하며, 외부 문서 실행 실패를 안내합니다.
  *
  * 로그아웃이나 회원 탈퇴로 로컬 인증 정보가 삭제되면
  * 앱의 공통 세션 관찰이 로그인 화면 전환을 처리합니다.
@@ -37,13 +46,26 @@ fun MyPageRoute(
     onDibsClick: () -> Unit,
     onTravelPreferenceClick: () -> Unit,
     onFriendsClick: () -> Unit,
-    onTermsClick: () -> Unit,
-    onPrivacyPolicyClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MyPageViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val uriHandler = LocalUriHandler.current
+    val coroutineScope = rememberCoroutineScope()
+    var documentErrorJob by remember(viewModel) { mutableStateOf<Job?>(null) }
+
+    val onOpenDocument: (String) -> Unit = { url ->
+        if (tryOpenExternalActivity { uriHandler.openUri(url) }) {
+            // 문서 오류 안내만 취소하고, 기존 API 오류 안내는 유지합니다.
+            documentErrorJob?.cancel()
+            documentErrorJob = null
+        } else if (documentErrorJob?.isActive != true) {
+            documentErrorJob = coroutineScope.launch {
+                snackbarHostState.showSnackbar(LEGAL_DOCUMENT_OPEN_ERROR_MESSAGE)
+            }
+        }
+    }
 
     /*
      * 프로필 수정 화면 등에서 돌아오면 마이페이지 정보를 다시 조회합니다.
@@ -78,8 +100,12 @@ fun MyPageRoute(
             onDibsClick = onDibsClick,
             onTravelPreferenceClick = onTravelPreferenceClick,
             onFriendsClick = onFriendsClick,
-            onTermsClick = onTermsClick,
-            onPrivacyPolicyClick = onPrivacyPolicyClick,
+            onTermsClick = {
+                onOpenDocument(LegalDocumentUrl.TERMS_OF_SERVICE)
+            },
+            onPrivacyPolicyClick = {
+                onOpenDocument(LegalDocumentUrl.PRIVACY_POLICY)
+            },
             onLogoutClick = viewModel::logout,
             onWithdrawalClick = viewModel::withdraw,
             modifier = Modifier.fillMaxSize(),

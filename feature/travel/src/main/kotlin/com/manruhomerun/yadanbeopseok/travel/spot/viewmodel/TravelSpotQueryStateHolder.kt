@@ -7,6 +7,7 @@ import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
 import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
+import com.manruhomerun.yadanbeopseok.model.TravelSpotListPage
 import com.manruhomerun.yadanbeopseok.travel.util.toTravelErrorMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -36,6 +37,9 @@ internal class TravelSpotQueryStateHolder(
     private var currentSuggestionParams: SuggestTravelSpotsParams? = null
     private var queryJob: Job? = null
     private val loadedTabs = mutableSetOf<TravelSpotSelectionTab>()
+    private var requestGeneration = 0L
+    private var dibsDirty = false
+    private var refreshTargetPage = FIRST_PAGE_NUMBER
 
     /** 추천 조건을 반영하고 현재 탭의 관광지 목록을 불러옵니다. */
     fun initializeTravelSpotSelection(params: SuggestTravelSpotsParams) {
@@ -51,14 +55,11 @@ internal class TravelSpotQueryStateHolder(
         if (currentParams != null && currentParams.region != params.region) {
             reset()
         } else {
-            cancelQuery()
+            val state = _uiState.value
+            val isSuggestedMode = !state.isSearchMode && state.selectedTab == TravelSpotSelectionTab.SUGGESTED
+            if (isSuggestedMode) cancelQuery()
             loadedTabs.remove(TravelSpotSelectionTab.SUGGESTED)
-            _uiState.update {
-                it.copy(
-                    suggestedSpots = emptyList(),
-                    errorMessage = null,
-                )
-            }
+            if (isSuggestedMode) _uiState.update { it.copy(errorMessage = null) }
         }
 
         currentSuggestionParams = params
@@ -75,7 +76,6 @@ internal class TravelSpotQueryStateHolder(
                 it.copy(
                     selectedTab = tab,
                     errorMessage = null,
-                    dibsLoadMoreErrorMessage = null,
                 )
             }
         }
@@ -185,6 +185,8 @@ internal class TravelSpotQueryStateHolder(
 
         cancelQuery()
         loadedTabs.remove(TravelSpotSelectionTab.DIBS)
+        dibsDirty = false
+        refreshTargetPage = FIRST_PAGE_NUMBER
 
         _uiState.update {
             it.copy(
@@ -194,6 +196,7 @@ internal class TravelSpotQueryStateHolder(
                 dibsTotalPages = 0,
                 errorMessage = null,
                 dibsLoadMoreErrorMessage = null,
+                dibsRefreshErrorMessage = null,
             )
         }
 
@@ -203,38 +206,35 @@ internal class TravelSpotQueryStateHolder(
     /**
      * 관광지 상세 화면에서 돌아온 경우 현재 목록을 다시 조회합니다.
      *
-     * 검색 중이면 현재 검색 결과와 스크롤을 유지하고 찜 목록 캐시만 무효화합니다.
-     * 최초 검색 실패 상태라면 같은 검색어로 다시 조회하고,
-     * 추천 또는 찜 탭이면 캐시 여부와 관계없이 현재 탭을 갱신합니다.
+     * 검색 중이면 진행 중인 검색과 결과를 유지하고 찜 목록을 갱신 필요로 표시합니다.
+     * 찜 탭은 기존 성공 페이지 범위를 갱신하고 추천 탭은 기존 단일 조회를 갱신합니다.
      */
     fun refreshTravelSpotSelection() {
         val state = _uiState.value
 
-        if (state.isLoading) {
-            return
-        }
-
-        if (state.isSearchMode) {
-            if (state.errorMessage != null) {
-                searchTravelSpots()
-            } else {
-                loadedTabs.remove(TravelSpotSelectionTab.DIBS)
-            }
-        } else {
-            loadSelectedTab(forceRefresh = true)
-        }
+        dibsDirty = true
+        refreshTargetPage = maxOf(refreshTargetPage, state.dibsPageNumber, FIRST_PAGE_NUMBER)
+        if (state.isSearchMode) return
+        cancelQuery()
+        loadSelectedTab(forceRefresh = true)
     }
 
     /** 실패한 현재 검색 또는 선택한 탭을 다시 조회합니다. */
     fun retryTravelSpotSelection() {
         val state = _uiState.value
 
-        if (state.searchLoadMoreErrorMessage != null) {
-            loadNextSearchPage()
-        } else if (state.dibsLoadMoreErrorMessage != null) {
-            loadNextDibsPage()
-        } else {
-            refreshTravelSpotSelection()
+        if (queryJob?.isActive == true) return
+        when {
+            state.isSearchMode -> {
+                if (state.searchLoadMoreErrorMessage != null) loadNextSearchPage() else searchTravelSpots()
+            }
+            state.selectedTab == TravelSpotSelectionTab.SUGGESTED -> loadSelectedTab(forceRefresh = true)
+            dibsDirty || state.dibsRefreshErrorMessage != null -> refreshDibsRange()
+            state.dibsLoadMoreErrorMessage != null -> {
+                _uiState.update { it.copy(dibsLoadMoreErrorMessage = null) }
+                loadNextDibsPage()
+            }
+            else -> loadSelectedTab(forceRefresh = true)
         }
     }
 
@@ -300,6 +300,8 @@ internal class TravelSpotQueryStateHolder(
             state.selectedTab == TravelSpotSelectionTab.DIBS &&
             !state.isDibsSpotsLoading &&
             !state.isDibsSpotsLoadingMore &&
+            !state.isDibsRefreshing && !dibsDirty &&
+            state.dibsLoadMoreErrorMessage == null && state.dibsRefreshErrorMessage == null &&
             state.hasNextDibsPage &&
             queryJob?.isActive != true
 
@@ -332,6 +334,13 @@ internal class TravelSpotQueryStateHolder(
                     _uiState.value.selectedDibsCategory == dibsCategory
 
                 if (isCurrentRequest) {
+                    if (page.pageNumber > page.totalPages) {
+                        dibsDirty = true
+                        refreshTargetPage = maxOf(FIRST_PAGE_NUMBER, state.dibsPageNumber)
+                        refreshDibsRange()
+                        return@launchSpotQuery
+                    }
+                    refreshTargetPage = page.pageNumber
                     _uiState.update { current ->
                         current.copy(
                             dibsSpots = (current.dibsSpots + page.travelSpots)
@@ -354,6 +363,8 @@ internal class TravelSpotQueryStateHolder(
         cancelQuery()
         currentSuggestionParams = null
         loadedTabs.clear()
+        dibsDirty = false
+        refreshTargetPage = FIRST_PAGE_NUMBER
         _uiState.value = TravelSpotSelectionUiState()
     }
 
@@ -366,6 +377,10 @@ internal class TravelSpotQueryStateHolder(
         val dibsCategory = state.selectedDibsCategory
 
         if (state.isSearchMode || queryJob?.isActive == true) return
+        if (tab == TravelSpotSelectionTab.DIBS && dibsDirty) {
+            refreshDibsRange()
+            return
+        }
         if (!forceRefresh && tab in loadedTabs) return
 
         cancelQuery()
@@ -417,6 +432,7 @@ internal class TravelSpotQueryStateHolder(
 
                         if (isCurrentRequest) {
                             loadedTabs.add(tab)
+                            refreshTargetPage = maxOf(FIRST_PAGE_NUMBER, page.pageNumber)
                             _uiState.update {
                                 it.copy(
                                     dibsSpots = page.travelSpots,
@@ -430,6 +446,59 @@ internal class TravelSpotQueryStateHolder(
                 )
             }
         }
+    }
+
+    /** 찜 목록의 기존 성공 범위만 재조회하고 모든 페이지가 성공한 뒤 일괄 반영합니다. */
+    private fun refreshDibsRange() {
+        val region = currentSuggestionParams?.region ?: return
+        val state = _uiState.value
+        val category = state.selectedDibsCategory
+        if (state.isSearchMode || state.selectedTab != TravelSpotSelectionTab.DIBS) return
+
+        cancelQuery()
+        dibsDirty = true
+        val targetPage = maxOf(refreshTargetPage, state.dibsPageNumber, FIRST_PAGE_NUMBER)
+        refreshTargetPage = targetPage
+        _uiState.update {
+            it.copy(isDibsRefreshing = true, errorMessage = null, dibsRefreshErrorMessage = null)
+        }
+
+        launchSpotQuery(
+            fallbackMessage = "찜 목록을 갱신하지 못했습니다. 다시 시도해주세요.",
+            request = {
+                val pages = linkedMapOf<Int, TravelSpotListPage>()
+                var pageNumber = FIRST_PAGE_NUMBER
+                var result: TravelSpotListPage
+                do {
+                    val page = repository.getTravelSpotDibs(region, category, pageNumber, TRAVEL_SPOT_PAGE_SIZE)
+                    pages[pageNumber] = page
+                    val lastPage = minOf(targetPage, maxOf(FIRST_PAGE_NUMBER, page.totalPages))
+                    result = page.copy(
+                        travelSpots = if (page.totalElements == 0L) emptyList() else {
+                            pages.filterKeys { it <= lastPage }.values.flatMap { it.travelSpots }.distinctBy { it.id }
+                        },
+                        pageNumber = minOf(pageNumber, lastPage),
+                    )
+                    pageNumber++
+                } while (pageNumber <= minOf(targetPage, result.totalPages))
+                result
+            },
+            onSuccess = { page ->
+                dibsDirty = false
+                refreshTargetPage = maxOf(FIRST_PAGE_NUMBER, page.pageNumber)
+                loadedTabs.add(TravelSpotSelectionTab.DIBS)
+                _uiState.update {
+                    it.copy(
+                        dibsSpots = page.travelSpots,
+                        dibsPageNumber = page.pageNumber,
+                        dibsTotalPages = page.totalPages,
+                        dibsLoadMoreErrorMessage = null,
+                        dibsRefreshErrorMessage = null,
+                    )
+                }
+            },
+            onError = { message -> _uiState.update { it.copy(dibsRefreshErrorMessage = message) } },
+        )
     }
 
     /** 추천, 찜 목록, 검색의 결과 반영과 예외 처리를 공통으로 실행합니다. */
@@ -446,21 +515,23 @@ internal class TravelSpotQueryStateHolder(
             return
         }
 
+        val generation = ++requestGeneration
         queryJob = scope.launch {
             try {
                 val spots = request()
                 ensureActive()
-                onSuccess(spots)
+                if (requestGeneration == generation) onSuccess(spots)
             } catch (exception: CancellationException) {
                 throw exception
             } catch (_: SessionExpiredException) {
             } catch (exception: Exception) {
                 ensureActive()
                 val message = exception.toTravelErrorMessage(fallbackMessage)
-                onError(message)
+                if (requestGeneration == generation) onError(message)
             } finally {
-                if (isActive) {
+                if (isActive && requestGeneration == generation) {
                     clearLoading()
+                    queryJob = null
                 }
             }
         }
@@ -468,6 +539,7 @@ internal class TravelSpotQueryStateHolder(
 
     /** 이전 요청을 취소합니다. 늦게 도착한 결과는 ensureActive에서 차단합니다. */
     private fun cancelQuery() {
+        requestGeneration++
         queryJob?.cancel()
         queryJob = null
         clearLoading()
@@ -479,6 +551,7 @@ internal class TravelSpotQueryStateHolder(
                 isSuggestedSpotsLoading = false,
                 isDibsSpotsLoading = false,
                 isDibsSpotsLoadingMore = false,
+                isDibsRefreshing = false,
                 isSearchLoading = false,
                 isSearchLoadingMore = false,
             )

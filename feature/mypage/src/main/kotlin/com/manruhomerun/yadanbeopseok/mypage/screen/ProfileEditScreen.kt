@@ -10,12 +10,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -31,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -71,6 +75,7 @@ fun ProfileEditScreen(
     onBackClick: () -> Unit,
     onRetryClick: () -> Unit,
     onNicknameChange: (String) -> Unit,
+    onNicknameInputDone: () -> Unit,
     onNicknameCheckRetry: () -> Unit,
     onTeamSelected: (KboTeam) -> Unit,
     onSaveClick: () -> Unit,
@@ -79,15 +84,12 @@ fun ProfileEditScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(YadanBackground),
+            .background(YadanBackground)
+            .imePadding(),
     ) {
         YadanTopAppBar(
             title = "프로필 수정",
-            onNavigationClick = {
-                if (!uiState.isSaving) {
-                    onBackClick()
-                }
-            },
+            onNavigationClick = onBackClick,
             modifier = Modifier.statusBarsPadding(),
         )
 
@@ -111,6 +113,7 @@ fun ProfileEditScreen(
                 ProfileEditContent(
                     uiState = uiState,
                     onNicknameChange = onNicknameChange,
+                    onNicknameInputDone = onNicknameInputDone,
                     onNicknameCheckRetry = onNicknameCheckRetry,
                     onTeamSelected = onTeamSelected,
                     onSaveClick = onSaveClick,
@@ -176,6 +179,7 @@ private fun ProfileEditErrorContent(
 private fun ProfileEditContent(
     uiState: ProfileEditUiState,
     onNicknameChange: (String) -> Unit,
+    onNicknameInputDone: () -> Unit,
     onNicknameCheckRetry: () -> Unit,
     onTeamSelected: (KboTeam) -> Unit,
     onSaveClick: () -> Unit,
@@ -217,6 +221,8 @@ private fun ProfileEditContent(
                 isError = uiState.hasNicknameError,
                 errorMessage = uiState.nicknameValidationMessage
                     ?: "닉네임을 확인해주세요",
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { onNicknameInputDone() }),
             )
 
             NicknameValidationMessage(
@@ -251,7 +257,7 @@ private fun ProfileEditContent(
                     .fillMaxWidth()
                     .padding(top = 10.dp),
             ) {
-                ProfileLinkedInfoRow(
+                ProfileBasicInfoRow(
                     label = "연령대",
                     value = profile.ageGroupLabel(currentDate),
                 )
@@ -261,7 +267,7 @@ private fun ProfileEditContent(
                     color = YadanDivider,
                 )
 
-                ProfileLinkedInfoRow(
+                ProfileBasicInfoRow(
                     label = "성별",
                     value = profile.gender.toDisplayName(),
                 )
@@ -439,9 +445,9 @@ private fun TeamSelectionGrid(
     }
 }
 
-/** 카카오 계정에서 연결된 읽기 전용 기본 정보를 표시합니다. */
+/** 서버 프로필에서 조회한 읽기 전용 기본 정보를 표시합니다. */
 @Composable
-private fun ProfileLinkedInfoRow(
+private fun ProfileBasicInfoRow(
     label: String,
     value: String,
 ) {
@@ -465,13 +471,6 @@ private fun ProfileLinkedInfoRow(
             text = value,
             style = YadanTypography.bodyMedium.copy(fontWeight = FontWeight.ExtraBold),
             color = YadanTextPrimary,
-        )
-
-        Text(
-            text = "카카오",
-            modifier = Modifier.padding(start = 10.dp),
-            style = YadanTypography.labelSmall.copy(fontWeight = FontWeight.Bold),
-            color = YadanTextMuted,
         )
     }
 }
@@ -504,6 +503,9 @@ private val previewProfile = UserProfile(
 )
 
 @Preview(name = "H02 프로필 수정", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "H02 작은 화면", showBackground = true, widthDp = 360, heightDp = 640)
+@Preview(name = "H02 큰 글꼴", showBackground = true, widthDp = 360, heightDp = 640, fontScale = 1.5f)
+@Preview(name = "H02 가로 화면", showBackground = true, widthDp = 740, heightDp = 360)
 @Composable
 private fun ProfileEditScreenPreview() {
     YadanbeopseokTheme {
@@ -519,6 +521,7 @@ private fun ProfileEditScreenPreview() {
             onBackClick = {},
             onRetryClick = {},
             onNicknameChange = {},
+            onNicknameInputDone = {},
             onNicknameCheckRetry = {},
             onTeamSelected = {},
             onSaveClick = {},
@@ -542,6 +545,7 @@ private fun ProfileEditDuplicatedPreview() {
             onBackClick = {},
             onRetryClick = {},
             onNicknameChange = {},
+            onNicknameInputDone = {},
             onNicknameCheckRetry = {},
             onTeamSelected = {},
             onSaveClick = {},
@@ -565,6 +569,7 @@ private fun ProfileEditCheckingPreview() {
             onBackClick = {},
             onRetryClick = {},
             onNicknameChange = {},
+            onNicknameInputDone = {},
             onNicknameCheckRetry = {},
             onTeamSelected = {},
             onSaveClick = {},
@@ -589,6 +594,7 @@ private fun ProfileEditSavingPreview() {
             onBackClick = {},
             onRetryClick = {},
             onNicknameChange = {},
+            onNicknameInputDone = {},
             onNicknameCheckRetry = {},
             onTeamSelected = {},
             onSaveClick = {},
@@ -605,6 +611,7 @@ private fun ProfileEditLoadingPreview() {
             onBackClick = {},
             onRetryClick = {},
             onNicknameChange = {},
+            onNicknameInputDone = {},
             onNicknameCheckRetry = {},
             onTeamSelected = {},
             onSaveClick = {},
@@ -624,6 +631,7 @@ private fun ProfileEditErrorPreview() {
             onBackClick = {},
             onRetryClick = {},
             onNicknameChange = {},
+            onNicknameInputDone = {},
             onNicknameCheckRetry = {},
             onTeamSelected = {},
             onSaveClick = {},

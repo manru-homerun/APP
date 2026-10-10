@@ -326,7 +326,7 @@ private fun TravelRecordScheduleCard(
 }
 
 /**
- * 지난 일정의 관광지 또는 야구 경기 한 항목을 표시합니다.
+ * 지난 일정의 관광지 인증 상태와 야구 경기 정보를 표시합니다.
  */
 @Composable
 private fun TravelRecordTimelineRow(
@@ -334,6 +334,12 @@ private fun TravelRecordTimelineRow(
     isLast: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val verificationText = when (item.isVerified) {
+        true -> "인증 완료"
+        false -> "미인증"
+        null -> null
+    }
+
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top,
@@ -346,25 +352,27 @@ private fun TravelRecordTimelineRow(
                 modifier = Modifier
                     .size(22.dp)
                     .background(
-                        color = if (item.isBaseballGame) {
-                            YadanTextPrimary
-                        } else {
-                            YadanPrimary
+                        color = when {
+                            item.isBaseballGame -> YadanTextPrimary
+                            item.isVerified == true -> YadanPrimary
+                            else -> YadanTextMuted
                         },
                         shape = CircleShape,
                     ),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = if (item.isBaseballGame) {
-                        Icons.Default.SportsBaseball
-                    } else {
-                        Icons.Default.Check
-                    },
-                    contentDescription = null,
-                    modifier = Modifier.size(14.dp),
-                    tint = YadanOnPrimary,
-                )
+                if (item.isBaseballGame || item.isVerified == true) {
+                    Icon(
+                        imageVector = if (item.isBaseballGame) {
+                            Icons.Default.SportsBaseball
+                        } else {
+                            Icons.Default.Check
+                        },
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = YadanOnPrimary,
+                    )
+                }
             }
 
             if (!isLast) {
@@ -395,16 +403,34 @@ private fun TravelRecordTimelineRow(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            Text(
-                text = item.supportingText,
+            Row(
                 modifier = Modifier.padding(top = 2.dp),
-                style = YadanTypography.labelSmall.copy(
-                    fontWeight = FontWeight.SemiBold,
-                ),
-                color = YadanTextMuted,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = item.supportingText,
+                    modifier = Modifier.weight(1f, fill = false),
+                    style = YadanTypography.labelSmall.copy(
+                        fontWeight = FontWeight.SemiBold,
+                    ),
+                    color = YadanTextMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+
+                if (verificationText != null) {
+                    Text(
+                        text = "· $verificationText",
+                        style = YadanTypography.labelSmall.copy(
+                            fontWeight = FontWeight.SemiBold,
+                        ),
+                        color = if (item.isVerified == true) YadanPrimaryInk else YadanTextMuted,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                }
+            }
         }
     }
 }
@@ -515,6 +541,7 @@ private fun TravelDay.toRecordTimelineItems(
                 name = place.spot.name,
                 supportingText = place.spot.category.displayName,
                 isBaseballGame = false,
+                isVerified = place.isVerified,
             )
         }
 
@@ -528,6 +555,7 @@ private fun TravelDay.toRecordTimelineItems(
                 name = baseballGame.stadium.name,
                 supportingText = "${baseballGame.toTimeText()} · 직관",
                 isBaseballGame = true,
+                isVerified = null,
             ),
         )
     }
@@ -535,10 +563,14 @@ private fun TravelDay.toRecordTimelineItems(
     return timelineItems
 }
 
+/**
+ * 지난 일정의 화면용 항목입니다. 야구 경기의 [isVerified]는 해당 사항이 없어 null입니다.
+ */
 private data class TravelRecordTimelineItem(
     val name: String,
     val supportingText: String,
     val isBaseballGame: Boolean,
+    val isVerified: Boolean?,
 )
 
 private fun Travel.toRecordDateRangeText(): String {
@@ -659,11 +691,38 @@ private fun TravelRecordDetailScreenPreview() {
     widthDp = 390,
     heightDp = 844,
 )
+@Preview(
+    name = "D01b 지난 여행 상세 - 좁은 화면 인증 혼합",
+    showBackground = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 320,
+    heightDp = 844,
+)
 @Composable
 private fun TravelRecordDetailWithoutStickerPreview() {
     YadanbeopseokTheme {
         TravelRecordDetailScreen(
             uiState = travelRecordDetailPreviewState(hasSticker = false),
+            onBackClick = {},
+            onRetryClick = {},
+            onStickerRetryClick = {},
+            onDecoratePhotoClick = null,
+        )
+    }
+}
+
+@Preview(
+    name = "D01b 지난 여행 상세 - 인증 0곳",
+    showBackground = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 390,
+    heightDp = 844,
+)
+@Composable
+private fun TravelRecordDetailUnverifiedPreview() {
+    YadanbeopseokTheme {
+        TravelRecordDetailScreen(
+            uiState = travelRecordDetailPreviewState(hasSticker = false, verifiedPlaceCount = 0),
             onBackClick = {},
             onRetryClick = {},
             onStickerRetryClick = {},
@@ -717,9 +776,8 @@ private fun TravelRecordDetailErrorPreview() {
 
 private fun travelRecordDetailPreviewState(
     hasSticker: Boolean,
+    verifiedPlaceCount: Int = if (hasSticker) STICKER_REQUIRED_VERIFIED_SPOT_COUNT else 2,
 ): TravelRecordDetailUiState {
-    val verifiedPlaceCount = if (hasSticker) STICKER_REQUIRED_VERIFIED_SPOT_COUNT else 2
-
     val travel = Travel(
         id = "travel-1",
         startDate = LocalDate(2026, 4, 12),

@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -31,12 +33,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOnPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOutline
-import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryDark
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryInk
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryTint
@@ -48,7 +50,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
  * 야단법석 공통 버튼의 시각적 유형입니다.
  */
 enum class YadanButtonStyle {
-    /** 주요 작업에 사용하는 하늘색 버튼입니다. */
+    /** 흰색 콘텐츠의 가독성을 높인 파란색 주요 작업 버튼입니다. */
     PRIMARY,
 
     /** 흰색 배경과 테두리가 있는 보조 버튼입니다. */
@@ -92,7 +94,7 @@ fun YadanButton(
     val (containerColor, contentColor) =
         when (style) {
             YadanButtonStyle.PRIMARY ->
-                YadanPrimary to YadanOnPrimary
+                YadanPrimaryInk to YadanOnPrimary
 
             YadanButtonStyle.GHOST ->
                 YadanSurface to YadanTextPrimary
@@ -119,9 +121,9 @@ fun YadanButton(
      * HTML의 .btn[disabled] { opacity: .42 }처럼
      * 버튼의 배경, 글자, 테두리 전체에 투명도를 적용합니다.
      *
-     * 로딩 중에는 클릭만 막고 활성 상태의 색상은 유지합니다.
+     * 로딩 중에는 enabled 값과 관계없이 클릭만 막고 활성 상태의 색상을 유지합니다.
      */
-    val buttonAlpha = if (enabled) 1f else DISABLED_ALPHA
+    val buttonAlpha = if (enabled || isLoading) 1f else DISABLED_ALPHA
 
     Button(
         onClick = onClick,
@@ -199,6 +201,8 @@ fun YadanButton(
 
         Text(
             text = text,
+            modifier = Modifier.weight(1f, fill = false),
+            textAlign = TextAlign.Center,
             // HTML 버튼의 font-weight: 800을 적용합니다.
             style =
                 MaterialTheme.typography.labelLarge.copy(
@@ -228,6 +232,40 @@ private val BUTTON_ICON_SIZE = 20.dp
 private val DEFAULT_CONTENT_PADDING = PaddingValues(horizontal = 20.dp, vertical = 14.dp)
 private val ICON_SPACING = 8.dp
 private const val DISABLED_ALPHA = 0.42f
+
+@Preview(name = "공통 버튼 - 좁은 너비", showBackground = true, widthDp = 280, heightDp = 640)
+@Preview(name = "공통 버튼 - 큰 글꼴", showBackground = true, widthDp = 280, heightDp = 640, fontScale = 2f)
+@Composable
+private fun YadanButtonLayoutPreview() {
+    YadanbeopseokTheme {
+        Column(
+            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            repeat(7) { index ->
+                YadanButton(
+                    text = "선택한 내용을 확인하고 계속 진행하기",
+                    onClick = {},
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = index != 5,
+                    isLoading = index == 4,
+                    reserveOppositeIconSpace = index != 6,
+                    leadingIcon = if (index == 1 || index == 3) {
+                        { Icon(imageVector = Icons.Default.Check, contentDescription = null) }
+                    } else {
+                        null
+                    },
+                    trailingIcon = if (index == 2 || index == 3 || index == 6) {
+                        { Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null) }
+                    } else {
+                        null
+                    },
+                )
+            }
+            YadanButton(text = "다시 시도", onClick = {})
+        }
+    }
+}
 
 @Preview(
     name = "Yadan buttons",
@@ -324,6 +362,14 @@ private fun YadanButtonPreview() {
                 text = "일정을 만드는 중",
                 onClick = {},
                 modifier = Modifier.fillMaxWidth(),
+                isLoading = true,
+            )
+
+            YadanButton(
+                text = "저장하는 중",
+                onClick = {},
+                modifier = Modifier.fillMaxWidth(),
+                enabled = false,
                 isLoading = true,
             )
 

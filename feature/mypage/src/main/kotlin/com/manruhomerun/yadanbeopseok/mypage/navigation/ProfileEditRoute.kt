@@ -1,5 +1,6 @@
 package com.manruhomerun.yadanbeopseok.mypage.navigation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,17 +12,24 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manruhomerun.yadanbeopseok.mypage.screen.ProfileEditScreen
 import com.manruhomerun.yadanbeopseok.mypage.viewmodel.ProfileEditEvent
 import com.manruhomerun.yadanbeopseok.mypage.viewmodel.ProfileEditViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
-/** H·02 프로필 수정 화면과 [ProfileEditViewModel]을 연결합니다. */
+/** H·02 프로필 편집, 입력 종료와 저장 중 뒤로가기 차단을 연결합니다. */
 @Composable
 fun ProfileEditRoute(
     onBackClick: () -> Unit,
@@ -30,11 +38,53 @@ fun ProfileEditRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val coroutineScope = rememberCoroutineScope()
+    var savingBackMessageJob by remember(viewModel) { mutableStateOf<Job?>(null) }
+
+    val onNicknameInputDone: () -> Unit = {
+        focusManager.clearFocus()
+        keyboardController?.hide()
+    }
+
+    val onSaveClick: () -> Unit = {
+        if (viewModel.uiState.value.isSaveEnabled) {
+            onNicknameInputDone()
+            viewModel.saveProfile()
+        }
+    }
+
+    val onUserBackClick: () -> Unit = {
+        if (viewModel.uiState.value.isSaving) {
+            if (savingBackMessageJob?.isActive != true) {
+                savingBackMessageJob = coroutineScope.launch {
+                    snackbarHostState.showSnackbar("저장 중입니다. 잠시만 기다려주세요.")
+                }
+            }
+        } else {
+            onBackClick()
+        }
+    }
+
+    BackHandler(enabled = uiState.isSaving, onBack = onUserBackClick)
+
+    // 저장 종료 시 대기 안내만 취소하고, 저장 실패 안내는 유지합니다.
+    LaunchedEffect(uiState.isSaving, viewModel) {
+        if (!viewModel.uiState.value.isSaving) {
+            savingBackMessageJob?.cancel()
+            savingBackMessageJob = null
+        }
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
-                ProfileEditEvent.Saved -> onBackClick()
+                ProfileEditEvent.Saved -> {
+                    savingBackMessageJob?.cancel()
+                    savingBackMessageJob = null
+                    onBackClick()
+                }
             }
         }
     }
@@ -53,12 +103,13 @@ fun ProfileEditRoute(
     Box(modifier = modifier.fillMaxSize()) {
         ProfileEditScreen(
             uiState = uiState,
-            onBackClick = onBackClick,
+            onBackClick = onUserBackClick,
             onRetryClick = viewModel::retry,
             onNicknameChange = viewModel::updateNickname,
+            onNicknameInputDone = onNicknameInputDone,
             onNicknameCheckRetry = viewModel::retryNicknameAvailabilityCheck,
             onTeamSelected = viewModel::selectTeam,
-            onSaveClick = viewModel::saveProfile,
+            onSaveClick = onSaveClick,
             modifier = Modifier.fillMaxSize(),
         )
 

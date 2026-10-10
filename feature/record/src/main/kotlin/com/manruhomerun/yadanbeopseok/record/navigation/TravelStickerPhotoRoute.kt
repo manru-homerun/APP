@@ -1,11 +1,12 @@
 package com.manruhomerun.yadanbeopseok.record.navigation
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.media.MediaMetadataRetriever
+import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
@@ -16,9 +17,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
@@ -30,13 +32,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
+import com.manruhomerun.yadanbeopseok.record.component.TravelStickerPhotoImageState
 import com.manruhomerun.yadanbeopseok.record.screen.TravelStickerPhotoScreen
 import com.manruhomerun.yadanbeopseok.record.viewmodel.TravelStickerPhotoViewModel
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
 /**
@@ -55,49 +57,96 @@ fun TravelStickerPhotoRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current.applicationContext
     val graphicsLayer = rememberGraphicsLayer()
-    val coroutineScope = rememberCoroutineScope()
-    var photoMetadataJob by remember {
-        mutableStateOf<Job?>(null)
+    var isGalleryLaunchPending by rememberSaveable(travelId) { mutableStateOf(false) }
+    var pendingPhotoUri by rememberSaveable(travelId) { mutableStateOf<String?>(null) }
+    var isLeavingRoute by remember(travelId) { mutableStateOf(false) }
+    var photoRequestId by remember(travelId) { mutableLongStateOf(0L) }
+    var canvasImageState by remember(travelId) { mutableStateOf<TravelStickerPhotoImageState?>(null) }
+    val isReadingPhoto = pendingPhotoUri != null
+
+    fun canEditPhoto(): Boolean = !viewModel.uiState.value.isExporting && !isGalleryLaunchPending &&
+        pendingPhotoUri == null && !isLeavingRoute
+
+    fun isCanvasReady(): Boolean {
+        val state = viewModel.uiState.value
+        val imageState = canvasImageState ?: return false
+        return imageState.isReady && imageState.matchesContent(photoRequestId, state.photoUri, state.placedStickers)
+    }
+
+    /** 화면 재생성 전의 준비 상태를 재사용하지 않고 캡처 직전에도 현재 이미지를 검사합니다. */
+    fun requireReadyCanvasForExport() {
+        val state = viewModel.uiState.value
+        if (!state.isExporting || !state.hasSelectedPhoto || state.isLoading ||
+            pendingPhotoUri != null || isGalleryLaunchPending || isLeavingRoute || !isCanvasReady()
+        ) {
+            throw IOException("사진과 스티커가 저장할 준비를 마치지 못했습니다.")
+        }
+    }
+
+    fun navigateBack() {
+        if (viewModel.uiState.value.isExporting || isLeavingRoute) return
+
+        isLeavingRoute = true
+        pendingPhotoUri = null
+        isGalleryLaunchPending = false
+        navigator.navigateBack()
+    }
+
+    fun showGalleryLaunchFailure() {
+        isGalleryLaunchPending = false
+        Toast.makeText(context, "갤러리를 열 수 없습니다.", Toast.LENGTH_SHORT).show()
     }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
     ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.data?.let { photoUri ->
-                photoMetadataJob?.cancel()
-                photoMetadataJob = coroutineScope.launch {
-                    try {
-                        val aspectRatio = withContext(Dispatchers.IO) {
-                            readPhotoAspectRatio(context, photoUri)
-                        }
+        isGalleryLaunchPending = false
 
-                        if (aspectRatio == null) {
-                            Toast.makeText(
-                                context,
-                                "사진 정보를 확인할 수 없습니다. 다른 사진을 선택해주세요.",
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                            return@launch
-                        }
+        if (canEditPhoto() && result.resultCode == Activity.RESULT_OK) {
+            val photoUri = result.data?.data?.toString()?.takeIf { it.isNotBlank() }
 
-                        viewModel.selectPhoto(photoUri.toString(), aspectRatio)
-                    } catch (exception: CancellationException) {
-                        throw exception
-                    } catch (_: Exception) {
-                        Toast.makeText(
-                            context,
-                            "사진 정보를 확인할 수 없습니다. 다른 사진을 선택해주세요.",
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    }
-                }
+            if (photoUri == null) {
+                Toast.makeText(context, "선택한 사진을 확인할 수 없습니다.", Toast.LENGTH_SHORT).show()
+            } else {
+                canvasImageState = null
+                pendingPhotoUri = photoUri
             }
         }
     }
 
     LaunchedEffect(travelId, viewModel) {
         viewModel.loadStickers(travelId)
+    }
+
+    LaunchedEffect(travelId, pendingPhotoUri, viewModel) {
+        val photoUri = pendingPhotoUri ?: return@LaunchedEffect
+
+        try {
+            val aspectRatio = withContext(Dispatchers.IO) {
+                readPhotoAspectRatio(context, Uri.parse(photoUri))
+            }
+
+            ensureActive()
+            if (pendingPhotoUri != photoUri || isLeavingRoute) return@LaunchedEffect
+
+            photoRequestId++
+            canvasImageState = null
+            viewModel.selectPhoto(photoUri, aspectRatio)
+            pendingPhotoUri = null
+        } catch (exception: CancellationException) {
+            // 화면 재생성 시 대기 URI는 유지하고, 이전 작업의 결과만 버립니다.
+            throw exception
+        } catch (_: Exception) {
+            ensureActive()
+            if (pendingPhotoUri != photoUri || isLeavingRoute) return@LaunchedEffect
+
+            pendingPhotoUri = null
+            Toast.makeText(
+                context,
+                "사진 정보를 확인할 수 없습니다. 다른 사진을 선택해주세요.",
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
     }
 
     /*
@@ -123,7 +172,10 @@ fun TravelStickerPhotoRoute(
                 // 편집용 UI가 제거된 캔버스의 그리기를 기다립니다.
             }
 
+            requireReadyCanvasForExport()
             val bitmap = graphicsLayer.toImageBitmap().asAndroidBitmap()
+            ensureActive()
+            requireReadyCanvasForExport()
 
             withContext(Dispatchers.IO) {
                 saveBitmapToGallery(
@@ -147,34 +199,80 @@ fun TravelStickerPhotoRoute(
         }
     }
 
-    BackHandler(enabled = uiState.isExporting) {
-        // 캔버스 캡처와 갤러리 저장이 끝날 때까지 화면을 유지합니다.
+    BackHandler(enabled = uiState.isExporting || isGalleryLaunchPending || isReadingPhoto) {
+        // 저장 중에는 이동하지 않고, 사진 조회 중에는 결과 반영을 취소한 뒤 이동합니다.
+        navigateBack()
     }
 
     TravelStickerPhotoScreen(
         uiState = uiState,
-        onBackClick = navigator::navigateBack,
+        onBackClick = ::navigateBack,
         onPhotoSelectClick = {
-            galleryLauncher.launch(
-                Intent(
-                    Intent.ACTION_PICK,
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                ).apply {
-                    type = IMAGE_PICKER_MIME_TYPE
-                },
-            )
+            if (canEditPhoto() && !viewModel.uiState.value.hasSelectedPhoto) {
+                isGalleryLaunchPending = true
+
+                try {
+                    galleryLauncher.launch(
+                        Intent(
+                            Intent.ACTION_PICK,
+                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        ).apply {
+                            type = IMAGE_PICKER_MIME_TYPE
+                        },
+                    )
+                } catch (_: ActivityNotFoundException) {
+                    showGalleryLaunchFailure()
+                } catch (_: SecurityException) {
+                    showGalleryLaunchFailure()
+                } catch (_: IllegalArgumentException) {
+                    showGalleryLaunchFailure()
+                }
+            }
         },
-        onPhotoResetClick = viewModel::clearPhoto,
-        onStickerClick = viewModel::addSticker,
+        onPhotoResetClick = {
+            if (canEditPhoto()) {
+                photoRequestId++
+                canvasImageState = null
+                viewModel.clearPhoto()
+            }
+        },
+        onStickerClick = {
+            if (canEditPhoto()) viewModel.addSticker(it)
+        },
         onClearStickerSelection = {
-            viewModel.selectSticker(null)
+            if (canEditPhoto()) viewModel.selectSticker(null)
         },
-        onStickerSelect = viewModel::selectSticker,
-        onStickerTransform = viewModel::updateStickerTransform,
-        onDeleteSelectedSticker = viewModel::deleteSelectedSticker,
-        onRetryClick = viewModel::retry,
-        onSaveClick = viewModel::startExport,
+        onStickerSelect = {
+            if (canEditPhoto()) viewModel.selectSticker(it)
+        },
+        onStickerTransform = { stickerId, panX, panY, zoom, rotation ->
+            if (canEditPhoto()) {
+                viewModel.updateStickerTransform(stickerId, panX, panY, zoom, rotation)
+            }
+        },
+        onDeleteSelectedSticker = {
+            if (canEditPhoto()) viewModel.deleteSelectedSticker()
+        },
+        onRetryClick = {
+            if (canEditPhoto()) viewModel.retry()
+        },
+        onSaveClick = {
+            if (canEditPhoto() && viewModel.uiState.value.canExport && isCanvasReady()) {
+                viewModel.startExport()
+            }
+        },
         modifier = modifier,
+        isReadingPhoto = isReadingPhoto,
+        photoRequestId = photoRequestId,
+        imageState = canvasImageState,
+        onCanvasImageStateChange = { imageState ->
+            val state = viewModel.uiState.value
+            if (!isLeavingRoute && pendingPhotoUri == null &&
+                imageState.matchesContent(photoRequestId, state.photoUri, state.placedStickers)
+            ) {
+                canvasImageState = imageState
+            }
+        },
         canvasModifier = Modifier.drawWithContent {
             graphicsLayer.record {
                 this@drawWithContent.drawContent()
@@ -185,42 +283,25 @@ fun TravelStickerPhotoRoute(
     )
 }
 
-/** 선택한 사진의 회전 방향을 반영한 가로세로 비율을 반환합니다. */
-private fun readPhotoAspectRatio(
-    context: Context,
-    photoUri: Uri,
-): Float? {
-    val metadataRetriever = MediaMetadataRetriever()
+/** 이미지 방향이 반영된 원본 비율을 읽고, 정보 확인용 작은 Bitmap은 즉시 해제합니다. */
+private fun readPhotoAspectRatio(context: Context, photoUri: Uri): Float {
+    val source = ImageDecoder.createSource(context.contentResolver, photoUri)
+    var aspectRatio: Float? = null
 
-    return try {
-        metadataRetriever.setDataSource(context, photoUri)
+    val bitmap = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+        val width = info.size.width
+        val height = info.size.height
+        if (width <= 0 || height <= 0) throw IOException("사진 크기가 유효하지 않습니다.")
 
-        val width = metadataRetriever
-            .extractMetadata(MediaMetadataRetriever.METADATA_KEY_IMAGE_WIDTH)
-            ?.toIntOrNull()
-            ?: return null
-        val height = metadataRetriever
-            .extractMetadata(MediaMetadataRetriever.METADATA_KEY_IMAGE_HEIGHT)
-            ?.toIntOrNull()
-            ?: return null
-        val rotation = metadataRetriever
-            .extractMetadata(MediaMetadataRetriever.METADATA_KEY_IMAGE_ROTATION)
-            ?.toIntOrNull()
-            ?: 0
-
-        if (width <= 0 || height <= 0) return null
-
-        val hasQuarterTurn = rotation == 90 || rotation == 270
-        val displayWidth = if (hasQuarterTurn) height else width
-        val displayHeight = if (hasQuarterTurn) width else height
-        val aspectRatio = displayWidth.toFloat() / displayHeight.toFloat()
-
-        aspectRatio.takeIf {
+        aspectRatio = (width.toFloat() / height.toFloat()).takeIf {
             it.isFinite() && it > 0f
         }
-    } finally {
-        metadataRetriever.release()
+        decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+        decoder.setTargetSize(1, 1)
     }
+
+    bitmap.recycle()
+    return aspectRatio ?: throw IOException("사진 비율이 유효하지 않습니다.")
 }
 
 /**

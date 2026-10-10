@@ -1,5 +1,6 @@
 package com.manruhomerun.yadanbeopseok.data.repository.impl
 
+import com.manruhomerun.yadanbeopseok.common.InvalidResponseException
 import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.mapper.toTravelSpot
 import com.manruhomerun.yadanbeopseok.data.mapper.toTravelSpotDetail
@@ -105,6 +106,19 @@ internal class TravelSpotRepositoryImpl @Inject constructor(
             )
         }
 
+        val invalidMetadata = response.pageNumber != pageNumber || response.pageSize <= 0 ||
+            response.totalElements < 0 || response.totalPages < 0
+        val invalidEmptyPage = response.contents.isEmpty() && response.totalElements > 0 &&
+            response.pageNumber <= response.totalPages
+        val invalidNonEmptyPage = response.contents.isNotEmpty() &&
+            (response.totalElements == 0L || response.pageNumber > response.totalPages)
+        val invalidTotal = response.totalElements > 0 && response.totalPages == 0
+
+        if (invalidMetadata || invalidEmptyPage || invalidNonEmptyPage || invalidTotal) {
+            throw InvalidResponseException("찜 목록의 페이지 정보가 올바르지 않습니다.")
+        }
+
+        // 목록이 줄어 범위 밖 페이지가 비면 호출자가 기존 조회 범위를 갱신합니다.
         return response.toTravelSpotListPage(defaultDibs = true)
     }
 

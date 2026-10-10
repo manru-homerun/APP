@@ -4,9 +4,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -36,7 +39,6 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
@@ -143,8 +145,11 @@ fun TravelThemeSelectionScreen(
             else -> {
                 themeItems.chunked(2).forEachIndexed { rowIndex, rowItems ->
                     item(key = "theme_row_$rowIndex") {
+                        // 긴 테마 이름에 맞춰 같은 행의 카드 높이를 맞춥니다.
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(IntrinsicSize.Min),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             rowItems.forEach { item ->
@@ -155,7 +160,9 @@ fun TravelThemeSelectionScreen(
                                         onClick = {
                                             onThemeClick(item.theme)
                                         },
-                                        modifier = Modifier.weight(1f),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight(),
                                     )
                                 }
                             }
@@ -172,7 +179,7 @@ fun TravelThemeSelectionScreen(
 }
 
 /**
- * 여행 테마의 아이콘, 이름과 선택 상태를 표시합니다.
+ * 여행 테마의 아이콘, 여러 줄 이름과 선택 상태를 수직 중앙에 표시합니다.
  */
 @Composable
 private fun ThemeSelectionCard(
@@ -209,6 +216,7 @@ private fun ThemeSelectionCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .fillMaxHeight()
                 .heightIn(min = 64.dp)
                 .padding(
                     horizontal = 10.dp,
@@ -237,13 +245,10 @@ private fun ThemeSelectionCard(
             Text(
                 text = item.theme.name,
                 modifier = Modifier.weight(1f),
-                style = YadanTypography.labelSmall.copy(
+                style = YadanTypography.labelMedium.copy(
                     fontWeight = FontWeight.ExtraBold,
                 ),
                 color = YadanTextPrimary,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -339,7 +344,7 @@ private val TravelThemeIcon.imageVector: ImageVector
     }
 
 @Preview(
-    name = "B03 여행 테마",
+    name = "여행 테마 선택",
     showBackground = true,
     widthDp = 390,
     heightDp = 844,
@@ -348,10 +353,42 @@ private val TravelThemeIcon.imageVector: ImageVector
 private fun TravelThemeSelectionScreenPreview() {
     val themes = previewTravelThemes
 
+    TravelThemeSelectionPreviewContent(themes = themes, selectedTheme = themes[2])
+}
+
+@Preview(
+    name = "여행 테마 선택 - 좁은 화면·큰 글꼴·미선택",
+    showBackground = true,
+    widthDp = 320,
+    heightDp = 740,
+    fontScale = 1.5f,
+)
+@Composable
+private fun TravelThemeSelectionNarrowPreview() {
+    TravelThemeSelectionPreviewContent(themes = previewLongNameTravelThemes, selectedTheme = null)
+}
+
+@Preview(
+    name = "여행 테마 선택 - 가로 화면·긴 이름 선택",
+    showBackground = true,
+    widthDp = 640,
+    heightDp = 360,
+)
+@Composable
+private fun TravelThemeSelectionLandscapePreview() {
+    TravelThemeSelectionPreviewContent(
+        themes = previewLongNameTravelThemes,
+        selectedTheme = previewLongNameTravelThemes[1],
+    )
+}
+
+/** 화면 크기와 선택 상태를 비교하는 전체 화면 Preview입니다. */
+@Composable
+private fun TravelThemeSelectionPreviewContent(themes: List<TravelTheme>, selectedTheme: TravelTheme?) {
     YadanbeopseokTheme {
         TravelThemeSelectionScreen(
             uiState = TravelThemeSelectionUiState(themes = themes),
-            selectedTheme = themes[2],
+            selectedTheme = selectedTheme,
             onThemeClick = {},
             onBackClick = {},
             onNextClick = {},
@@ -371,4 +408,12 @@ private val previewTravelThemes = listOf(
     TravelTheme(id = "8", name = "역사·문화 탐방"),
     TravelTheme(id = "9", name = "특별한 기념일"),
     TravelTheme(id = "10", name = "발길이 이끄는 대로"),
+)
+
+private val previewLongNameTravelThemes = listOf(
+    TravelTheme(id = "preview-short", name = "힐링"),
+    TravelTheme(id = "preview-long", name = "소중한 사람과 함께 새로운 도시의 풍경과 문화를 천천히 즐기는 여행"),
+    TravelTheme(id = "preview-no-spaces", name = "새로운도시에서역사와문화를만나며소중한추억을남기는여행"),
+    TravelTheme(id = "preview-culture", name = "역사·문화 탐방"),
+    TravelTheme(id = "preview-last", name = "오랜만에 만난 친구들과 여유롭게 대화하며 추억을 쌓는 여행"),
 )

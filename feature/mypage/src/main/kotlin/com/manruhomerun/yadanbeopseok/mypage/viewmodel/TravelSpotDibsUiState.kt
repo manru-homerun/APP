@@ -14,9 +14,11 @@ import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
  * @property totalPages 전체 페이지 수
  * @property isLoading 첫 페이지를 조회하는 중인지 여부
  * @property isLoadingMore 다음 페이지를 조회하는 중인지 여부
+ * @property isRefreshing 기존 조회 범위를 갱신하는 중인지 여부
  * @property updatingDibsSpotIds 찜 취소 요청을 처리 중인 관광지 ID
  * @property errorMessage 사용자에게 표시할 안전한 오류 문구
  * @property loadMoreErrorMessage 다음 페이지 조회 실패 문구
+ * @property refreshErrorMessage 기존 목록을 유지하면서 표시할 갱신 실패 문구
  */
 data class TravelSpotDibsUiState(
     val dibsSpots: List<TravelSpot> = emptyList(),
@@ -26,9 +28,11 @@ data class TravelSpotDibsUiState(
     val totalPages: Int = 0,
     val isLoading: Boolean = true,
     val isLoadingMore: Boolean = false,
+    val isRefreshing: Boolean = false,
     val updatingDibsSpotIds: Set<String> = emptySet(),
     val errorMessage: String? = null,
     val loadMoreErrorMessage: String? = null,
+    val refreshErrorMessage: String? = null,
 ) {
     val hasNextPage: Boolean
         get() = pageNumber < totalPages

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
@@ -27,6 +28,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
 import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
+import com.manruhomerun.yadanbeopseok.travel.component.PreserveTravelSpotScrollPosition
 import com.manruhomerun.yadanbeopseok.travel.component.travelSpotSelectionContent
 import com.manruhomerun.yadanbeopseok.travel.course.viewmodel.TravelCourseSpotSelectionUiState
 import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotSelectionTab
@@ -61,6 +63,13 @@ fun TravelCourseSpotSelectionScreen(
 ) {
     val targetDay = uiState.targetDay ?: return
     val selectionState = uiState.selectionState
+    val listState = rememberLazyListState()
+    PreserveTravelSpotScrollPosition(
+        listState = listState,
+        spots = selectionState.displayedSpots,
+        resetKey = "$targetDay:${selectionState.selectedTab}:${selectionState.selectedDibsCategory}:" +
+            "${selectionState.searchQuery}:${selectionState.selectedCategory}",
+    )
     val selectedSpotIds = remember(uiState.selectedTravelSpots) {
         uiState.selectedTravelSpots.mapTo(mutableSetOf()) { it.id }
     }
@@ -83,6 +92,7 @@ fun TravelCourseSpotSelectionScreen(
         )
 
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
@@ -293,6 +303,49 @@ private fun TravelCourseSpotSelectionPreview(
             onLoadNextDibsPage = {},
         )
     }
+}
+
+@Preview(name = "C01b 찜 목록 갱신", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelCourseSpotDibsRefreshingPreview() {
+    TravelCourseSpotSelectionPreview(
+        TravelSpotSelectionUiState(selectedTab = TravelSpotSelectionTab.DIBS, dibsSpots = previewCourseSpots, isDibsRefreshing = true),
+        selectedTravelSpots = listOf(previewCourseSpots.first()),
+    )
+}
+
+@Preview(name = "C01b 찜 갱신 실패", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelCourseSpotDibsRefreshErrorPreview() {
+    TravelCourseSpotSelectionPreview(
+        TravelSpotSelectionUiState(
+            selectedTab = TravelSpotSelectionTab.DIBS,
+            dibsSpots = previewCourseSpots,
+            dibsPageNumber = 2,
+            dibsTotalPages = 3,
+            dibsRefreshErrorMessage = "찜 목록을 갱신하지 못했습니다. 다시 시도해주세요.",
+        ),
+    )
+}
+
+@Preview(name = "C01b 찜 다음 페이지 실패", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelCourseSpotDibsLoadMoreErrorPreview() {
+    TravelCourseSpotSelectionPreview(
+        TravelSpotSelectionUiState(
+            selectedTab = TravelSpotSelectionTab.DIBS,
+            dibsSpots = previewCourseSpots,
+            dibsPageNumber = 1,
+            dibsTotalPages = 3,
+            dibsLoadMoreErrorMessage = "다음 찜 목록을 불러오지 못했습니다.",
+        ),
+    )
+}
+
+@Preview(name = "C01b 찜 없음", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelCourseSpotDibsEmptyPreview() {
+    TravelCourseSpotSelectionPreview(TravelSpotSelectionUiState(selectedTab = TravelSpotSelectionTab.DIBS))
 }
 
 private val previewCourseSpots = listOf(

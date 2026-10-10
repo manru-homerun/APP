@@ -58,11 +58,7 @@ fun TravelPreferenceEditScreen(
     ) {
         YadanTopAppBar(
             title = "취향 수정",
-            onNavigationClick = {
-                if (!uiState.isSaving) {
-                    onBackClick()
-                }
-            },
+            onNavigationClick = onBackClick,
             modifier = Modifier.statusBarsPadding(),
         )
 

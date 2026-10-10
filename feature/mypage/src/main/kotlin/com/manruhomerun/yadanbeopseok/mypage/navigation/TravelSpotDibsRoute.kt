@@ -11,7 +11,10 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -37,9 +40,13 @@ fun TravelSpotDibsRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    var shouldRefreshOnReturn by rememberSaveable(viewModel) { mutableStateOf(false) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.refresh()
+        if (shouldRefreshOnReturn) {
+            shouldRefreshOnReturn = false
+            viewModel.refresh()
+        }
     }
 
     LaunchedEffect(
@@ -47,7 +54,7 @@ fun TravelSpotDibsRoute(
         uiState.dibsSpots.isNotEmpty(),
     ) {
         val errorMessage = uiState.errorMessage ?: return@LaunchedEffect
-        if (uiState.dibsSpots.isEmpty()) return@LaunchedEffect
+        if (uiState.dibsSpots.isEmpty() && uiState.pageNumber == 0) return@LaunchedEffect
 
         snackbarHostState.showSnackbar(errorMessage)
         viewModel.clearErrorMessage()
@@ -59,7 +66,10 @@ fun TravelSpotDibsRoute(
             onBackClick = onBackClick,
             onRegionSelected = viewModel::selectRegion,
             onCategorySelected = viewModel::selectCategory,
-            onTravelSpotClick = onTravelSpotClick,
+            onTravelSpotClick = { spotId ->
+                shouldRefreshOnReturn = true
+                onTravelSpotClick(spotId)
+            },
             onDibsClick = viewModel::deleteDibs,
             onRetryClick = viewModel::retry,
             onLoadNextPage = viewModel::loadNextPage,

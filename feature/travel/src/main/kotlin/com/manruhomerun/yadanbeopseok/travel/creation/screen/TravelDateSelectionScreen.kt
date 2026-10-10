@@ -1,7 +1,6 @@
 package com.manruhomerun.yadanbeopseok.travel.creation.screen
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -48,6 +48,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.component.YadanStatusChipStyl
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanError
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOnPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryInk
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextMuted
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextSecondary
@@ -83,8 +84,6 @@ fun TravelDateSelectionScreen(
     onNextClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val gameDate = selectedGame.gameDateTime.date
-
     var pendingStartDateValue by rememberSaveable(selectedGame.id) {
         mutableStateOf<String?>(null)
     }
@@ -93,16 +92,61 @@ fun TravelDateSelectionScreen(
         LocalDate.parse(value)
     }
 
+    TravelDateSelectionContent(
+        selectedGame = selectedGame,
+        startDate = startDate,
+        endDate = endDate,
+        pendingStartDate = pendingStartDate,
+        onDateClick = { clickedDate ->
+            val currentStartDate = pendingStartDate
+
+            if (currentStartDate == null) {
+                pendingStartDateValue = clickedDate.toString()
+            } else {
+                val resolvedStartDate = minOf(currentStartDate, clickedDate)
+                val resolvedEndDate = maxOf(currentStartDate, clickedDate)
+
+                if (isValidDateRange(selectedGame, resolvedStartDate, resolvedEndDate)) {
+                    onDateRangeSelected(resolvedStartDate, resolvedEndDate)
+                    pendingStartDateValue = null
+                }
+            }
+        },
+        onCancelSelection = { pendingStartDateValue = null },
+        onBackClick = onBackClick,
+        onNextClick = onNextClick,
+        modifier = modifier,
+    )
+}
+
+/** 확정된 기간과 임시 선택을 구분해 달력 및 선택 안내를 표시합니다. */
+@Composable
+private fun TravelDateSelectionContent(
+    selectedGame: BaseballGame,
+    startDate: LocalDate?,
+    endDate: LocalDate?,
+    pendingStartDate: LocalDate?,
+    onDateClick: (LocalDate) -> Unit,
+    onCancelSelection: () -> Unit,
+    onBackClick: () -> Unit,
+    onNextClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val gameDate = selectedGame.gameDateTime.date
     val displayedStartDate = pendingStartDate ?: startDate
     val displayedEndDate = if (pendingStartDate == null) endDate else null
     val isNextEnabled = startDate != null &&
         endDate != null &&
-        pendingStartDate == null
+        pendingStartDate == null &&
+        isValidDateRange(selectedGame, startDate, endDate)
+
+    // 첫 선택 전에는 경기일과 구성 가능한 날짜를, 선택 중에는 유효한 두 번째 날짜를 허용합니다.
+    val selectionAnchor = pendingStartDate ?: gameDate
 
     TravelCreationScaffold(
         currentStep = TravelCreationStep.DATE_SELECTION,
         title = "언제 다녀올까요?",
-        description = "${gameDate.toShortDateText()} 직관 경기일이 기간에 포함돼야 해요.",
+        description = "${gameDate.toShortDateText()} 직관 경기일을 포함해\n최대 2박 3일까지 선택할 수 있어요.",
         onNavigationClick = onBackClick,
         modifier = modifier,
         bottomBar = {
@@ -132,32 +176,14 @@ fun TravelDateSelectionScreen(
                 gameDate = gameDate,
                 selectedStartDate = displayedStartDate,
                 selectedEndDate = displayedEndDate ?: displayedStartDate,
-                onDateClick = { clickedDate ->
-                    val currentStartDate = pendingStartDate
-
-                    if (currentStartDate == null) {
-                        pendingStartDateValue = clickedDate.toString()
-                    } else {
-                        val resolvedStartDate = minOf(currentStartDate, clickedDate)
-                        val resolvedEndDate = maxOf(currentStartDate, clickedDate)
-
-                        if (
-                            isValidDateRange(
-                                game = selectedGame,
-                                startDate = resolvedStartDate,
-                                endDate = resolvedEndDate,
-                            )
-                        ) {
-                            onDateRangeSelected(
-                                resolvedStartDate,
-                                resolvedEndDate,
-                            )
-                            pendingStartDateValue = null
-                        } else {
-                            pendingStartDateValue = clickedDate.toString()
-                        }
-                    }
+                isDateEnabled = { date ->
+                    isValidDateRange(
+                        selectedGame,
+                        minOf(selectionAnchor, date),
+                        maxOf(selectionAnchor, date),
+                    )
                 },
+                onDateClick = onDateClick,
             )
         }
 
@@ -165,6 +191,7 @@ fun TravelDateSelectionScreen(
             SelectedTravelPeriodCard(
                 startDate = displayedStartDate,
                 endDate = displayedEndDate,
+                onCancelSelection = onCancelSelection.takeIf { pendingStartDate != null },
             )
         }
 
@@ -182,6 +209,7 @@ private fun TravelMonthCalendar(
     gameDate: LocalDate,
     selectedStartDate: LocalDate?,
     selectedEndDate: LocalDate?,
+    isDateEnabled: (LocalDate) -> Boolean,
     onDateClick: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -309,7 +337,8 @@ private fun TravelMonthCalendar(
                                 selectedStartDate = selectedStartDate,
                                 selectedEndDate = selectedEndDate,
                                 enabled = date != null &&
-                                    date in earliestDate..latestDate,
+                                    date in earliestDate..latestDate &&
+                                    isDateEnabled(date),
                                 onClick = {
                                     date?.let(onDateClick)
                                 },
@@ -378,16 +407,16 @@ private fun TravelCalendarDay(
                 style = YadanTypography.labelMedium.copy(
                     fontWeight = FontWeight.Bold,
                 ),
-                color = if (isRangeSelected) {
-                    YadanOnPrimary
-                } else {
-                    YadanTextPrimary
+                color = when {
+                    isRangeSelected -> YadanOnPrimary
+                    !enabled -> YadanTextMuted.copy(alpha = 0.45f)
+                    else -> YadanTextPrimary
                 },
             )
 
             Box(
                 modifier = Modifier
-                    .size(4.dp)
+                    .size(GAME_DATE_MARKER_SIZE)
                     .background(
                         color = when {
                             !isGameDate -> Color.Transparent
@@ -408,11 +437,12 @@ private fun TravelCalendarDay(
 private fun SelectedTravelPeriodCard(
     startDate: LocalDate?,
     endDate: LocalDate?,
+    onCancelSelection: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val periodText = when {
         startDate == null -> "날짜를 선택해주세요"
-        endDate == null -> "${startDate.toShortDateText()}부터 · 종료일을 선택해주세요"
+        endDate == null -> "${startDate.toShortDateText()} · 두 번째 날짜를 선택해주세요"
         else -> "${startDate.toShortDateText()} ~ ${endDate.toShortDateText()}"
     }
 
@@ -445,7 +475,15 @@ private fun SelectedTravelPeriodCard(
                 )
             }
 
-            if (startDate != null && endDate != null) {
+            if (onCancelSelection != null) {
+                TextButton(onClick = onCancelSelection) {
+                    Text(
+                        text = "선택 취소",
+                        style = YadanTypography.labelSmall,
+                        color = YadanPrimaryInk,
+                    )
+                }
+            } else if (startDate != null && endDate != null) {
                 val nights = endDate.toEpochDays() - startDate.toEpochDays()
 
                 YadanStatusChip(
@@ -495,9 +533,8 @@ private fun TravelCalendarLegend(modifier: Modifier = Modifier) {
             marker = {
                 Box(
                     modifier = Modifier
-                        .size(12.dp)
-                        .border(
-                            width = 2.dp,
+                        .size(GAME_DATE_MARKER_SIZE)
+                        .background(
                             color = YadanPrimary,
                             shape = CircleShape,
                         ),
@@ -576,6 +613,7 @@ private val KOREAN_WEEKDAY_LABELS = listOf(
 private const val DAYS_PER_WEEK = 7
 private const val FIVE_WEEK_CELL_COUNT = 35
 private const val SIX_WEEK_CELL_COUNT = 42
+private val GAME_DATE_MARKER_SIZE = 8.dp
 
 @Preview(
     name = "B05 여행 기간",
@@ -585,6 +623,75 @@ private const val SIX_WEEK_CELL_COUNT = 42
 )
 @Composable
 private fun TravelDateSelectionScreenPreview() {
+    TravelDateSelectionPreview(
+        startDate = LocalDate(2026, 5, 22),
+        endDate = LocalDate(2026, 5, 23),
+    )
+}
+
+@Preview(name = "B05 기간 미선택", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelDateSelectionEmptyPreview() {
+    TravelDateSelectionPreview()
+}
+
+@Preview(name = "B05 두 번째 날짜 선택", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelDateSelectionPendingPreview() {
+    TravelDateSelectionPreview(pendingStartDate = LocalDate(2026, 5, 22))
+}
+
+@Preview(name = "B05 당일 선택", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelDateSelectionDayTripPreview() {
+    TravelDateSelectionPreview(
+        startDate = LocalDate(2026, 5, 23),
+        endDate = LocalDate(2026, 5, 23),
+    )
+}
+
+@Preview(name = "B05 2박 3일 선택", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelDateSelectionMaximumPeriodPreview() {
+    TravelDateSelectionPreview(
+        startDate = LocalDate(2026, 5, 22),
+        endDate = LocalDate(2026, 5, 24),
+    )
+}
+
+@Preview(name = "B05 연도 경계", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelDateSelectionYearBoundaryPreview() {
+    TravelDateSelectionPreview(
+        startDate = LocalDate(2026, 12, 31),
+        endDate = LocalDate(2027, 1, 2),
+        gameDate = LocalDate(2027, 1, 1),
+    )
+}
+
+@Preview(
+    name = "B05 좁은 화면 재선택",
+    showBackground = true,
+    widthDp = 320,
+    heightDp = 740,
+    fontScale = 1.3f,
+)
+@Composable
+private fun TravelDateSelectionNarrowPreview() {
+    TravelDateSelectionPreview(
+        startDate = LocalDate(2026, 5, 22),
+        endDate = LocalDate(2026, 5, 23),
+        pendingStartDate = LocalDate(2026, 5, 21),
+    )
+}
+
+@Composable
+private fun TravelDateSelectionPreview(
+    startDate: LocalDate? = null,
+    endDate: LocalDate? = null,
+    pendingStartDate: LocalDate? = null,
+    gameDate: LocalDate = LocalDate(2026, 5, 23),
+) {
     val game = BaseballGame(
         id = "game-123",
         stadium = BaseballStadium(
@@ -597,9 +704,9 @@ private fun TravelDateSelectionScreenPreview() {
         homeTeam = KboTeam.LOTTE,
         awayTeam = KboTeam.KIA,
         gameDateTime = LocalDateTime(
-            year = 2026,
-            month = 5,
-            day = 23,
+            year = gameDate.year,
+            month = gameDate.month.number,
+            day = gameDate.day,
             hour = 17,
             minute = 0,
         ),
@@ -607,11 +714,13 @@ private fun TravelDateSelectionScreenPreview() {
     )
 
     YadanbeopseokTheme {
-        TravelDateSelectionScreen(
+        TravelDateSelectionContent(
             selectedGame = game,
-            startDate = LocalDate(2026, 5, 22),
-            endDate = LocalDate(2026, 5, 23),
-            onDateRangeSelected = { _, _ -> },
+            startDate = startDate,
+            endDate = endDate,
+            pendingStartDate = pendingStartDate,
+            onDateClick = {},
+            onCancelSelection = {},
             onBackClick = {},
             onNextClick = {},
         )

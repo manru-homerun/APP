@@ -1,5 +1,7 @@
 package com.manruhomerun.yadanbeopseok.data.mapper
 
+import android.text.Html
+import android.text.style.URLSpan
 import com.manruhomerun.yadanbeopseok.data.repository.SuggestTravelSpotsParams
 import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
@@ -11,6 +13,8 @@ import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotDetailRespons
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotPageResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotResponseDto
 import com.manruhomerun.yadanbeopseok.network.travel.dto.TravelSpotSuggestionRequestDto
+import java.net.URI
+import java.net.URISyntaxException
 
 /** 맞춤 관광지 추천 조건을 서버 요청 DTO로 변환합니다. */
 internal fun SuggestTravelSpotsParams.toTravelSpotSuggestionRequestDto() =
@@ -100,12 +104,41 @@ internal fun TravelSpotDetailResponseDto.toTravelSpotDetail(
             dibs = dibs,
         ),
         telephone = tel?.trim()?.takeIf { it.isNotEmpty() },
-        homepage = homepage?.trim()?.takeIf { it.isNotEmpty() },
+        homepage = homepage.toHomepageUrlOrNull(),
         longitude = longitude?.trim()?.toDoubleOrNull(),
         latitude = latitude?.trim()?.toDoubleOrNull(),
         overview = overview?.trim()?.takeIf { it.isNotEmpty() },
         imageUrls = normalizedImageUrls,
     )
+}
+
+/** 홈페이지 원문이 URL 또는 HTML 링크여도 검증된 웹 주소만 전달합니다. */
+private fun String?.toHomepageUrlOrNull(): String? {
+    val source = this?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    source.toWebUrlOrNull()?.let { return it }
+
+    val html = Html.fromHtml(source, Html.FROM_HTML_MODE_COMPACT)
+    return html.getSpans(0, html.length, URLSpan::class.java)
+        .sortedBy { span -> html.getSpanStart(span) }
+        .firstNotNullOfOrNull { span -> span.url.toWebUrlOrNull() }
+}
+
+/** 외부 앱 실행에 사용할 수 있는 HTTP(S) 주소인지 확인합니다. */
+private fun String.toWebUrlOrNull(): String? {
+    val value = trim()
+    val uri = try {
+        URI(value)
+    } catch (_: URISyntaxException) {
+        return null
+    }
+
+    if (!uri.scheme.equals("http", ignoreCase = true) &&
+        !uri.scheme.equals("https", ignoreCase = true)
+    ) return null
+    if (uri.host.isNullOrBlank() || uri.rawUserInfo != null) return null
+    if (uri.port !in -1..65535) return null
+
+    return uri.scheme.lowercase() + value.substring(uri.scheme.length)
 }
 
 /**

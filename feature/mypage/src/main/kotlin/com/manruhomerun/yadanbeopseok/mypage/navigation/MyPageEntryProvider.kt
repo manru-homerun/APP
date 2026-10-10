@@ -1,9 +1,7 @@
 package com.manruhomerun.yadanbeopseok.mypage.navigation
 
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
-import com.manruhomerun.yadanbeopseok.common.LegalDocumentUrl
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
 import com.manruhomerun.yadanbeopseok.navigation.route.FriendManagementNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.MyPageNavKey
@@ -17,8 +15,6 @@ import com.manruhomerun.yadanbeopseok.navigation.route.TravelPreferenceEditNavKe
  */
 fun EntryProviderScope<NavKey>.myPageEntryProvider(navigator: Navigator) {
     entry<MyPageNavKey> {
-        val uriHandler = LocalUriHandler.current
-
         MyPageRoute(
             onProfileClick = {
                 navigator.navigate(ProfileEditNavKey)
@@ -31,12 +27,6 @@ fun EntryProviderScope<NavKey>.myPageEntryProvider(navigator: Navigator) {
             },
             onFriendsClick = {
                 navigator.navigate(FriendManagementNavKey())
-            },
-            onTermsClick = {
-                uriHandler.openUri(LegalDocumentUrl.TERMS_OF_SERVICE)
-            },
-            onPrivacyPolicyClick = {
-                uriHandler.openUri(LegalDocumentUrl.PRIVACY_POLICY)
             },
         )
     }

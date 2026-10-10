@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.AutoAwesome
@@ -43,6 +44,7 @@ import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
 import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
+import com.manruhomerun.yadanbeopseok.travel.component.PreserveTravelSpotScrollPosition
 import com.manruhomerun.yadanbeopseok.travel.component.travelSpotSelectionContent
 import com.manruhomerun.yadanbeopseok.travel.creation.viewmodel.MAX_SELECTED_TRAVEL_SPOT_COUNT
 import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotSelectionTab
@@ -51,7 +53,7 @@ import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotAction
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotCard
 
 /**
- * B·06 여행 만들기의 필수 관광지 선택 화면입니다.
+ * B·06 여행 만들기의 관광지 선택 화면입니다.
  *
  * 사용자는 맞춤 추천·찜·검색 결과에서 관광지를 선택할 수 있습니다.
  * 선택하지 않고 AI가 전체 코스를 구성하도록 진행하는 것도 허용합니다.
@@ -77,6 +79,12 @@ fun TravelSpotSelectionScreen(
     onLoadNextDibsPage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val listState = rememberLazyListState()
+    PreserveTravelSpotScrollPosition(
+        listState = listState,
+        spots = uiState.displayedSpots,
+        resetKey = "${uiState.selectedTab}:${uiState.selectedDibsCategory}:${uiState.searchQuery}:${uiState.selectedCategory}",
+    )
     val selectedSpotIds = remember(selectedTravelSpots) {
         selectedTravelSpots.mapTo(mutableSetOf()) { spot -> spot.id }
     }
@@ -86,13 +94,13 @@ fun TravelSpotSelectionScreen(
     val screenTitle = if (uiState.isSearchMode) {
         "‘${uiState.searchQuery}’ 검색 결과"
     } else {
-        "꼭 가고 싶은 곳이 있나요?"
+        "가고 싶은 곳이 있나요?"
     }
 
     val screenDescription = if (uiState.isSearchMode) {
         null
     } else {
-        "담은 곳은 코스에 꼭 포함돼요. 나머지는 AI가 채워드려요."
+        "담은 관광지는 일정에 포함하고, 나머지는 AI가 추천해드려요."
     }
 
     TravelCreationScaffold(
@@ -101,6 +109,7 @@ fun TravelSpotSelectionScreen(
         description = screenDescription,
         onNavigationClick = onBackClick,
         modifier = modifier,
+        listState = listState,
         bottomBar = {
             TravelSpotSelectionBottomButton(
                 selectedCount = selectedCount,
@@ -128,7 +137,7 @@ fun TravelSpotSelectionScreen(
             selectedSpotsContent = {
                 item(key = "selected_spot_header") {
                     YadanSectionHeader(
-                        title = "꼭 가고 싶은 곳 $selectedCount/$MAX_SELECTED_TRAVEL_SPOT_COUNT",
+                        title = "가고 싶은 곳 $selectedCount/$MAX_SELECTED_TRAVEL_SPOT_COUNT",
                     )
                 }
 
@@ -275,7 +284,7 @@ private fun TravelSpotSelectionEmptyCard(modifier: Modifier = Modifier) {
             )
 
             Text(
-                text = "딱히 없으면 비워두세요",
+                text = "관광지를 담지 않아도 괜찮아요",
                 style = YadanTypography.bodyMedium.copy(
                     fontWeight = FontWeight.ExtraBold,
                 ),
@@ -284,7 +293,7 @@ private fun TravelSpotSelectionEmptyCard(modifier: Modifier = Modifier) {
             )
 
             Text(
-                text = "담은 곳은 코스에 꼭 넣고, 나머지는 AI가 취향·동선에 맞춰 채워요.",
+                text = "AI가 취향에 맞는 관광지를 추천해 일정을 만들어드려요.",
                 style = YadanTypography.bodySmall,
                 color = YadanTextSecondary,
                 textAlign = TextAlign.Center,
@@ -437,6 +446,49 @@ private fun TravelSpotSelectionPreview(
             onLoadNextDibsPage = {},
         )
     }
+}
+
+@Preview(name = "B06 찜 목록 갱신", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelSpotSelectionDibsRefreshingPreview() {
+    TravelSpotSelectionPreview(
+        TravelSpotSelectionUiState(selectedTab = TravelSpotSelectionTab.DIBS, dibsSpots = previewSuggestedSpots, isDibsRefreshing = true),
+        selectedTravelSpots = previewSelectedSpots,
+    )
+}
+
+@Preview(name = "B06 찜 갱신 실패", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelSpotSelectionDibsRefreshErrorPreview() {
+    TravelSpotSelectionPreview(
+        TravelSpotSelectionUiState(
+            selectedTab = TravelSpotSelectionTab.DIBS,
+            dibsSpots = previewSuggestedSpots,
+            dibsPageNumber = 2,
+            dibsTotalPages = 3,
+            dibsRefreshErrorMessage = "찜 목록을 갱신하지 못했습니다. 다시 시도해주세요.",
+        ),
+    )
+}
+
+@Preview(name = "B06 찜 다음 페이지 실패", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelSpotSelectionDibsLoadMoreErrorPreview() {
+    TravelSpotSelectionPreview(
+        TravelSpotSelectionUiState(
+            selectedTab = TravelSpotSelectionTab.DIBS,
+            dibsSpots = previewSuggestedSpots,
+            dibsPageNumber = 1,
+            dibsTotalPages = 3,
+            dibsLoadMoreErrorMessage = "다음 찜 목록을 불러오지 못했습니다.",
+        ),
+    )
+}
+
+@Preview(name = "B06 찜 없음", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelSpotSelectionDibsEmptyPreview() {
+    TravelSpotSelectionPreview(TravelSpotSelectionUiState(selectedTab = TravelSpotSelectionTab.DIBS))
 }
 
 private val previewSuggestedSpots = listOf(

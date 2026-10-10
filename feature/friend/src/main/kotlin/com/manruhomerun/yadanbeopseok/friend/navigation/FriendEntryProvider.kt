@@ -23,6 +23,10 @@ fun EntryProviderScope<NavKey>.friendEntryProvider(navigator: Navigator) {
     entry<FriendSearchNavKey> {
         FriendSearchRoute(
             onBackClick = navigator::navigateBack,
+            onReceivedRequestsClick = {
+                navigator.navigateBack()
+                navigator.replaceCurrent(FriendManagementNavKey(initialTab = FriendManagementInitialTab.REQUESTS))
+            },
         )
     }
 }

@@ -26,8 +26,20 @@ data class HomeUiState(
     /** 홈의 최초 데이터를 불러오는 중인지 나타냅니다. */
     val isLoading: Boolean = true,
 
-    /** 홈 정보를 새로고침하는 중인지 나타냅니다. */
+    /** 여행과 인기 관광지를 함께 새로고침하는 중인지 나타냅니다. */
     val isRefreshing: Boolean = false,
+
+    /** 진행 중·예정 여행의 전체 페이지를 조회하는 중인지 나타냅니다. */
+    val isTravelListLoading: Boolean = false,
+
+    /** 현재 필터의 인기 관광지를 조회하는 중인지 나타냅니다. */
+    val isPopularSpotLoading: Boolean = false,
+
+    /** 진행 중·예정 여행의 모든 페이지를 한 번 이상 정상 조회했는지 나타냅니다. */
+    val hasLoadedTravelList: Boolean = false,
+
+    /** 여행 목록 조회가 모두 성공할 때까지 여행 영역에 유지할 오류 안내입니다. */
+    val travelErrorMessage: String? = null,
 
     /** 찜 상태 변경 요청이 진행 중인 관광지 ID 목록입니다. */
     val updatingDibsSpotIds: Set<String> = emptySet(),

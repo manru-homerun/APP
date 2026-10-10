@@ -15,9 +15,12 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,6 +71,10 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
  * 전달하면 기본 placeholder 대신 해당 Painter를 사용합니다.
  * @param error 로딩 실패 시 표시할 별도 Painter입니다.
  * @param fallback 이미지 URL이 없을 때 표시할 별도 Painter입니다.
+ * @param crossfade 이미지 로딩 후 전환 효과를 사용할지 결정합니다.
+ * 캡처할 이미지는 false로 전달해 요청 성공 후 전환 중인 이미지가 저장되지 않게 합니다.
+ * @param onLoadStateChange 현재 요청의 표시 상태를 Compose 반영 후 전달합니다.
+ * SUCCESS는 이미지 요청 성공이며 crossfade 종료를 의미하지 않습니다.
  */
 @Composable
 fun YadanAsyncImage(
@@ -81,6 +88,8 @@ fun YadanAsyncImage(
     placeholder: Painter? = null,
     error: Painter? = null,
     fallback: Painter? = null,
+    crossfade: Boolean = true,
+    onLoadStateChange: ((YadanImageLoadState) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val hasImageUrl = !imageUrl.isNullOrBlank()
@@ -99,7 +108,7 @@ fun YadanAsyncImage(
     val resolvedFallback = fallback ?: resolvedError
 
     var loadState by
-    remember(imageUrl) {
+    remember(context, imageUrl, crossfade) {
         mutableStateOf(
             if (hasImageUrl) {
                 YadanImageLoadState.LOADING
@@ -110,7 +119,7 @@ fun YadanAsyncImage(
     }
 
     val imageRequest =
-        remember(context, imageUrl) {
+        remember(context, imageUrl, crossfade) {
             ImageRequest
                 .Builder(context)
                 .data(
@@ -118,9 +127,16 @@ fun YadanAsyncImage(
                         it.isNotBlank()
                     },
                 )
-                .crossfade(true)
+                .crossfade(crossfade)
                 .build()
         }
+
+    val currentOnLoadStateChange by rememberUpdatedState(onLoadStateChange)
+    if (onLoadStateChange != null) {
+        LaunchedEffect(imageRequest, loadState) {
+            currentOnLoadStateChange?.invoke(loadState)
+        }
+    }
 
     /*
      * 호출자가 상태별 Painter를 제공하면 해당 Painter를 우선합니다.
@@ -147,35 +163,35 @@ fun YadanAsyncImage(
         modifier = modifier.clip(shape),
         contentAlignment = Alignment.Center,
     ) {
-        AsyncImage(
-            model = imageRequest,
-            contentDescription = contentDescription,
-            modifier = Modifier.matchParentSize(),
-            placeholder = resolvedPlaceholder,
-            error = resolvedError,
-            fallback = resolvedFallback,
-            contentScale = contentScale,
-            alignment = alignment,
-            onLoading = {
-                loadState =
-                    if (hasImageUrl) {
+        key(imageRequest) {
+            AsyncImage(
+                model = imageRequest,
+                contentDescription = contentDescription,
+                modifier = Modifier.matchParentSize(),
+                placeholder = resolvedPlaceholder,
+                error = resolvedError,
+                fallback = resolvedFallback,
+                contentScale = contentScale,
+                alignment = alignment,
+                onLoading = {
+                    loadState = if (hasImageUrl) {
                         YadanImageLoadState.LOADING
                     } else {
                         YadanImageLoadState.FALLBACK
                     }
-            },
-            onSuccess = {
-                loadState = YadanImageLoadState.SUCCESS
-            },
-            onError = {
-                loadState =
-                    if (hasImageUrl) {
+                },
+                onSuccess = {
+                    loadState = YadanImageLoadState.SUCCESS
+                },
+                onError = {
+                    loadState = if (hasImageUrl) {
                         YadanImageLoadState.ERROR
                     } else {
                         YadanImageLoadState.FALLBACK
                     }
-            },
-        )
+                },
+            )
+        }
 
         if (showDefaultPlaceholder) {
             YadanImagePlaceholder(
@@ -261,7 +277,7 @@ private fun YadanImagePlaceholder(
 /**
  * Coil 이미지 요청의 현재 표시 상태입니다.
  */
-private enum class YadanImageLoadState {
+enum class YadanImageLoadState {
     LOADING,
     SUCCESS,
     ERROR,

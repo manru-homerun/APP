@@ -29,6 +29,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -96,13 +97,13 @@ fun TravelRecordScreen(
         )
 
         when {
-            uiState.isLoading && !hasLoadedTravels -> {
+            uiState.isLoading && !hasLoadedTravels && !uiState.hasCompleteStatistics -> {
                 TravelRecordLoadingContent(
                     modifier = Modifier.weight(1f),
                 )
             }
 
-            errorMessage != null && !hasLoadedTravels -> {
+            errorMessage != null && !hasLoadedTravels && !uiState.hasCompleteStatistics -> {
                 TravelRecordErrorContent(
                     message = errorMessage,
                     onRetryClick = onRetryClick,
@@ -112,6 +113,8 @@ fun TravelRecordScreen(
 
             uiState.isEmpty -> {
                 TravelRecordEmptyContent(
+                    uiState = uiState,
+                    onRetryClick = onRetryClick,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -167,8 +170,26 @@ private fun TravelRecordLoadedContent(
             }
         }
 
+        if (uiState.hasCompleteStatistics && (uiState.isLoading || uiState.errorMessage != null)) {
+            item(key = "record-query-status") {
+                TravelRecordQueryStatus(
+                    isLoading = uiState.isLoading,
+                    errorMessage = uiState.errorMessage,
+                    onRetryClick = onRetryClick,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+            }
+        }
+
         item(key = "travel-record-map") {
-            if (isMapUnavailable) {
+            if (!uiState.hasCompleteStatistics) {
+                TravelRecordStatisticsContent(
+                    isLoading = uiState.isLoading,
+                    errorMessage = uiState.errorMessage,
+                    onRetryClick = onRetryClick,
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                )
+            } else if (isMapUnavailable) {
                 TravelRecordMapErrorContent(
                     onRetryClick = {
                         isMapUnavailable = false
@@ -217,7 +238,8 @@ private fun TravelRecordLoadedContent(
                 ),
                 trailingContent = {
                     YadanSectionMetaText(
-                        text = "${uiState.completedTravelCount}건",
+                        text = uiState.completedTravelCount?.let { "${it}건" }
+                            ?: if (uiState.isLoading) "집계 중" else "미집계",
                     )
                 },
             )
@@ -236,74 +258,83 @@ private fun TravelRecordLoadedContent(
             )
         }
 
-        when {
-            uiState.isLoadingMore -> {
-                item(key = "loading-more") {
-                    TravelRecordLoadMoreProgress()
-                }
-            }
-
-            uiState.loadMoreErrorMessage != null -> {
-                item(key = "load-more-error") {
-                    TravelRecordLoadMoreError(
-                        message = uiState.loadMoreErrorMessage,
-                        onRetryClick = onRetryClick,
-                    )
-                }
-            }
-
-            !uiState.isLoading && uiState.hasNextPage -> {
-                item(key = "load-next-page") {
-                    LaunchedEffect(uiState.pageNumber) {
-                        onLoadNextPage()
-                    }
+        if (uiState.hasNextPage) {
+            item(key = "load-next-page") {
+                LaunchedEffect(uiState.selectedSeason, uiState.displayedTravelCount) {
+                    onLoadNextPage()
                 }
             }
         }
     }
 }
 
-/** 다음 완료 여행 페이지를 불러오는 동안 목록 하단에 진행 상태를 표시합니다. */
+/** 통계가 아직 확정되지 않았을 때 지도 대신 집계 진행 또는 실패 상태를 표시합니다. */
 @Composable
-private fun TravelRecordLoadMoreProgress() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 16.dp),
-        contentAlignment = Alignment.Center,
+private fun TravelRecordStatisticsContent(
+    isLoading: Boolean,
+    errorMessage: String?,
+    onRetryClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.height(TRAVEL_RECORD_MAP_HEIGHT),
+        shape = YadanShapes.medium,
+        color = YadanPrimaryTint,
+        border = BorderStroke(1.dp, YadanOutline),
     ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(24.dp),
-            color = YadanPrimary,
-            strokeWidth = 2.dp,
-        )
+        Column(
+            modifier = Modifier.fillMaxSize().padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = if (isLoading) "여행 기록을 집계하고 있어요" else "여행 기록 집계를 완료하지 못했습니다",
+                style = YadanTypography.titleSmall,
+                color = YadanTextPrimary,
+                textAlign = TextAlign.Center,
+            )
+            TravelRecordQueryStatus(
+                isLoading = isLoading,
+                errorMessage = errorMessage,
+                onRetryClick = onRetryClick,
+                modifier = Modifier.padding(top = 12.dp),
+            )
+        }
     }
 }
 
-/** 다음 완료 여행 페이지 조회 실패를 기존 목록 아래에 표시합니다. */
+/** 전체 조회 상태를 표시하며 지도 SDK 자체의 재시도와는 분리합니다. */
 @Composable
-private fun TravelRecordLoadMoreError(
-    message: String,
+private fun TravelRecordQueryStatus(
+    isLoading: Boolean,
+    errorMessage: String?,
     onRetryClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
+    if (!isLoading && errorMessage == null) return
+
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
+        modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = message,
+            text = if (isLoading) "전체 완료 여행 기록을 확인하고 있어요." else errorMessage.orEmpty(),
             style = YadanTypography.bodySmall,
             color = YadanTextSecondary,
             textAlign = TextAlign.Center,
         )
 
-        TextButton(onClick = onRetryClick) {
-            Text(
-                text = "다시 시도",
-                style = YadanTypography.labelMedium,
+        if (isLoading) {
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                color = YadanPrimary,
             )
+        } else {
+            TextButton(onClick = onRetryClick) {
+                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(text = "다시 시도", style = YadanTypography.labelMedium)
+            }
         }
     }
 }
@@ -547,6 +578,8 @@ private fun TravelRecordErrorContent(
  */
 @Composable
 private fun TravelRecordEmptyContent(
+    uiState: TravelRecordUiState,
+    onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -573,6 +606,13 @@ private fun TravelRecordEmptyContent(
             color = YadanTextSecondary,
             textAlign = TextAlign.Center,
         )
+
+        TravelRecordQueryStatus(
+            isLoading = uiState.isLoading,
+            errorMessage = uiState.errorMessage,
+            onRetryClick = onRetryClick,
+            modifier = Modifier.padding(top = 16.dp),
+        )
     }
 }
 
@@ -592,6 +632,7 @@ private fun TravelRecordScreenPreview() {
             uiState = TravelRecordUiState(
                 completedTravels = previewCompletedTravels,
                 selectedSeason = 2026,
+                hasCompleteStatistics = true,
                 isLoading = false,
             ),
             onSeasonSelected = {},
@@ -657,8 +698,82 @@ private fun TravelRecordEmptyPreview() {
     YadanbeopseokTheme {
         TravelRecordScreen(
             uiState = TravelRecordUiState(
+                hasCompleteStatistics = true,
                 isLoading = false,
             ),
+            onSeasonSelected = {},
+            onTravelClick = {},
+            onRetryClick = {},
+            onLoadNextPage = {},
+        )
+    }
+}
+
+@Preview(name = "D01 전체 화면 · 일부 조회 후 집계 중", widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelRecordStatisticsLoadingPreview() {
+    TravelRecordStatePreview(
+        TravelRecordUiState(completedTravels = previewCompletedTravels, selectedSeason = 2026),
+    )
+}
+
+@Preview(name = "D01 전체 화면 · 일부 페이지 실패", widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelRecordPartialFailurePreview() {
+    TravelRecordStatePreview(
+        TravelRecordUiState(
+            completedTravels = previewCompletedTravels,
+            selectedSeason = 2026,
+            isLoading = false,
+            errorMessage = "인터넷 연결을 확인한 후 다시 시도해주세요.",
+        ),
+    )
+}
+
+@Preview(name = "D01 전체 화면 · 이전 시즌 유지하며 갱신", widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelRecordRefreshingPreview() {
+    TravelRecordStatePreview(
+        TravelRecordUiState(
+            completedTravels = previewPagedCompletedTravels,
+            selectedSeason = 2025,
+            hasCompleteStatistics = true,
+        ),
+    )
+}
+
+@Preview(name = "D01 전체 화면 · 기존 통계 유지하며 갱신 실패", widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelRecordRefreshFailurePreview() {
+    TravelRecordStatePreview(
+        TravelRecordUiState(
+            completedTravels = previewPagedCompletedTravels,
+            selectedSeason = 2025,
+            hasCompleteStatistics = true,
+            isLoading = false,
+            errorMessage = "여행 기록을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
+        ),
+    )
+}
+
+@Preview(name = "D01 전체 화면 · 시즌 전체 15건 중 10건 표시", widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelRecordPagedPreview() {
+    TravelRecordStatePreview(
+        TravelRecordUiState(
+            completedTravels = previewPagedCompletedTravels,
+            selectedSeason = 2026,
+            hasCompleteStatistics = true,
+            isLoading = false,
+        ),
+    )
+}
+
+@Composable
+private fun TravelRecordStatePreview(uiState: TravelRecordUiState) {
+    YadanbeopseokTheme {
+        TravelRecordScreen(
+            uiState = uiState,
             onSeasonSelected = {},
             onTravelClick = {},
             onRetryClick = {},
@@ -697,3 +812,14 @@ private val previewCompletedTravels = listOf(
         hasSticker = false,
     ),
 )
+
+private val previewPagedCompletedTravels = List(25) { index ->
+    val travel = previewCompletedTravels[index % previewCompletedTravels.size]
+    val season = if (index < 15) 2026 else 2025
+    val day = 26 - index % 15
+    travel.copy(
+        id = "preview-$index",
+        startDate = LocalDate(season, 4, day),
+        endDate = LocalDate(season, 4, day + 1),
+    )
+}.sortedByDescending { it.endDate }

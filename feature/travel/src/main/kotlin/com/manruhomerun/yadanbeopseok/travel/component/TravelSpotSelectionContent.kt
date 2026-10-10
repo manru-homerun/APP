@@ -8,12 +8,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -128,7 +135,7 @@ internal fun LazyListScope.travelSpotSelectionContent(
         else -> "찜한 관광지가 없습니다"
     }
 
-    if (uiState.isLoading || uiState.errorMessage != null) {
+    if (spots.isEmpty() && (uiState.isLoading || uiState.errorMessage != null)) {
         item(key = "spot_list_status") {
             TravelSpotListStatus(
                 isLoading = uiState.isLoading,
@@ -139,6 +146,9 @@ internal fun LazyListScope.travelSpotSelectionContent(
         }
     } else if (spots.isEmpty()) {
         when {
+            !uiState.isSearchMode && uiState.selectedTab == TravelSpotSelectionTab.DIBS &&
+                (uiState.isDibsRefreshing || uiState.dibsRefreshErrorMessage != null) -> Unit
+
             uiState.isSearchMode && uiState.isSearchLoadingMore -> {
                 item(key = "search_loading_more_empty") {
                     TravelSpotLoadMoreProgress()
@@ -231,32 +241,73 @@ internal fun LazyListScope.travelSpotSelectionContent(
                     }
                 }
             }
-        } else if (uiState.selectedTab == TravelSpotSelectionTab.DIBS) {
-            when {
-                uiState.isDibsSpotsLoadingMore -> {
-                    item(key = "dibs_loading_more") {
-                        TravelSpotLoadMoreProgress()
-                    }
-                }
+        }
+    }
 
-                uiState.dibsLoadMoreErrorMessage != null -> {
-                    item(key = "dibs_load_more_error") {
-                        TravelSpotLoadMoreError(
-                            message = uiState.dibsLoadMoreErrorMessage,
-                            onRetryClick = onRetryClick,
-                        )
-                    }
+    if (!uiState.isSearchMode && uiState.selectedTab == TravelSpotSelectionTab.DIBS) {
+        when {
+            uiState.isDibsRefreshing || uiState.isDibsSpotsLoadingMore -> {
+                item(key = "dibs_loading_more") {
+                    TravelSpotLoadMoreProgress()
                 }
+            }
 
-                uiState.hasNextDibsPage -> {
-                    item(key = "dibs_load_next_page") {
-                        LaunchedEffect(uiState.dibsPageNumber) {
-                            onLoadNextDibsPage()
-                        }
+            uiState.dibsRefreshErrorMessage != null || uiState.dibsLoadMoreErrorMessage != null -> {
+                item(key = "dibs_load_more_error") {
+                    TravelSpotLoadMoreError(
+                        message = uiState.dibsRefreshErrorMessage ?: uiState.dibsLoadMoreErrorMessage.orEmpty(),
+                        onRetryClick = onRetryClick,
+                    )
+                }
+            }
+
+            uiState.hasNextDibsPage && !uiState.isLoading && uiState.errorMessage == null -> {
+                item(key = "dibs_load_next_page") {
+                    LaunchedEffect(uiState.selectedDibsCategory, uiState.dibsPageNumber) {
+                        onLoadNextDibsPage()
                     }
                 }
             }
         }
+    } else if (spots.isNotEmpty() && !uiState.isSearchMode) {
+        if (uiState.isLoading) {
+            item(key = "suggested_refresh") { TravelSpotLoadMoreProgress() }
+        } else if (uiState.errorMessage != null) {
+            item(key = "suggested_refresh_error") {
+                TravelSpotLoadMoreError(message = uiState.errorMessage, onRetryClick = onRetryClick)
+            }
+        }
+    }
+}
+
+/** 실제 조회 조건 변경만 초기화하며, 삭제된 표시 기준 카드는 인접 카드로 보정합니다. */
+@Composable
+internal fun PreserveTravelSpotScrollPosition(
+    listState: LazyListState,
+    spots: List<TravelSpot>,
+    resetKey: String,
+) {
+    var previousKey by rememberSaveable { mutableStateOf(resetKey) }
+    var previousSpots by remember { mutableStateOf(spots) }
+    SideEffect {
+        if (previousKey != resetKey) {
+            listState.requestScrollToItem(0)
+        } else if (previousSpots != spots) {
+            val anchor = listState.layoutInfo.visibleItemsInfo.firstOrNull()
+            val oldIndex = previousSpots.indexOfFirst { "available_${it.id}" == anchor?.key }
+            if (oldIndex >= 0 && spots.none { "available_${it.id}" == anchor?.key }) {
+                val nextAnchor = (previousSpots.drop(oldIndex + 1) + previousSpots.take(oldIndex).asReversed())
+                    .firstOrNull { old -> spots.any { it.id == old.id } }
+                val newIndex = spots.indexOfFirst { it.id == nextAnchor?.id }
+                val prefixCount = (anchor?.index ?: 0) - oldIndex
+                listState.requestScrollToItem(
+                    index = if (newIndex >= 0) prefixCount + newIndex else 0,
+                    scrollOffset = listState.firstVisibleItemScrollOffset,
+                )
+            }
+        }
+        previousKey = resetKey
+        previousSpots = spots
     }
 }
 

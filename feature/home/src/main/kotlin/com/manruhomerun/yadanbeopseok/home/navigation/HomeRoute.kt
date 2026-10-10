@@ -117,6 +117,8 @@ fun HomeRoute(
             onRegionSelected = viewModel::selectRegion,
             onCategorySelected = viewModel::selectCategory,
             onRefreshClick = viewModel::refresh,
+            onTravelRetryClick = viewModel::refreshTravels,
+            onPopularSpotsRefreshClick = viewModel::refreshPopularTravelSpots,
             onTravelSpotClick = onTravelSpotClick,
             onDibsClick = viewModel::toggleDibs,
             modifier = Modifier.fillMaxSize(),

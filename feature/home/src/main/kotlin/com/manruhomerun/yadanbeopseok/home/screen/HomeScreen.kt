@@ -5,16 +5,24 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
@@ -22,12 +30,18 @@ import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SportsBaseball
 import androidx.compose.material.icons.filled.Stadium
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,12 +54,18 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.manruhomerun.yadanbeopseok.designsystem.component.YadanBottomNavigation
+import com.manruhomerun.yadanbeopseok.designsystem.component.YadanBottomNavigationCenterAction
+import com.manruhomerun.yadanbeopseok.designsystem.component.YadanBottomNavigationItem
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanButton
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanIconButton
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanMainHeader
@@ -91,18 +111,23 @@ fun HomeScreen(
     onRegionSelected: (Region) -> Unit,
     onCategorySelected: (TravelSpotFilterCategory?) -> Unit,
     onRefreshClick: () -> Unit,
+    onTravelRetryClick: () -> Unit,
+    onPopularSpotsRefreshClick: () -> Unit,
     onTravelSpotClick: (String) -> Unit,
     onDibsClick: (String) -> Unit,
     initialTravelPage: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     val displayedTravels = uiState.displayedTravels
-    val isPopularSpotLoading = (uiState.isLoading || uiState.isRefreshing) && uiState.popularTravelSpots.isEmpty()
+    val isHomeLoading = uiState.isLoading || uiState.isRefreshing
+    val isTravelRetryEnabled = !isHomeLoading && !uiState.isTravelListLoading
+    val isPopularRefreshEnabled = !isHomeLoading && !uiState.isPopularSpotLoading
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(YadanBackground),
+            .background(YadanBackground)
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
     ) {
         HomeHeader(
             onNotificationClick = onNotificationClick,
@@ -120,7 +145,7 @@ fun HomeScreen(
                 contentPadding = PaddingValues(bottom = 24.dp),
             ) {
                 item {
-                    Row(
+                    FlowRow(
                         modifier = Modifier.padding(
                             start = 20.dp,
                             top = 4.dp,
@@ -128,7 +153,8 @@ fun HomeScreen(
                             bottom = 10.dp,
                         ),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        itemVerticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             text = "내 원정 여행",
@@ -138,7 +164,7 @@ fun HomeScreen(
                             color = YadanTextPrimary,
                         )
 
-                        if (!uiState.isLoading && displayedTravels.isNotEmpty()) {
+                        if (displayedTravels.isNotEmpty()) {
                             YadanSectionCountBadge(count = displayedTravels.size)
                         }
                     }
@@ -148,11 +174,25 @@ fun HomeScreen(
                     HomeTravelContent(
                         travels = displayedTravels,
                         currentDate = currentDate,
-                        isLoading = uiState.isLoading,
+                        isLoading = uiState.isTravelListLoading,
+                        hasLoadedTravelList = uiState.hasLoadedTravelList,
+                        errorMessage = uiState.travelErrorMessage,
+                        onRetryClick = onTravelRetryClick,
+                        retryEnabled = isTravelRetryEnabled,
                         onTravelClick = onTravelClick,
                         onGameScheduleClick = onGameScheduleClick,
                         initialPage = initialTravelPage,
                     )
+                }
+
+                if (displayedTravels.isNotEmpty() && uiState.travelErrorMessage != null) {
+                    item {
+                        HomeSectionErrorContent(
+                            message = uiState.travelErrorMessage,
+                            onRetryClick = onTravelRetryClick,
+                            retryEnabled = isTravelRetryEnabled,
+                        )
+                    }
                 }
 
                 item {
@@ -162,9 +202,11 @@ fun HomeScreen(
                 item {
                     HomeRecommendationHeader(
                         selectedRegion = uiState.selectedRegion,
-                        isRefreshing = uiState.isRefreshing,
+                        isLoading = uiState.isPopularSpotLoading,
+                        filterEnabled = !isHomeLoading,
+                        refreshEnabled = isPopularRefreshEnabled,
                         onRegionSelected = onRegionSelected,
-                        onRefreshClick = onRefreshClick,
+                        onRefreshClick = onPopularSpotsRefreshClick,
                     )
                 }
 
@@ -172,7 +214,7 @@ fun HomeScreen(
                     YadanTravelSpotCategoryFilters(
                         selectedCategory = uiState.selectedCategory,
                         onCategorySelected = onCategorySelected,
-                        enabled = !uiState.isRefreshing,
+                        enabled = !isHomeLoading,
                         contentPadding = PaddingValues(horizontal = 20.dp),
                     )
                 }
@@ -182,49 +224,51 @@ fun HomeScreen(
                 }
 
                 when {
-                    isPopularSpotLoading -> {
-                        item {
-                            HomeLoadingContent()
-                        }
-                    }
-
-                    uiState.travelSpotErrorMessage != null -> {
-                        item {
-                            HomeSpotErrorContent(
-                                message = uiState.travelSpotErrorMessage,
-                                onRetryClick = onRefreshClick,
-                            )
-                        }
-                    }
-
-                    uiState.popularTravelSpots.isEmpty() -> {
-                        item {
-                            HomeEmptySpotContent()
-                        }
-                    }
-
-                    else -> {
+                    uiState.popularTravelSpots.isNotEmpty() -> {
                         items(
                             items = uiState.popularTravelSpots,
                             key = { spot -> spot.id },
                         ) { spot ->
                             YadanTravelSpotCard(
                                 spot = spot,
-                                onClick = {
-                                    onTravelSpotClick(spot.id)
-                                },
-                                onActionClick = {
-                                    onDibsClick(spot.id)
-                                },
-                                modifier =
-                                    Modifier.padding(
-                                        start = 20.dp,
-                                        end = 20.dp,
-                                        bottom = 10.dp,
-                                    ),
-                                enabled = spot.id !in uiState.updatingDibsSpotIds,
+                                onClick = { onTravelSpotClick(spot.id) },
+                                onActionClick = { onDibsClick(spot.id) },
+                                modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 10.dp),
+                                actionEnabled = isPopularRefreshEnabled && spot.id !in uiState.updatingDibsSpotIds,
                             )
                         }
+                    }
+
+                    uiState.travelSpotErrorMessage != null -> {
+                        item {
+                            HomeSectionErrorContent(
+                                message = uiState.travelSpotErrorMessage,
+                                onRetryClick = onPopularSpotsRefreshClick,
+                                retryEnabled = isPopularRefreshEnabled,
+                            )
+                        }
+                    }
+
+                    uiState.isPopularSpotLoading -> {
+                        item {
+                            HomeLoadingContent()
+                        }
+                    }
+
+                    else -> {
+                        item {
+                            HomeEmptySpotContent()
+                        }
+                    }
+                }
+
+                if (uiState.popularTravelSpots.isNotEmpty() && uiState.travelSpotErrorMessage != null) {
+                    item {
+                        HomeSectionErrorContent(
+                            message = uiState.travelSpotErrorMessage,
+                            onRetryClick = onPopularSpotsRefreshClick,
+                            retryEnabled = isPopularRefreshEnabled,
+                        )
                     }
                 }
             }
@@ -257,28 +301,77 @@ private fun HomeHeader(
 }
 
 /**
- * 여행 개수에 맞게 로딩, Pager, 단일 카드, 빈 상태를 표시합니다.
+ * 여행 조회 상태와 개수에 맞게 로딩, 오류, 카드 또는 확인된 빈 상태를 표시합니다.
  */
 @Composable
 private fun HomeTravelContent(
     travels: List<TravelSummary>,
     currentDate: LocalDate,
     isLoading: Boolean,
+    hasLoadedTravelList: Boolean,
+    errorMessage: String?,
+    onRetryClick: () -> Unit,
+    retryEnabled: Boolean,
     onTravelClick: (String) -> Unit,
     onGameScheduleClick: () -> Unit,
     initialPage: Int,
 ) {
-    when {
-        isLoading && travels.isEmpty() -> {
-            HomeTravelLoadingContent()
-        }
+    SubcomposeLayout(modifier = Modifier.fillMaxWidth()) { constraints ->
+        val cardWidth = (constraints.maxWidth - HOME_TRAVEL_HORIZONTAL_PADDING.roundToPx() * 2).coerceAtLeast(0)
+        val sizingConstraints = Constraints.fixedWidth(cardWidth)
+        val travelHeight = subcompose("travel-height") {
+            YadanTravelCardDefaults.HeightReference(travels, currentDate)
+        }.single().measure(sizingConstraints).height
+        val emptyHeight = subcompose("empty-height") {
+            HomeEmptyTravelCardContent(onGameScheduleClick = {}, enabled = false)
+        }.single().measure(sizingConstraints).height
+        val cardHeight = maxOf(YadanTravelCardDefaults.Height.roundToPx(), travelHeight, emptyHeight).toDp()
+        // 표시 후 높이를 갱신하지 않고, 첫 측정에서 모든 카드의 공통 높이를 결정합니다.
+        val content = subcompose("content") {
+            HomeTravelCards(
+                travels = travels,
+                currentDate = currentDate,
+                isLoading = isLoading,
+                hasLoadedTravelList = hasLoadedTravelList,
+                errorMessage = errorMessage,
+                onRetryClick = onRetryClick,
+                retryEnabled = retryEnabled,
+                onTravelClick = onTravelClick,
+                onGameScheduleClick = onGameScheduleClick,
+                initialPage = initialPage,
+                cardHeight = cardHeight,
+            )
+        }.single().measure(constraints)
+        layout(constraints.maxWidth, content.height) { content.placeRelative(0, 0) }
+    }
+}
 
+private val HOME_TRAVEL_HORIZONTAL_PADDING = 24.dp
+private val HOME_TRAVEL_VERTICAL_PADDING = 6.dp
+
+/** 조회된 여행은 유지하고, 데이터가 없을 때 조회 실패와 실제 빈 목록을 구분합니다. */
+@Composable
+private fun HomeTravelCards(
+    travels: List<TravelSummary>,
+    currentDate: LocalDate,
+    isLoading: Boolean,
+    hasLoadedTravelList: Boolean,
+    errorMessage: String?,
+    onRetryClick: () -> Unit,
+    retryEnabled: Boolean,
+    onTravelClick: (String) -> Unit,
+    onGameScheduleClick: () -> Unit,
+    initialPage: Int,
+    cardHeight: Dp,
+) {
+    when {
         travels.size > 1 -> {
             HomeTravelPager(
                 travels = travels,
                 currentDate = currentDate,
                 onTravelClick = onTravelClick,
                 initialPage = initialPage,
+                cardHeight = cardHeight,
             )
         }
 
@@ -291,14 +384,29 @@ private fun HomeTravelContent(
                 onClick = {
                     onTravelClick(travel.id)
                 },
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
+                modifier = Modifier.padding(horizontal = HOME_TRAVEL_HORIZONTAL_PADDING, vertical = HOME_TRAVEL_VERTICAL_PADDING)
+                    .height(cardHeight),
             )
+        }
+
+        errorMessage != null -> {
+            HomeSectionErrorContent(
+                message = errorMessage,
+                onRetryClick = onRetryClick,
+                retryEnabled = retryEnabled,
+                modifier = Modifier.heightIn(min = cardHeight + HOME_TRAVEL_VERTICAL_PADDING * 2),
+            )
+        }
+
+        isLoading || !hasLoadedTravelList -> {
+            HomeTravelLoadingContent(cardHeight)
         }
 
         else -> {
             HomeEmptyTravelCard(
                 onGameScheduleClick = onGameScheduleClick,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
+                cardHeight = cardHeight,
+                modifier = Modifier.padding(horizontal = HOME_TRAVEL_HORIZONTAL_PADDING, vertical = HOME_TRAVEL_VERTICAL_PADDING),
             )
         }
     }
@@ -313,6 +421,7 @@ private fun HomeTravelPager(
     currentDate: LocalDate,
     onTravelClick: (String) -> Unit,
     initialPage: Int,
+    cardHeight: Dp,
 ) {
     val pagerState =
         rememberPagerState(
@@ -328,8 +437,8 @@ private fun HomeTravelPager(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(276.dp),
-            contentPadding = PaddingValues(horizontal = 24.dp),
+                    .height(cardHeight + HOME_TRAVEL_VERTICAL_PADDING * 2),
+            contentPadding = PaddingValues(horizontal = HOME_TRAVEL_HORIZONTAL_PADDING),
             pageSize = PageSize.Fill,
             pageSpacing = 10.dp,
             key = { page ->
@@ -344,7 +453,7 @@ private fun HomeTravelPager(
                 onClick = {
                     onTravelClick(travel.id)
                 },
-                modifier = Modifier.padding(vertical = 6.dp),
+                modifier = Modifier.padding(vertical = HOME_TRAVEL_VERTICAL_PADDING).height(cardHeight),
             )
         }
 
@@ -365,12 +474,13 @@ private fun HomeTravelPager(
 @Composable
 private fun HomeEmptyTravelCard(
     onGameScheduleClick: () -> Unit,
+    cardHeight: Dp,
     modifier: Modifier = Modifier,
 ) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(YadanTravelCardDefaults.Height)
+            .height(cardHeight)
             .background(
                 color = YadanPrimaryTint,
                 shape = YadanShapes.large,
@@ -413,68 +523,75 @@ private fun HomeEmptyTravelCard(
             )
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+        HomeEmptyTravelCardContent(onGameScheduleClick = onGameScheduleClick)
+    }
+}
+
+/** 빈 카드의 표시와 높이 측정에서 같은 본문을 사용합니다. */
+@Composable
+private fun HomeEmptyTravelCardContent(onGameScheduleClick: () -> Unit, enabled: Boolean = true) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Surface(
+            shape = YadanShapes.medium,
+            color = YadanSurface,
+            shadowElevation = 3.dp,
         ) {
-            Surface(
-                shape = YadanShapes.medium,
-                color = YadanSurface,
-                shadowElevation = 3.dp,
+            Box(
+                modifier = Modifier.size(48.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                Box(
-                    modifier = Modifier.size(48.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Stadium,
-                        contentDescription = null,
-                        modifier = Modifier.size(27.dp),
-                        tint = YadanPrimary,
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Stadium,
+                    contentDescription = null,
+                    modifier = Modifier.size(27.dp),
+                    tint = YadanPrimary,
+                )
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = "아직 떠난 원정이 없어요",
-                style =
-                    YadanTypography.titleSmall.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                    ),
-                color = YadanTextPrimary,
-                textAlign = TextAlign.Center,
-            )
-
-            Spacer(modifier = Modifier.height(5.dp))
-
-            Text(
-                text = "응원 팀 경기를 고르면 구장 주변 코스를 짜드려요",
-                style = YadanTypography.bodySmall,
-                color = YadanTextMuted,
-                textAlign = TextAlign.Center,
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            YadanButton(
-                text = "경기 일정에서 시작",
-                onClick = onGameScheduleClick,
-                modifier = Modifier
-                    .widthIn(max = 280.dp)
-                    .fillMaxWidth(),
-                trailingIcon = {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                    )
-                },
-            )
         }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = "아직 떠난 원정이 없어요",
+            style =
+                YadanTypography.titleSmall.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                ),
+            color = YadanTextPrimary,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(5.dp))
+
+        Text(
+            text = "응원 팀 경기를 고르면 구장 주변 코스를 짜드려요",
+            style = YadanTypography.bodySmall,
+            color = YadanTextMuted,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        YadanButton(
+            text = "경기 일정에서 시작",
+            onClick = onGameScheduleClick,
+            enabled = enabled,
+            modifier = Modifier
+                .widthIn(max = 280.dp)
+                .fillMaxWidth(),
+            trailingIcon = {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                )
+            },
+        )
     }
 }
 
@@ -484,35 +601,37 @@ private fun HomeEmptyTravelCard(
 @Composable
 private fun HomeRecommendationHeader(
     selectedRegion: Region,
-    isRefreshing: Boolean,
+    isLoading: Boolean,
+    filterEnabled: Boolean,
+    refreshEnabled: Boolean,
     onRegionSelected: (Region) -> Unit,
     onRefreshClick: () -> Unit,
 ) {
-    Row(
+    FlowRow(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         YadanTravelRegionDropdown(
             selectedRegion = selectedRegion,
             onRegionSelected = onRegionSelected,
-            enabled = !isRefreshing,
+            enabled = filterEnabled,
         )
-
-        Spacer(modifier = Modifier.weight(1f))
 
         TextButton(
             onClick = onRefreshClick,
-            enabled = !isRefreshing,
+            enabled = refreshEnabled,
             contentPadding = PaddingValues(horizontal = 4.dp),
             colors =
                 ButtonDefaults.textButtonColors(
                     contentColor = YadanPrimary,
                 ),
         ) {
-            if (isRefreshing) {
+            if (isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(16.dp),
                     color = YadanPrimary,
@@ -540,12 +659,12 @@ private fun HomeRecommendationHeader(
 }
 
 @Composable
-private fun HomeTravelLoadingContent() {
+private fun HomeTravelLoadingContent(cardHeight: Dp) {
     Box(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(276.dp),
+                .height(cardHeight + HOME_TRAVEL_VERTICAL_PADDING * 2),
         contentAlignment = Alignment.Center,
     ) {
         CircularProgressIndicator(
@@ -569,15 +688,18 @@ private fun HomeLoadingContent() {
     }
 }
 
+/** 홈의 여행·인기 관광지 영역에서 오류 안내와 재시도 동작을 재사용합니다. */
 @Composable
-private fun HomeSpotErrorContent(
+private fun HomeSectionErrorContent(
     message: String,
     onRetryClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    retryEnabled: Boolean = true,
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .height(120.dp)
+            .heightIn(min = 120.dp)
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -589,11 +711,14 @@ private fun HomeSpotErrorContent(
             textAlign = TextAlign.Center,
         )
 
-        TextButton(onClick = onRetryClick) {
+        TextButton(
+            onClick = onRetryClick,
+            enabled = retryEnabled,
+            colors = ButtonDefaults.textButtonColors(contentColor = YadanPrimary),
+        ) {
             Text(
                 text = "다시 시도",
                 style = YadanTypography.labelMedium,
-                color = YadanPrimary,
             )
         }
     }
@@ -605,7 +730,7 @@ private fun HomeEmptySpotContent() {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(100.dp)
+                .heightIn(min = 100.dp)
                 .padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -631,27 +756,49 @@ private class HomeUiStatePreviewProvider :
             endDate = LocalDate(2026, 5, 24),
         )
 
+    private val loaded = HomeUiState(
+        travels = pagerTravels,
+        popularTravelSpots = previewPopularSpots(),
+        selectedRegion = Region.BUSAN,
+        isLoading = false,
+        hasLoadedTravelList = true,
+    )
+
+    private val travelLoadFailure = loaded.copy(
+        travels = emptyList(),
+        hasLoadedTravelList = false,
+        travelErrorMessage = "여행 목록을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
+    )
+
+    private val popularLoadFailure = loaded.copy(
+        travelSpotErrorMessage = "인기 관광지를 불러오지 못했습니다. 인터넷 연결을 확인한 후 다시 시도해주세요.",
+    )
+
     override val values: Sequence<HomeUiState> =
         sequenceOf(
-            HomeUiState(
-                travels = pagerTravels,
-                popularTravelSpots = previewPopularSpots(),
-                isLoading = false,
-            ),
-            HomeUiState(
-                travels = pagerTravels.drop(1),
-                popularTravelSpots = previewPopularSpots(),
-                isLoading = false,
-            ),
-            HomeUiState(
-                travels = listOf(guestTravel),
-                popularTravelSpots = previewPopularSpots(),
-                isLoading = false,
-            ),
-            HomeUiState(
-                popularTravelSpots = previewPopularSpots(),
-                isLoading = false,
-            ),
+            loaded,
+            loaded.copy(travels = pagerTravels.drop(1)),
+            loaded.copy(travels = listOf(guestTravel)),
+            loaded.copy(travels = emptyList()),
+            travelLoadFailure,
+            travelLoadFailure.copy(travels = pagerTravels.take(1)),
+            travelLoadFailure.copy(travels = pagerTravels, hasLoadedTravelList = true),
+            travelLoadFailure.copy(isTravelListLoading = true),
+            travelLoadFailure.copy(travels = pagerTravels, hasLoadedTravelList = true, isTravelListLoading = true),
+            loaded.copy(isTravelListLoading = true),
+            loaded.copy(isPopularSpotLoading = true),
+            loaded.copy(isTravelListLoading = true, isPopularSpotLoading = true),
+            loaded.copy(isRefreshing = true, isTravelListLoading = true, isPopularSpotLoading = true),
+            popularLoadFailure,
+            popularLoadFailure.copy(popularTravelSpots = emptyList()),
+            popularLoadFailure.copy(isPopularSpotLoading = true),
+            popularLoadFailure.copy(popularTravelSpots = emptyList(), isPopularSpotLoading = true),
+            loaded.copy(popularTravelSpots = emptyList(), isPopularSpotLoading = true),
+            loaded.copy(popularTravelSpots = emptyList()),
+            loaded.copy(updatingDibsSpotIds = setOf("spot-1")),
+            loaded.copy(isLoading = true, popularTravelSpots = emptyList(), isPopularSpotLoading = true),
+            loaded.copy(isLoading = true, travels = emptyList(), hasLoadedTravelList = false, isTravelListLoading = true),
+            HomeUiState(isTravelListLoading = true, isPopularSpotLoading = true),
         )
 }
 
@@ -805,7 +952,9 @@ private fun HomeScreenTravelPagePreviewContent(initialPage: Int) {
         uiState = HomeUiState(
             travels = previewPagerTravels(),
             popularTravelSpots = previewPopularSpots(),
+            selectedRegion = Region.BUSAN,
             isLoading = false,
+            hasLoadedTravelList = true,
         ),
         initialTravelPage = initialPage,
     )
@@ -814,18 +963,108 @@ private fun HomeScreenTravelPagePreviewContent(initialPage: Int) {
 @Composable
 private fun HomeScreenPreviewContent(uiState: HomeUiState, initialTravelPage: Int = 0) {
     YadanbeopseokTheme {
-        HomeScreen(
-            uiState = uiState,
-            currentDate = LocalDate(2026, 5, 20),
-            onNotificationClick = {},
-            onTravelClick = {},
-            onGameScheduleClick = {},
-            onRegionSelected = {},
-            onCategorySelected = {},
-            onRefreshClick = {},
-            onTravelSpotClick = {},
-            onDibsClick = {},
-            initialTravelPage = initialTravelPage,
-        )
+        Scaffold(
+            containerColor = YadanBackground,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            bottomBar = {
+                Column {
+                    HomeBottomNavigationPreview()
+                    Spacer(
+                        modifier = Modifier.fillMaxWidth()
+                            .windowInsetsBottomHeight(WindowInsets.navigationBars)
+                            .background(YadanSurface),
+                    )
+                }
+            },
+        ) { padding ->
+            HomeScreen(
+                uiState = uiState,
+                currentDate = LocalDate(2026, 5, 20),
+                onNotificationClick = {},
+                onTravelClick = {},
+                onGameScheduleClick = {},
+                onRegionSelected = {},
+                onCategorySelected = {},
+                onRefreshClick = {},
+                onTravelRetryClick = {},
+                onPopularSpotsRefreshClick = {},
+                onTravelSpotClick = {},
+                onDibsClick = {},
+                initialTravelPage = initialTravelPage,
+                modifier = Modifier.fillMaxSize().padding(padding),
+            )
+        }
     }
+}
+
+@Composable
+private fun HomeBottomNavigationPreview() {
+    YadanBottomNavigation(
+        centerAction = {
+            YadanBottomNavigationCenterAction(onClick = {}) {
+                Icon(imageVector = Icons.Default.Add, contentDescription = "새 여행 만들기", modifier = Modifier.fillMaxSize())
+            }
+        },
+        startItems = {
+            YadanBottomNavigationItem(selected = true, onClick = {}, label = "홈") {
+                Icon(imageVector = Icons.Default.Home, contentDescription = null, modifier = Modifier.fillMaxSize())
+            }
+            YadanBottomNavigationItem(selected = false, onClick = {}, label = "경기") {
+                Icon(imageVector = Icons.Default.SportsBaseball, contentDescription = null, modifier = Modifier.fillMaxSize())
+            }
+        },
+        endItems = {
+            YadanBottomNavigationItem(selected = false, onClick = {}, label = "기록") {
+                Icon(imageVector = Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.fillMaxSize())
+            }
+            YadanBottomNavigationItem(selected = false, onClick = {}, label = "마이") {
+                Icon(imageVector = Icons.Default.Person, contentDescription = null, modifier = Modifier.fillMaxSize())
+            }
+        },
+    )
+}
+
+private data class HomeLayoutPreviewState(val uiState: HomeUiState, val page: Int = 0)
+
+private class HomeLayoutPreviewProvider : PreviewParameterProvider<HomeLayoutPreviewState> {
+    private val base = HomeUiState(
+        travels = previewPagerTravels().mapIndexed { index, travel ->
+            travel.copy(
+                name = if (index == 1) "친구들과 함께 떠나는 아주 긴 이름의 서울 잠실 직관 여행" else travel.name,
+                isLeader = index != 2,
+            )
+        },
+        popularTravelSpots = previewPopularSpots(),
+        selectedRegion = Region.BUSAN,
+        isLoading = false,
+        hasLoadedTravelList = true,
+    )
+    override val values = sequenceOf(
+        HomeLayoutPreviewState(base.copy(travels = emptyList())),
+        HomeLayoutPreviewState(base.copy(travels = base.travels.take(1))),
+        HomeLayoutPreviewState(base, page = 0),
+        HomeLayoutPreviewState(base, page = 1),
+        HomeLayoutPreviewState(base, page = 2),
+        HomeLayoutPreviewState(HomeUiState(isTravelListLoading = true, isPopularSpotLoading = true)),
+        HomeLayoutPreviewState(
+            base.copy(
+                popularTravelSpots = emptyList(),
+                travelSpotErrorMessage = "인기 관광지를 불러오지 못했습니다. 인터넷 연결을 확인한 후 다시 시도해주세요.",
+            ),
+        ),
+    ) + HomeUiStatePreviewProvider().values
+        .filter { state ->
+            state.travelErrorMessage != null || state.travelSpotErrorMessage != null ||
+                state.isTravelListLoading || state.isPopularSpotLoading || state.isRefreshing
+        }
+        .map { state -> HomeLayoutPreviewState(state) }
+}
+
+@Preview(name = "홈 전체 - 좁은 화면", showBackground = true, widthDp = 320, heightDp = 640)
+@Preview(name = "홈 전체 - 큰 글꼴", showBackground = true, widthDp = 320, heightDp = 640, fontScale = 1.5f)
+@Preview(name = "홈 전체 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 640, fontScale = 2f)
+@Preview(name = "홈 전체 - 낮은 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Composable
+private fun HomeScreenLayoutPreview(@PreviewParameter(HomeLayoutPreviewProvider::class) state: HomeLayoutPreviewState) {
+    HomeScreenPreviewContent(uiState = state.uiState, initialTravelPage = state.page)
 }

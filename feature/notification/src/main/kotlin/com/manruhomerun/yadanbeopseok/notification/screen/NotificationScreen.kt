@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -57,7 +58,8 @@ fun NotificationScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(YadanBackground),
+            .background(YadanBackground)
+            .navigationBarsPadding(),
     ) {
         YadanTopAppBar(
             title = "알림",
@@ -203,47 +205,42 @@ private fun NotificationErrorContent(message: String, onRetryClick: () -> Unit, 
 @Preview(
     name = "E01 알림 목록",
     showBackground = true,
+    showSystemUi = true,
     backgroundColor = 0xFFFAFAFA,
     widthDp = 390,
     heightDp = 844,
 )
 @Composable
 private fun NotificationScreenPreview() {
-    val notifications = listOf(
-        NotificationListItem(
-            notification = AppNotification(
-                id = 1001,
-                type = NotificationType.FRIEND_REQUEST,
-                title = "친구 신청이 도착했어요",
-                body = "야구친구님이 친구 신청을 보냈어요.",
-                referenceId = "35",
-                createdAt = LocalDateTime(2026, 9, 21, 13, 55),
+    YadanbeopseokTheme {
+        NotificationScreen(
+            uiState = NotificationUiState(
+                notifications = notificationPreviewItems(),
+                isLoading = false,
             ),
-            timeText = "5분 전",
-        ),
-        NotificationListItem(
-            notification = AppNotification(
-                id = 1002,
-                type = NotificationType.FRIEND_REQUEST_ACCEPTED,
-                title = "친구 신청을 수락했어요",
-                body = "야구친구님과 친구가 되었어요.",
-                referenceId = "35",
-                createdAt = LocalDateTime(2026, 9, 21, 11, 0),
-            ),
-            timeText = "3시간 전",
-        ),
-        NotificationListItem(
-            notification = AppNotification(
-                id = 1003,
-                type = NotificationType.WEEKLY_TEAM_SCHEDULE,
-                title = "이번 주 경기 일정을 확인하세요",
-                body = "응원 팀의 이번 주 경기 일정이 도착했어요.",
-                referenceId = "2",
-                createdAt = LocalDateTime(2026, 9, 21, 9, 0),
-            ),
-            timeText = "5시간 전",
-        ),
-    )
+            onBackClick = {},
+            onSettingClick = {},
+            onNotificationClick = {},
+            onRetryClick = {},
+        )
+    }
+}
+
+@Preview(
+    name = "E01 긴 알림 목록",
+    showBackground = true,
+    showSystemUi = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 390,
+    heightDp = 844,
+)
+@Composable
+private fun NotificationScreenLongListPreview() {
+    val samples = notificationPreviewItems()
+    val notifications = List(12) { index ->
+        val item = samples[index % samples.size]
+        item.copy(notification = item.notification.copy(id = 1001L + index))
+    }
 
     YadanbeopseokTheme {
         NotificationScreen(
@@ -260,8 +257,30 @@ private fun NotificationScreenPreview() {
 }
 
 @Preview(
+    name = "E01 알림 로딩",
+    showBackground = true,
+    showSystemUi = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 390,
+    heightDp = 844,
+)
+@Composable
+private fun NotificationScreenLoadingPreview() {
+    YadanbeopseokTheme {
+        NotificationScreen(
+            uiState = NotificationUiState(),
+            onBackClick = {},
+            onSettingClick = {},
+            onNotificationClick = {},
+            onRetryClick = {},
+        )
+    }
+}
+
+@Preview(
     name = "E01 빈 알림",
     showBackground = true,
+    showSystemUi = true,
     backgroundColor = 0xFFFAFAFA,
     widthDp = 390,
     heightDp = 844,
@@ -282,6 +301,7 @@ private fun NotificationScreenEmptyPreview() {
 @Preview(
     name = "E01 오류",
     showBackground = true,
+    showSystemUi = true,
     backgroundColor = 0xFFFAFAFA,
     widthDp = 390,
     heightDp = 844,
@@ -301,3 +321,40 @@ private fun NotificationScreenErrorPreview() {
         )
     }
 }
+
+/** 알림 목록 Preview에서만 재사용하는 샘플입니다. */
+private fun notificationPreviewItems(): List<NotificationListItem> = listOf(
+    NotificationListItem(
+        notification = AppNotification(
+            id = 1001,
+            type = NotificationType.FRIEND_REQUEST,
+            title = "친구 신청이 도착했어요",
+            body = "야구친구님이 친구 신청을 보냈어요.",
+            referenceId = "35",
+            createdAt = LocalDateTime(2026, 9, 21, 13, 55),
+        ),
+        timeText = "5분 전",
+    ),
+    NotificationListItem(
+        notification = AppNotification(
+            id = 1002,
+            type = NotificationType.FRIEND_REQUEST_ACCEPTED,
+            title = "친구 신청을 수락했어요",
+            body = "야구친구님과 친구가 되었어요.",
+            referenceId = "35",
+            createdAt = LocalDateTime(2026, 9, 21, 11, 0),
+        ),
+        timeText = "3시간 전",
+    ),
+    NotificationListItem(
+        notification = AppNotification(
+            id = 1003,
+            type = NotificationType.WEEKLY_TEAM_SCHEDULE,
+            title = "이번 주 경기 일정을 확인하세요",
+            body = "응원 팀의 이번 주 경기 일정이 도착했어요.",
+            referenceId = "2",
+            createdAt = LocalDateTime(2026, 9, 21, 9, 0),
+        ),
+        timeText = "5시간 전",
+    ),
+)

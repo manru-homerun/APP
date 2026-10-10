@@ -8,11 +8,14 @@ import com.manruhomerun.yadanbeopseok.common.NetworkConnectionException
 import com.manruhomerun.yadanbeopseok.common.NetworkTimeoutException
 import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.repository.TravelRepository
+import com.manruhomerun.yadanbeopseok.model.TravelListPage
 import com.manruhomerun.yadanbeopseok.model.TravelStatus
+import com.manruhomerun.yadanbeopseok.model.TravelSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +23,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * D01의 완료 여행 목록과 시즌 선택 상태를 관리합니다.
+ * D01의 전체 완료 여행 조회, 시즌 통계와 목록의 추가 표시를 관리합니다.
  */
 @HiltViewModel
 class TravelRecordViewModel @Inject constructor(
@@ -30,12 +33,13 @@ class TravelRecordViewModel @Inject constructor(
     val uiState: StateFlow<TravelRecordUiState> = _uiState.asStateFlow()
 
     private var loadJob: Job? = null
+    private var loadGeneration = 0L
+    private var nextPageNumber = FIRST_PAGE_NUMBER
+    private val pendingTravels = linkedMapOf<String, TravelSummary>()
+    private var keepPreviousSnapshot = false
 
     init {
-        loadCompletedTravels(
-            pageNumber = FIRST_PAGE_NUMBER,
-            clearCurrentTravels = true,
-        )
+        loadCompletedTravels(restart = true)
     }
 
     /**
@@ -50,158 +54,140 @@ class TravelRecordViewModel @Inject constructor(
         if (season == currentState.selectedSeason) return
 
         _uiState.update {
-            it.copy(selectedSeason = season)
+            it.copy(selectedSeason = season, displayedTravelCount = TRAVEL_RECORD_PAGE_SIZE)
         }
     }
 
     /**
-     * 완료 여행 목록 조회를 다시 시도합니다.
+     * 성공한 페이지는 유지하고 실패한 서버 페이지부터 전체 조회를 재개합니다.
      */
     fun retry() {
-        val currentState = _uiState.value
-        if (currentState.isLoading || currentState.isLoadingMore) return
+        if (_uiState.value.isLoading || loadJob?.isActive == true) return
+        if (_uiState.value.errorMessage == null) return
 
-        if (currentState.loadMoreErrorMessage != null) {
-            loadNextPage()
-        } else {
-            loadCompletedTravels(
-                pageNumber = FIRST_PAGE_NUMBER,
-                clearCurrentTravels = currentState.completedTravels.isEmpty(),
-            )
-        }
+        loadCompletedTravels(restart = false)
     }
 
     /**
      * 완료 여행 목록을 최신 상태로 다시 조회합니다.
      */
     fun refresh() {
-        val currentState = _uiState.value
-        if (currentState.isLoading || currentState.isLoadingMore) return
+        if (_uiState.value.isLoading || loadJob?.isActive == true) return
 
-        loadCompletedTravels(
-            pageNumber = FIRST_PAGE_NUMBER,
-            clearCurrentTravels = false,
-        )
+        loadCompletedTravels(restart = true)
     }
 
-    /** 목록 하단에서 완료 여행의 다음 페이지를 조회합니다. */
+    /** 서버를 다시 호출하지 않고 선택 시즌의 보관된 여행을 10개 더 표시합니다. */
     fun loadNextPage() {
-        val currentState = _uiState.value
-        val canLoadNextPage = !currentState.isLoading &&
-            !currentState.isLoadingMore &&
-            currentState.hasNextPage
+        _uiState.update {
+            if (!it.hasNextPage) return@update it
 
-        if (!canLoadNextPage) return
-
-        loadCompletedTravels(
-            pageNumber = currentState.pageNumber + 1,
-            clearCurrentTravels = false,
-        )
+            it.copy(
+                displayedTravelCount = it.displayedTravelCount +
+                    minOf(TRAVEL_RECORD_PAGE_SIZE, it.seasonTravels.size - it.displayedTravelCount),
+            )
+        }
     }
 
-    /** 완료 여행 한 페이지를 조회하고 최신 여행이 먼저 보이도록 누적합니다. */
-    private fun loadCompletedTravels(
-        pageNumber: Int,
-        clearCurrentTravels: Boolean,
-    ) {
+    /** 전체 페이지를 순차 조회하며 새로고침 결과는 모두 성공한 뒤에 교체합니다. */
+    private fun loadCompletedTravels(restart: Boolean) {
         loadJob?.cancel()
-        val isFirstPage = pageNumber == FIRST_PAGE_NUMBER
+        val generation = ++loadGeneration
+
+        if (restart) {
+            pendingTravels.clear()
+            nextPageNumber = FIRST_PAGE_NUMBER
+            keepPreviousSnapshot = _uiState.value.hasCompleteStatistics ||
+                _uiState.value.completedTravels.isNotEmpty()
+        }
 
         _uiState.update {
-            it.copy(
-                completedTravels = if (clearCurrentTravels) emptyList() else it.completedTravels,
-                pageNumber = if (clearCurrentTravels) 0 else it.pageNumber,
-                totalPages = if (clearCurrentTravels) 0 else it.totalPages,
-                isLoading = isFirstPage,
-                isLoadingMore = !isFirstPage,
-                errorMessage = null,
-                loadMoreErrorMessage = null,
-            )
+            it.copy(isLoading = true, errorMessage = null)
         }
 
         loadJob = viewModelScope.launch {
             try {
-                val page = travelRepository.getTravels(
-                    status = TravelStatus.COMPLETED,
-                    pageNumber = pageNumber,
-                    pageSize = TRAVEL_PAGE_SIZE,
-                )
+                while (true) {
+                    val requestedPage = nextPageNumber
+                    val page = travelRepository.getTravels(
+                        status = TravelStatus.COMPLETED,
+                        pageNumber = requestedPage,
+                        pageSize = TRAVEL_RECORD_PAGE_SIZE,
+                    )
 
-                val completedTravels = _uiState.value.let { currentState ->
-                    val travels = if (isFirstPage) {
-                        page.travels
-                    } else {
-                        currentState.completedTravels + page.travels
+                    ensureActive()
+                    if (generation != loadGeneration) return@launch
+                    page.validatePage(requestedPage)
+
+                    page.travels.forEach { travel -> pendingTravels[travel.id] = travel }
+                    val isComplete = page.pageNumber >= page.totalPages
+
+                    if (isComplete || !keepPreviousSnapshot) {
+                        publishTravels(isComplete)
                     }
 
-                    travels
-                        .distinctBy { travel -> travel.id }
-                        .sortedByDescending { travel -> travel.endDate }
-                }
+                    if (isComplete) {
+                        pendingTravels.clear()
+                        return@launch
+                    }
 
-                val availableSeasons = completedTravels
-                    .map { travel -> travel.startDate.year }
-                    .distinct()
-                    .sortedDescending()
-
-                val currentSeason = _uiState.value.selectedSeason
-                val selectedSeason = currentSeason
-                    ?.takeIf { season -> season in availableSeasons }
-                    ?: availableSeasons.firstOrNull()
-
-                _uiState.update {
-                    it.copy(
-                        completedTravels = completedTravels,
-                        selectedSeason = selectedSeason,
-                        pageNumber = page.pageNumber,
-                        totalPages = page.totalPages,
-                        isLoading = false,
-                        isLoadingMore = false,
-                        errorMessage = null,
-                        loadMoreErrorMessage = null,
-                    )
+                    nextPageNumber = page.pageNumber + 1
                 }
             } catch (exception: CancellationException) {
                 throw exception
             } catch (_: SessionExpiredException) {
+                ensureActive()
+                if (generation != loadGeneration) return@launch
+
+                pendingTravels.clear()
                 _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        isLoadingMore = false,
-                        errorMessage = null,
-                        loadMoreErrorMessage = null,
-                    )
+                    it.copy(isLoading = false, errorMessage = null)
                 }
             } catch (exception: Exception) {
+                ensureActive()
+                if (generation != loadGeneration) return@launch
+
                 _uiState.update {
-                    it.copy(
-                        completedTravels = if (isFirstPage && clearCurrentTravels) {
-                            emptyList()
-                        } else {
-                            it.completedTravels
-                        },
-                        selectedSeason = if (isFirstPage && clearCurrentTravels) {
-                            null
-                        } else {
-                            it.selectedSeason
-                        },
-                        isLoading = false,
-                        isLoadingMore = false,
-                        errorMessage = if (isFirstPage) {
-                            exception.toTravelRecordErrorMessage()
-                        } else {
-                            null
-                        },
-                        loadMoreErrorMessage = if (isFirstPage) {
-                            null
-                        } else {
-                            exception.toTravelRecordErrorMessage()
-                        },
-                    )
+                    it.copy(isLoading = false, errorMessage = exception.toTravelRecordErrorMessage())
                 }
             }
         }
     }
+
+    /** 최신 선택 시즌을 존중하고 전체 조회 성공 시에만 통계를 확정합니다. */
+    private fun publishTravels(isComplete: Boolean) {
+        val travels = pendingTravels.values.sortedByDescending { travel -> travel.endDate }
+        val seasons = travels.map { travel -> travel.startDate.year }.distinct().sortedDescending()
+
+        _uiState.update {
+            val selectedSeason = it.selectedSeason
+                ?.takeIf { season -> !isComplete || season in seasons }
+                ?: seasons.firstOrNull()
+
+            it.copy(
+                completedTravels = travels,
+                selectedSeason = selectedSeason,
+                displayedTravelCount = if (selectedSeason == it.selectedSeason) {
+                    it.displayedTravelCount
+                } else {
+                    TRAVEL_RECORD_PAGE_SIZE
+                },
+                hasCompleteStatistics = isComplete,
+                isLoading = !isComplete,
+                errorMessage = null,
+            )
+        }
+    }
+}
+
+/** 정상적인 빈 첫 페이지는 허용하고, 페이지 번호 불일치나 진행되지 않는 응답은 거부합니다. */
+private fun TravelListPage.validatePage(requestedPage: Int) {
+    val isValidEmptyPage = pageNumber == FIRST_PAGE_NUMBER && travels.isEmpty() &&
+        totalElements == 0L && totalPages in 0..1
+    val isInvalid = pageNumber != requestedPage || pageSize <= 0 || totalPages < 0 || totalElements < 0 ||
+        (!isValidEmptyPage && (pageNumber > totalPages || travels.isEmpty()))
+
+    if (isInvalid) throw InvalidResponseException("완료 여행 목록의 페이지 정보가 유효하지 않습니다.")
 }
 
 /**
@@ -224,4 +210,3 @@ private fun Exception.toTravelRecordErrorMessage(): String =
     }
 
 private const val FIRST_PAGE_NUMBER = 1
-private const val TRAVEL_PAGE_SIZE = 10

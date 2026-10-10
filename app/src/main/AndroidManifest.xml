@@ -51,7 +51,8 @@
             android:name="com.manruhomerun.yadanbeopseok.MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
-            android:theme="@style/Theme.Yadanbeopseok.Starting">
+            android:theme="@style/Theme.Yadanbeopseok.Starting"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

@@ -808,6 +808,16 @@ private fun previewPagerTravels(): List<TravelSummary> = listOf(
     previewSecondUpcomingTravel(),
 )
 
+private fun previewManyPagerTravels(): List<TravelSummary> {
+    val samples = previewPagerTravels()
+    return List(30) { index ->
+        samples[index % samples.size].copy(
+            id = "travel-many-${index + 1}",
+            baseballGameId = "game-many-${index + 1}",
+        )
+    }
+}
+
 private fun previewActiveTravel(): TravelSummary = previewTravel(
     id = "travel-active",
     name = "부산 사직 직관 여행",
@@ -946,11 +956,29 @@ private fun HomeScreenThirdTravelPreview() {
     HomeScreenTravelPagePreviewContent(initialPage = 2)
 }
 
+@Preview(name = "홈 전체 - 여행 30개 중 1번째", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun HomeScreenTravelPagePreviewContent(initialPage: Int) {
+private fun HomeScreenManyTravelsFirstPagePreview() {
+    HomeScreenTravelPagePreviewContent(initialPage = 0, travels = previewManyPagerTravels())
+}
+
+@Preview(name = "홈 전체 - 여행 30개 중 15번째", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun HomeScreenManyTravelsMiddlePagePreview() {
+    HomeScreenTravelPagePreviewContent(initialPage = 14, travels = previewManyPagerTravels())
+}
+
+@Preview(name = "홈 전체 - 여행 30개 중 30번째", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun HomeScreenManyTravelsLastPagePreview() {
+    HomeScreenTravelPagePreviewContent(initialPage = 29, travels = previewManyPagerTravels())
+}
+
+@Composable
+private fun HomeScreenTravelPagePreviewContent(initialPage: Int, travels: List<TravelSummary> = previewPagerTravels()) {
     HomeScreenPreviewContent(
         uiState = HomeUiState(
-            travels = previewPagerTravels(),
+            travels = travels,
             popularTravelSpots = previewPopularSpots(),
             selectedRegion = Region.BUSAN,
             isLoading = false,
@@ -1039,12 +1067,17 @@ private class HomeLayoutPreviewProvider : PreviewParameterProvider<HomeLayoutPre
         isLoading = false,
         hasLoadedTravelList = true,
     )
+    private val many = base.copy(travels = previewManyPagerTravels())
+
     override val values = sequenceOf(
         HomeLayoutPreviewState(base.copy(travels = emptyList())),
         HomeLayoutPreviewState(base.copy(travels = base.travels.take(1))),
         HomeLayoutPreviewState(base, page = 0),
         HomeLayoutPreviewState(base, page = 1),
         HomeLayoutPreviewState(base, page = 2),
+        HomeLayoutPreviewState(many, page = 0),
+        HomeLayoutPreviewState(many, page = 14),
+        HomeLayoutPreviewState(many, page = 29),
         HomeLayoutPreviewState(HomeUiState(isTravelListLoading = true, isPopularSpotLoading = true)),
         HomeLayoutPreviewState(
             base.copy(

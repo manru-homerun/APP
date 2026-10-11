@@ -3,18 +3,22 @@ package com.manruhomerun.yadanbeopseok.record.screen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.Icon
@@ -61,19 +65,21 @@ fun TravelStickerRewardScreen(
     val stickerPack = uiState.stickerPack
     val hasStickers = stickerPack?.stickers?.isNotEmpty() == true
 
-    Column(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .background(YadanPrimaryDark)
             .windowInsetsPadding(WindowInsets.safeDrawing),
-        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
-            contentAlignment = Alignment.Center,
+                .verticalScroll(rememberScrollState())
+                .heightIn(min = maxHeight),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            Spacer(modifier = Modifier.weight(1f))
+
             StickerRewardContent(
                 travel = travel,
                 stickerPack = stickerPack,
@@ -82,40 +88,42 @@ fun TravelStickerRewardScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
             )
-        }
 
-        Column(
-            modifier = Modifier
-                .widthIn(max = 420.dp)
-                .fillMaxWidth()
-                .padding(
-                    start = 24.dp,
-                    end = 24.dp,
-                    bottom = 26.dp,
-                ),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            YadanButton(
-                text = "사진에 붙이기",
-                onClick = {
-                    onDecoratePhotoClick?.invoke()
-                },
-                enabled = hasStickers && onDecoratePhotoClick != null,
-                modifier = Modifier.fillMaxWidth(),
-                trailingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = null,
-                    )
-                },
-            )
+            Spacer(modifier = Modifier.weight(1f))
 
-            YadanButton(
-                text = "나중에 하기",
-                onClick = onLaterClick,
-                modifier = Modifier.fillMaxWidth(),
-                style = YadanButtonStyle.ON_DARK,
-            )
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 420.dp)
+                    .fillMaxWidth()
+                    .padding(
+                        start = 24.dp,
+                        end = 24.dp,
+                        bottom = 26.dp,
+                    ),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                YadanButton(
+                    text = "사진에 붙이기",
+                    onClick = {
+                        onDecoratePhotoClick?.invoke()
+                    },
+                    enabled = hasStickers && onDecoratePhotoClick != null,
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                        )
+                    },
+                )
+
+                YadanButton(
+                    text = "나중에 하기",
+                    onClick = onLaterClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = YadanButtonStyle.ON_DARK,
+                )
+            }
         }
     }
 }
@@ -222,6 +230,11 @@ private fun rewardDescription(
     widthDp = 360,
     heightDp = 800,
 )
+@Preview(name = "스티커 획득 · 작은 화면", widthDp = 320, heightDp = 480)
+@Preview(name = "스티커 획득 · 작은 화면 · 글꼴 1.5", widthDp = 320, heightDp = 480, fontScale = 1.5f)
+@Preview(name = "스티커 획득 · 작은 화면 · 글꼴 2", widthDp = 320, heightDp = 480, fontScale = 2f)
+@Preview(name = "스티커 획득 · 가로 화면", widthDp = 640, heightDp = 360)
+@Preview(name = "스티커 획득 · 가로 화면 · 글꼴 2", widthDp = 640, heightDp = 360, fontScale = 2f)
 @Composable
 private fun TravelStickerRewardScreenPreview() {
     YadanbeopseokTheme {
@@ -233,17 +246,31 @@ private fun TravelStickerRewardScreenPreview() {
     }
 }
 
-private fun stickerRewardPreviewState(): TravelVerificationUiState {
+@Preview(name = "스티커 획득 · 여러 스티커", widthDp = 360, heightDp = 800)
+@Preview(name = "스티커 획득 · 여러 스티커 · 작은 화면", widthDp = 320, heightDp = 480, fontScale = 2f)
+@Preview(name = "스티커 획득 · 여러 스티커 · 가로 화면", widthDp = 640, heightDp = 360, fontScale = 2f)
+@Composable
+private fun TravelStickerRewardMultipleStickersPreview() {
+    YadanbeopseokTheme {
+        TravelStickerRewardScreen(
+            uiState = stickerRewardPreviewState(stickerCount = 3),
+            onDecoratePhotoClick = {},
+            onLaterClick = {},
+        )
+    }
+}
+
+private fun stickerRewardPreviewState(stickerCount: Int = 1): TravelVerificationUiState {
     val stickerPack = StickerPack(
         id = "pack-busan",
         name = "사직 한정 스티커팩",
-        stickers = listOf(
+        stickers = List(stickerCount) { index ->
             Sticker(
-                id = "sticker-sajik",
+                id = "sticker-sajik-$index",
                 stickerPackId = "pack-busan",
                 imageUrl = "",
-            ),
-        ),
+            )
+        },
     )
 
     val travel = Travel(

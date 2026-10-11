@@ -89,6 +89,7 @@ fun TravelSpotDetailScreen(
     onBackClick: () -> Unit,
     onDibsClick: () -> Unit,
     onRetryClick: () -> Unit,
+    onImagesRetryClick: () -> Unit,
     onHomepageClick: (String) -> Unit,
     onTelephoneClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
@@ -121,6 +122,9 @@ fun TravelSpotDetailScreen(
             uiState.detail != null -> {
                 TravelSpotDetailContent(
                     detail = uiState.detail,
+                    isLoadingImages = uiState.isLoadingImages,
+                    imageErrorMessage = uiState.imageErrorMessage,
+                    onImagesRetryClick = onImagesRetryClick,
                     onHomepageClick = onHomepageClick,
                     onTelephoneClick = onTelephoneClick,
                     modifier = Modifier.fillMaxWidth().weight(1f),
@@ -142,6 +146,9 @@ fun TravelSpotDetailScreen(
 @Composable
 private fun TravelSpotDetailContent(
     detail: TravelSpotDetail,
+    isLoadingImages: Boolean,
+    imageErrorMessage: String?,
+    onImagesRetryClick: () -> Unit,
     onHomepageClick: (String) -> Unit,
     onTelephoneClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
@@ -154,7 +161,12 @@ private fun TravelSpotDetailContent(
         contentPadding = PaddingValues(bottom = 32.dp),
     ) {
         item(key = "gallery") {
-            TravelSpotImageGallery(detail = detail)
+            TravelSpotImageGallery(
+                detail = detail,
+                isLoadingImages = isLoadingImages,
+                imageErrorMessage = imageErrorMessage,
+                onImagesRetryClick = onImagesRetryClick,
+            )
         }
 
         item(key = "information") {
@@ -212,39 +224,65 @@ private fun TravelSpotDetailContent(
     }
 }
 
-/** 관광지 이미지 목록을 가로로 넘겨볼 수 있는 갤러리입니다. */
+/** 이미지 목록 조회 상태는 사진 영역에만 표시하고 완료되면 갤러리를 채웁니다. */
 @Composable
-private fun TravelSpotImageGallery(detail: TravelSpotDetail) {
+private fun TravelSpotImageGallery(
+    detail: TravelSpotDetail,
+    isLoadingImages: Boolean,
+    imageErrorMessage: String?,
+    onImagesRetryClick: () -> Unit,
+) {
     key(detail.spot.id) {
         val imageUrls: List<String?> = detail.imageUrls.takeIf { it.isNotEmpty() } ?: listOf(detail.spot.imageUrl)
         val pagerState = rememberPagerState(pageCount = imageUrls::size)
+        val imageListState = when {
+            isLoadingImages -> YadanImageLoadState.LOADING
+            imageErrorMessage != null -> YadanImageLoadState.ERROR
+            else -> null
+        }
 
         Box(modifier = Modifier.fillMaxWidth().height(230.dp)) {
-            HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-                key(page, imageUrls[page]) {
-                    TravelSpotImagePage(
-                        imageUrl = imageUrls[page],
-                        contentDescription = if (imageUrls.size == 1) {
-                            "${detail.spot.name} 이미지"
-                        } else {
-                            "${detail.spot.name} 이미지 ${page + 1}"
-                        },
+            if (imageListState != null) {
+                YadanAsyncImage(
+                    imageUrl = null,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    shape = RectangleShape,
+                    placeholderIcon = null,
+                )
+                TravelSpotImageStatus(
+                    loadState = imageListState,
+                    onRetryClick = onImagesRetryClick,
+                    errorMessage = imageErrorMessage,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+                    key(page, imageUrls[page]) {
+                        TravelSpotImagePage(
+                            imageUrl = imageUrls[page],
+                            contentDescription = if (imageUrls.size == 1) {
+                                "${detail.spot.name} 이미지"
+                            } else {
+                                "${detail.spot.name} 이미지 ${page + 1}"
+                            },
+                        )
+                    }
+                }
+
+                if (imageUrls.size > 1) {
+                    TravelSpotGalleryIndicator(
+                        pageCount = imageUrls.size,
+                        currentPage = pagerState.currentPage,
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 13.dp),
+                    )
+
+                    TravelSpotGalleryCount(
+                        pageCount = imageUrls.size,
+                        currentPage = pagerState.currentPage,
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 10.dp),
                     )
                 }
-            }
-
-            if (imageUrls.size > 1) {
-                TravelSpotGalleryIndicator(
-                    pageCount = imageUrls.size,
-                    currentPage = pagerState.currentPage,
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 13.dp),
-                )
-
-                TravelSpotGalleryCount(
-                    pageCount = imageUrls.size,
-                    currentPage = pagerState.currentPage,
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(end = 12.dp, bottom = 10.dp),
-                )
             }
         }
     }
@@ -289,10 +327,15 @@ private fun TravelSpotImagePage(imageUrl: String?, contentDescription: String) {
 
 /** 사진 영역 안에서만 로딩·실패·표시할 이미지 없음 상태를 안내합니다. */
 @Composable
-private fun TravelSpotImageStatus(loadState: YadanImageLoadState, onRetryClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun TravelSpotImageStatus(
+    loadState: YadanImageLoadState,
+    onRetryClick: () -> Unit,
+    errorMessage: String? = null,
+    modifier: Modifier = Modifier,
+) {
     val message = when (loadState) {
         YadanImageLoadState.LOADING -> "이미지를 불러오는 중입니다"
-        YadanImageLoadState.ERROR -> "이미지를 불러오지 못했습니다"
+        YadanImageLoadState.ERROR -> errorMessage ?: "이미지를 불러오지 못했습니다"
         YadanImageLoadState.FALLBACK -> "표시할 이미지가 없습니다"
         YadanImageLoadState.SUCCESS -> return
     }
@@ -605,6 +648,25 @@ private fun TravelSpotDetailWithoutImagesPreview() {
     TravelSpotDetailPreviewContent(detail = previewTravelSpotDetail().copy(imageUrls = emptyList()))
 }
 
+@Preview(name = "관광지 상세 - 본문 표시와 이미지 목록 로딩", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelSpotDetailImagesLoadingPreview() {
+    TravelSpotDetailPreviewContent(
+        detail = previewTravelSpotDetail().copy(imageUrls = emptyList()),
+        isLoadingImages = true,
+    )
+}
+
+@Preview(name = "관광지 상세 - 본문 표시와 이미지 목록 실패", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "관광지 상세 - 이미지 목록 실패와 큰 글꼴", showBackground = true, widthDp = 320, heightDp = 740, fontScale = 1.5f)
+@Composable
+private fun TravelSpotDetailImagesErrorPreview() {
+    TravelSpotDetailPreviewContent(
+        detail = previewTravelSpotDetail().copy(imageUrls = emptyList()),
+        imageErrorMessage = "이미지를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
+    )
+}
+
 @Preview(name = "관광지 상세 - 이미지 한 장", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun TravelSpotDetailSingleImagePreview() {
@@ -667,6 +729,7 @@ private fun TravelSpotDetailLoadingPreview() {
             onBackClick = {},
             onDibsClick = {},
             onRetryClick = {},
+            onImagesRetryClick = {},
             onHomepageClick = {},
             onTelephoneClick = null,
         )
@@ -682,6 +745,7 @@ private fun TravelSpotDetailErrorPreview() {
             onBackClick = {},
             onDibsClick = {},
             onRetryClick = {},
+            onImagesRetryClick = {},
             onHomepageClick = {},
             onTelephoneClick = null,
         )
@@ -693,14 +757,23 @@ private fun TravelSpotDetailErrorPreview() {
 private fun TravelSpotDetailPreviewContent(
     detail: TravelSpotDetail,
     isUpdatingDibs: Boolean = false,
+    isLoadingImages: Boolean = false,
+    imageErrorMessage: String? = null,
     onTelephoneClick: (() -> Unit)? = {},
 ) {
     YadanbeopseokTheme {
         TravelSpotDetailScreen(
-            uiState = TravelSpotDetailUiState(detail = detail, isLoading = false, isUpdatingDibs = isUpdatingDibs),
+            uiState = TravelSpotDetailUiState(
+                detail = detail,
+                isLoading = false,
+                isLoadingImages = isLoadingImages,
+                imageErrorMessage = imageErrorMessage,
+                isUpdatingDibs = isUpdatingDibs,
+            ),
             onBackClick = {},
             onDibsClick = {},
             onRetryClick = {},
+            onImagesRetryClick = {},
             onHomepageClick = {},
             onTelephoneClick = onTelephoneClick,
         )

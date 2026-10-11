@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
@@ -52,6 +54,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
  * 야단법석 메인 화면에서 사용하는 공통 하단 내비게이션입니다.
  *
  * 일반 탭과 중앙 버튼을 하나의 Row에 배치합니다.
+ * 기본 높이는 62dp이며 큰 글꼴에서는 콘텐츠에 필요한 높이만큼 늘어납니다.
  *
  * 실제 화면 경로와 NavController는 알지 않으며
  * 선택 상태와 클릭 이벤트를 전달받아 시각적인 구성만 담당합니다.
@@ -72,10 +75,7 @@ fun YadanBottomNavigation(
     endItems: @Composable RowScope.() -> Unit,
 ) {
     Box(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .height(NAVIGATION_CONTAINER_HEIGHT),
+        modifier = modifier.fillMaxWidth(),
     ) {
         /*
          * HTML의 반투명 배경과 위쪽 구분선입니다.
@@ -84,11 +84,7 @@ fun YadanBottomNavigation(
          * 기존 Surface 색상에 투명도만 적용합니다.
          */
         Surface(
-            modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .height(NAVIGATION_CONTAINER_HEIGHT),
+            modifier = Modifier.matchParentSize(),
             color =
                 YadanSurface.copy(
                     alpha = NAVIGATION_CONTAINER_ALPHA,
@@ -106,8 +102,8 @@ fun YadanBottomNavigation(
         }
 
         /*
-         * Row에는 좌우 여백만 적용하여 일반 탭이 전체 62dp 높이를
-         * 클릭 영역으로 사용할 수 있게 합니다.
+         * 콘텐츠의 최소 필요 높이로 Row를 측정하여 일반 탭이
+         * 큰 글꼴에서도 바의 전체 높이를 클릭 영역으로 사용하게 합니다.
          *
          * HTML의 위 9px와 아래 13px 여백은 각 탭 내부에 적용합니다.
          */
@@ -116,7 +112,8 @@ fun YadanBottomNavigation(
                 Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .height(NAVIGATION_CONTAINER_HEIGHT)
+                    .heightIn(min = NAVIGATION_MIN_HEIGHT)
+                    .height(IntrinsicSize.Min)
                     .padding(
                         horizontal = NAVIGATION_HORIZONTAL_PADDING,
                     ),
@@ -144,7 +141,7 @@ fun YadanBottomNavigation(
  * HTML처럼 별도의 선택 배경 없이 아이콘과 글자 색상만 변경합니다.
  * Compose의 selectable을 사용하여 선택 상태, Ripple 및 접근성을 처리합니다.
  *
- * 선택 영역은 하단 내비게이션 배경의 전체 높이인 62dp이며,
+ * 선택 영역은 큰 글꼴에 따라 늘어나는 하단 내비게이션의 전체 높이이며,
  * 아이콘과 글자에는 HTML의 위 9px, 아래 13px 여백을 적용합니다.
  *
  * [selectedIcon]을 전달하면 선택 상태에서 별도의 채워진 아이콘을
@@ -228,7 +225,7 @@ fun RowScope.YadanBottomNavigationItem(
             )
 
             /*
-             * Pretendard와 자간은 기존 타이포그래피를 재사용하고,
+             * Wanted Sans와 자간은 기존 타이포그래피를 재사용하고,
              * 하단 탭에만 필요한 HTML의 10px 크기만 조정합니다.
              */
             Text(
@@ -311,9 +308,9 @@ fun YadanBottomNavigationCenterAction(
 }
 
 /*
- * 하단 내비게이션의 실제 표시 높이입니다.
+ * 하단 내비게이션의 최소 표시 높이입니다.
  */
-private val NAVIGATION_CONTAINER_HEIGHT = 62.dp
+private val NAVIGATION_MIN_HEIGHT = 62.dp
 
 /*
  * HTML의 tabbar 내부 여백입니다.
@@ -341,13 +338,14 @@ private val NAVIGATION_DIVIDER_THICKNESS = 1.dp
 private const val NAVIGATION_CONTAINER_ALPHA = 0.94f
 private const val DISABLED_ALPHA = 0.42f
 
-@Preview(
-    name = "Yadan bottom navigation",
-    showBackground = true,
-    backgroundColor = 0xFFFAFAFA,
-    widthDp = 390,
-    heightDp = 62,
-)
+@Preview(name = "하단 탭 - 320dp 기본 글꼴", showBackground = true, backgroundColor = 0xFFFAFAFA, widthDp = 320, fontScale = 1f)
+@Preview(name = "하단 탭 - 320dp 글꼴 1.3", showBackground = true, backgroundColor = 0xFFFAFAFA, widthDp = 320, fontScale = 1.3f)
+@Preview(name = "하단 탭 - 320dp 글꼴 1.5", showBackground = true, backgroundColor = 0xFFFAFAFA, widthDp = 320, fontScale = 1.5f)
+@Preview(name = "하단 탭 - 320dp 글꼴 2.0", showBackground = true, backgroundColor = 0xFFFAFAFA, widthDp = 320, fontScale = 2f)
+@Preview(name = "하단 탭 - 390dp 기본 글꼴", showBackground = true, backgroundColor = 0xFFFAFAFA, widthDp = 390, fontScale = 1f)
+@Preview(name = "하단 탭 - 390dp 글꼴 1.3", showBackground = true, backgroundColor = 0xFFFAFAFA, widthDp = 390, fontScale = 1.3f)
+@Preview(name = "하단 탭 - 390dp 글꼴 1.5", showBackground = true, backgroundColor = 0xFFFAFAFA, widthDp = 390, fontScale = 1.5f)
+@Preview(name = "하단 탭 - 390dp 글꼴 2.0", showBackground = true, backgroundColor = 0xFFFAFAFA, widthDp = 390, fontScale = 2f)
 @Composable
 private fun YadanBottomNavigationPreview() {
     YadanbeopseokTheme {

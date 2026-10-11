@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,12 +15,15 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.SportsBaseball
@@ -177,57 +181,61 @@ private fun TravelCourseGeneratingContent(
             tint = YadanOnPrimary.copy(alpha = 0.06f),
         )
 
-        Column(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .fillMaxWidth()
-                .padding(horizontal = 26.dp)
-                .semantics {
-                    contentDescription = "여행 코스 생성 중"
-                    stateDescription = progressDescription
-                    progressBarRangeInfo = ProgressBarRangeInfo(
-                        current = safeCompletedStepCount.toFloat(),
-                        range = 0f..generationSteps.size.toFloat(),
-                        steps = generationSteps.lastIndex,
-                    )
-                },
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = "$regionName 여행 코스를\n짜고 있어요",
-                style = YadanTypography.headlineSmall.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                ),
-                color = YadanOnPrimary,
-                textAlign = TextAlign.Center,
-            )
-
-            Spacer(modifier = Modifier.height(9.dp))
-
-            Text(
-                text = activeStep?.description ?: "여행 코스를 완성했어요",
-                style = YadanTypography.bodySmall,
-                color = YadanOnPrimary.copy(alpha = 0.72f),
-                textAlign = TextAlign.Center,
-            )
-
-            Spacer(modifier = Modifier.height(30.dp))
-
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(9.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .heightIn(min = maxHeight)
+                    .padding(horizontal = 26.dp)
+                    .semantics {
+                        contentDescription = "여행 코스 생성 중"
+                        stateDescription = progressDescription
+                        progressBarRangeInfo = ProgressBarRangeInfo(
+                            current = safeCompletedStepCount.toFloat(),
+                            range = 0f..generationSteps.size.toFloat(),
+                            steps = generationSteps.lastIndex,
+                        )
+                    },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
             ) {
-                generationSteps.forEachIndexed { index, step ->
-                    val state = when {
-                        index < safeCompletedStepCount -> GenerationStepState.COMPLETED
-                        index == safeCompletedStepCount -> GenerationStepState.ACTIVE
-                        else -> GenerationStepState.PENDING
-                    }
+                Text(
+                    text = "$regionName 여행 코스를\n짜고 있어요",
+                    style = YadanTypography.headlineSmall.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                    ),
+                    color = YadanOnPrimary,
+                    textAlign = TextAlign.Center,
+                )
 
-                    GenerationProgressItem(
-                        title = step.title,
-                        state = state,
-                    )
+                Spacer(modifier = Modifier.height(9.dp))
+
+                Text(
+                    text = activeStep?.description ?: "여행 코스를 완성했어요",
+                    style = YadanTypography.bodySmall,
+                    color = YadanOnPrimary.copy(alpha = 0.72f),
+                    textAlign = TextAlign.Center,
+                )
+
+                Spacer(modifier = Modifier.height(30.dp))
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(9.dp),
+                ) {
+                    generationSteps.forEachIndexed { index, step ->
+                        val state = when {
+                            index < safeCompletedStepCount -> GenerationStepState.COMPLETED
+                            index == safeCompletedStepCount -> GenerationStepState.ACTIVE
+                            else -> GenerationStepState.PENDING
+                        }
+
+                        GenerationProgressItem(
+                            title = step.title,
+                            state = state,
+                        )
+                    }
                 }
             }
         }
@@ -391,6 +399,11 @@ private fun TravelCourseGeneratingThirdStepPreview() {
     widthDp = 390,
     heightDp = 844,
 )
+@Preview(name = "코스 생성 중 · 작은 화면", widthDp = 320, heightDp = 480)
+@Preview(name = "코스 생성 중 · 작은 화면 · 글꼴 1.5", widthDp = 320, heightDp = 480, fontScale = 1.5f)
+@Preview(name = "코스 생성 중 · 작은 화면 · 글꼴 2", widthDp = 320, heightDp = 480, fontScale = 2f)
+@Preview(name = "코스 생성 중 · 가로 화면", widthDp = 640, heightDp = 360)
+@Preview(name = "코스 생성 중 · 가로 화면 · 글꼴 2", widthDp = 640, heightDp = 360, fontScale = 2f)
 @Composable
 private fun TravelCourseGeneratingLastStepPreview() {
     YadanbeopseokTheme {

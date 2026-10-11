@@ -15,6 +15,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.coil.kt)
     implementation(libs.kakao.map.sdk)
 
     testImplementation(libs.junit)

@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,6 +62,7 @@ fun BaseballScheduleScreen(
     onTeamSelected: (KboTeam) -> Unit,
     onPlanClick: ((String) -> Unit)?,
     onRetryClick: () -> Unit,
+    onRefreshClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val gamesByDate = uiState.games.groupBy { game -> game.gameDateTime.date }
@@ -84,64 +86,70 @@ fun BaseballScheduleScreen(
             )
         }
 
-        LazyColumn(
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = onRefreshClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            contentPadding = PaddingValues(
-                start = 20.dp,
-                top = 8.dp,
-                end = 20.dp,
-                bottom = 24.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            item(key = "team-filter") {
-                YadanBaseballTeamFilter(
-                    selectedTeam = uiState.selectedTeam,
-                    onTeamSelected = onTeamSelected,
-                )
-            }
-
-            when {
-                uiState.isLoading -> {
-                    item(key = "loading") {
-                        BaseballScheduleLoadingContent()
-                    }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 20.dp,
+                    top = 8.dp,
+                    end = 20.dp,
+                    bottom = 24.dp,
+                ),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                item(key = "team-filter") {
+                    YadanBaseballTeamFilter(
+                        selectedTeam = uiState.selectedTeam,
+                        onTeamSelected = onTeamSelected,
+                    )
                 }
 
-                uiState.errorMessage != null -> {
-                    item(key = "error") {
-                        BaseballScheduleErrorContent(
-                            message = uiState.errorMessage,
-                            onRetryClick = onRetryClick,
-                        )
-                    }
-                }
-
-                uiState.games.isEmpty() -> {
-                    item(key = "empty") {
-                        BaseballScheduleEmptyContent(
-                            selectedTeam = uiState.selectedTeam,
-                        )
-                    }
-                }
-
-                else -> {
-                    gamesByDate.forEach { (date, gamesOnDate) ->
-                        item(key = "date-$date") {
-                            BaseballGameDateHeader(date = date)
+                when {
+                    uiState.isLoading -> {
+                        item(key = "loading") {
+                            BaseballScheduleLoadingContent()
                         }
+                    }
 
-                        items(
-                            items = gamesOnDate,
-                            key = { game -> game.id },
-                        ) { game ->
-                            YadanGameScheduleCard(
-                                game = game,
-                                onPlanClick = { onPlanClick?.invoke(game.id) },
-                                enabled = isPlanEnabled,
+                    !uiState.hasLoadedSchedule && uiState.errorMessage != null -> {
+                        item(key = "error") {
+                            BaseballScheduleErrorContent(
+                                message = uiState.errorMessage,
+                                onRetryClick = onRetryClick,
                             )
+                        }
+                    }
+
+                    uiState.games.isEmpty() -> {
+                        item(key = "empty") {
+                            BaseballScheduleEmptyContent(
+                                selectedTeam = uiState.selectedTeam,
+                            )
+                        }
+                    }
+
+                    else -> {
+                        gamesByDate.forEach { (date, gamesOnDate) ->
+                            item(key = "date-$date") {
+                                BaseballGameDateHeader(date = date)
+                            }
+
+                            items(
+                                items = gamesOnDate,
+                                key = { game -> game.id },
+                            ) { game ->
+                                YadanGameScheduleCard(
+                                    game = game,
+                                    onPlanClick = { onPlanClick?.invoke(game.id) },
+                                    enabled = isPlanEnabled,
+                                )
+                            }
                         }
                     }
                 }
@@ -300,10 +308,12 @@ private fun BaseballScheduleScreenPreview() {
                 selectedTeam = KboTeam.KIA,
                 games = previewBaseballGames,
                 isLoading = false,
+                hasLoadedSchedule = true,
             ),
             onTeamSelected = {},
             onPlanClick = {},
             onRetryClick = {},
+            onRefreshClick = {},
         )
     }
 }
@@ -323,6 +333,7 @@ private fun BaseballScheduleLoadingPreview() {
             onTeamSelected = {},
             onPlanClick = {},
             onRetryClick = {},
+            onRefreshClick = {},
         )
     }
 }
@@ -343,6 +354,84 @@ private fun BaseballScheduleErrorPreview() {
             onTeamSelected = {},
             onPlanClick = {},
             onRetryClick = {},
+            onRefreshClick = {},
+        )
+    }
+}
+
+@Preview(name = "경기 일정 없음", showBackground = true)
+@Composable
+private fun BaseballScheduleEmptyPreview() {
+    YadanbeopseokTheme {
+        BaseballScheduleScreen(
+            uiState = BaseballScheduleUiState(
+                selectedTeam = KboTeam.KIA,
+                isLoading = false,
+                hasLoadedSchedule = true,
+            ),
+            onTeamSelected = {},
+            onPlanClick = {},
+            onRetryClick = {},
+            onRefreshClick = {},
+        )
+    }
+}
+
+@Preview(name = "경기 일정 갱신 중", showBackground = true)
+@Composable
+private fun BaseballScheduleRefreshingPreview() {
+    YadanbeopseokTheme {
+        BaseballScheduleScreen(
+            uiState = BaseballScheduleUiState(
+                selectedTeam = KboTeam.KIA,
+                games = previewBaseballGames,
+                isLoading = false,
+                isRefreshing = true,
+                hasLoadedSchedule = true,
+            ),
+            onTeamSelected = {},
+            onPlanClick = {},
+            onRetryClick = {},
+            onRefreshClick = {},
+        )
+    }
+}
+
+@Preview(name = "빈 경기 일정 갱신 중", showBackground = true)
+@Composable
+private fun BaseballScheduleEmptyRefreshingPreview() {
+    YadanbeopseokTheme {
+        BaseballScheduleScreen(
+            uiState = BaseballScheduleUiState(
+                selectedTeam = KboTeam.KIA,
+                isLoading = false,
+                isRefreshing = true,
+                hasLoadedSchedule = true,
+            ),
+            onTeamSelected = {},
+            onPlanClick = {},
+            onRetryClick = {},
+            onRefreshClick = {},
+        )
+    }
+}
+
+@Preview(name = "갱신 실패 후 경기 일정 유지", showBackground = true)
+@Composable
+private fun BaseballScheduleRefreshErrorPreview() {
+    YadanbeopseokTheme {
+        BaseballScheduleScreen(
+            uiState = BaseballScheduleUiState(
+                selectedTeam = KboTeam.KIA,
+                games = previewBaseballGames,
+                isLoading = false,
+                hasLoadedSchedule = true,
+                errorMessage = "인터넷 연결을 확인한 후 다시 시도해주세요.",
+            ),
+            onTeamSelected = {},
+            onPlanClick = {},
+            onRetryClick = {},
+            onRefreshClick = {},
         )
     }
 }

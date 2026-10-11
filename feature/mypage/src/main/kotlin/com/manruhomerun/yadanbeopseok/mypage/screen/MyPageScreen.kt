@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -82,6 +81,7 @@ fun MyPageScreen(
     var isWithdrawalDialogVisible by rememberSaveable {
         mutableStateOf(false)
     }
+    val accountActionsEnabled = !uiState.isLoading && !uiState.isProcessing
 
     Column(
         modifier = modifier
@@ -93,48 +93,30 @@ fun MyPageScreen(
             modifier = Modifier.statusBarsPadding(),
         )
 
-        val userProfile = uiState.userProfile
-
-        when {
-            uiState.isLoading -> {
-                MyPageLoadingContent(
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            userProfile == null -> {
-                MyPageErrorContent(
-                    message = uiState.errorMessage
-                        ?: "마이페이지 정보를 불러오지 못했습니다.",
-                    onRetryClick = onRetryClick,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            else -> {
-                MyPageContent(
-                    userProfile = userProfile,
-                    travelPreferenceSummary = uiState.travelPreferenceSummary,
-                    uiState = uiState,
-                    onProfileClick = onProfileClick,
-                    onDibsClick = onDibsClick,
-                    onTravelPreferenceClick = onTravelPreferenceClick,
-                    onFriendsClick = onFriendsClick,
-                    onTermsClick = onTermsClick,
-                    onPrivacyPolicyClick = onPrivacyPolicyClick,
-                    onLogoutClick = onLogoutClick,
-                    onWithdrawalClick = {
-                        isWithdrawalDialogVisible = true
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
+        MyPageContent(
+            userProfile = uiState.userProfile,
+            travelPreferenceSummary = uiState.travelPreferenceSummary,
+            uiState = uiState,
+            accountActionsEnabled = accountActionsEnabled,
+            onRetryClick = onRetryClick,
+            onProfileClick = onProfileClick,
+            onDibsClick = onDibsClick,
+            onTravelPreferenceClick = onTravelPreferenceClick,
+            onFriendsClick = onFriendsClick,
+            onTermsClick = onTermsClick,
+            onPrivacyPolicyClick = onPrivacyPolicyClick,
+            onLogoutClick = onLogoutClick,
+            onWithdrawalClick = {
+                isWithdrawalDialogVisible = true
+            },
+            modifier = Modifier.weight(1f),
+        )
     }
 
     if (isWithdrawalDialogVisible) {
         WithdrawalConfirmationDialog(
             isProcessing = uiState.processingAction == MyPageAction.WITHDRAWAL,
+            confirmEnabled = accountActionsEnabled,
             onDismiss = {
                 if (!uiState.isProcessing) {
                     isWithdrawalDialogVisible = false
@@ -146,12 +128,14 @@ fun MyPageScreen(
 }
 
 /**
- * 사용자 정보를 처음 불러오는 동안 진행 상태를 표시합니다.
+ * 프로필 영역에서만 최초 조회 진행 상태를 표시합니다.
  */
 @Composable
 private fun MyPageLoadingContent(modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 24.dp),
         contentAlignment = Alignment.Center,
     ) {
         CircularProgressIndicator(color = YadanPrimary)
@@ -159,24 +143,23 @@ private fun MyPageLoadingContent(modifier: Modifier = Modifier) {
 }
 
 /**
- * 사용자 정보 조회 실패 문구와 재시도 버튼을 표시합니다.
+ * 요청 오류 스낵바가 사라져도 프로필 조회 실패 안내와 재시도 버튼을 유지합니다.
  */
 @Composable
 private fun MyPageErrorContent(
-    message: String,
     onRetryClick: () -> Unit,
+    enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 280.dp)
-            .padding(horizontal = 24.dp),
+            .padding(vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "마이페이지 정보를 확인할 수 없습니다",
+            text = "프로필 정보를 확인할 수 없습니다",
             style = YadanTypography.titleSmall.copy(
                 fontWeight = FontWeight.Bold,
             ),
@@ -185,7 +168,7 @@ private fun MyPageErrorContent(
         )
 
         Text(
-            text = message,
+            text = "잠시 후 다시 시도해주세요.",
             modifier = Modifier.padding(top = 8.dp),
             style = YadanTypography.bodySmall,
             color = YadanTextSecondary,
@@ -195,6 +178,7 @@ private fun MyPageErrorContent(
         YadanButton(
             text = "다시 시도",
             onClick = onRetryClick,
+            enabled = enabled,
             modifier = Modifier
                 .padding(top = 20.dp)
                 .widthIn(min = 120.dp),
@@ -203,13 +187,15 @@ private fun MyPageErrorContent(
 }
 
 /**
- * H·01의 스크롤 가능한 본문을 표시합니다.
+ * 프로필 조회 상태와 관계없이 H·01의 메뉴를 스크롤 가능한 본문에 유지합니다.
  */
 @Composable
 private fun MyPageContent(
-    userProfile: UserProfile,
+    userProfile: UserProfile?,
     travelPreferenceSummary: String?,
     uiState: MyPageUiState,
+    accountActionsEnabled: Boolean,
+    onRetryClick: () -> Unit,
     onProfileClick: () -> Unit,
     onDibsClick: () -> Unit,
     onTravelPreferenceClick: () -> Unit,
@@ -232,11 +218,24 @@ private fun MyPageContent(
         ),
     ) {
         item(key = "profile") {
-            YadanProfileCard(
-                user = userProfile,
-                onClick = onProfileClick,
-                enabled = contentEnabled,
-            )
+            when {
+                uiState.isLoading -> MyPageLoadingContent()
+
+                userProfile == null -> {
+                    MyPageErrorContent(
+                        onRetryClick = onRetryClick,
+                        enabled = contentEnabled,
+                    )
+                }
+
+                else -> {
+                    YadanProfileCard(
+                        user = userProfile,
+                        onClick = onProfileClick,
+                        enabled = contentEnabled,
+                    )
+                }
+            }
         }
 
         item(key = "travel-label") {
@@ -282,6 +281,7 @@ private fun MyPageContent(
         item(key = "account-actions") {
             MyPageAccountActions(
                 uiState = uiState,
+                enabled = accountActionsEnabled,
                 onLogoutClick = onLogoutClick,
                 onWithdrawalClick = onWithdrawalClick,
                 modifier = Modifier.padding(top = 16.dp),
@@ -415,6 +415,7 @@ private fun MyPageMenuDivider() {
 @Composable
 private fun MyPageAccountActions(
     uiState: MyPageUiState,
+    enabled: Boolean,
     onLogoutClick: () -> Unit,
     onWithdrawalClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -427,7 +428,7 @@ private fun MyPageAccountActions(
         AccountActionButton(
             text = "로그아웃",
             isProcessing = uiState.processingAction == MyPageAction.LOGOUT,
-            enabled = !uiState.isProcessing,
+            enabled = enabled,
             contentColor = YadanTextMuted,
             onClick = onLogoutClick,
         )
@@ -441,7 +442,7 @@ private fun MyPageAccountActions(
         AccountActionButton(
             text = "회원 탈퇴",
             isProcessing = uiState.processingAction == MyPageAction.WITHDRAWAL,
-            enabled = !uiState.isProcessing,
+            enabled = enabled,
             contentColor = YadanError,
             onClick = onWithdrawalClick,
         )
@@ -493,6 +494,7 @@ private fun AccountActionButton(
 @Composable
 private fun WithdrawalConfirmationDialog(
     isProcessing: Boolean,
+    confirmEnabled: Boolean,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
@@ -515,7 +517,7 @@ private fun WithdrawalConfirmationDialog(
         confirmButton = {
             TextButton(
                 onClick = onConfirm,
-                enabled = !isProcessing,
+                enabled = confirmEnabled,
             ) {
                 if (isProcessing) {
                     CircularProgressIndicator(
@@ -561,24 +563,13 @@ private val previewUserProfile = UserProfile(
 )
 @Composable
 private fun MyPageScreenPreview() {
-    YadanbeopseokTheme {
-        MyPageScreen(
-            uiState = MyPageUiState(
-                userProfile = previewUserProfile,
-                travelPreferenceSummary = "부산 거주 · 자연 선호 · 선호 지역 2곳",
-                isLoading = false,
-            ),
-            onRetryClick = {},
-            onProfileClick = {},
-            onDibsClick = {},
-            onTravelPreferenceClick = {},
-            onFriendsClick = {},
-            onTermsClick = {},
-            onPrivacyPolicyClick = {},
-            onLogoutClick = {},
-            onWithdrawalClick = {},
-        )
-    }
+    MyPageScreenPreviewContent(
+        uiState = MyPageUiState(
+            userProfile = previewUserProfile,
+            travelPreferenceSummary = "부산 거주 · 자연 선호 · 선호 지역 2곳",
+            isLoading = false,
+        ),
+    )
 }
 
 @Preview(
@@ -590,14 +581,63 @@ private fun MyPageScreenPreview() {
 )
 @Composable
 private fun MyPageScreenLoadingPreview() {
+    MyPageScreenPreviewContent(
+        uiState = MyPageUiState(
+            userProfile = previewUserProfile,
+            travelPreferenceSummary = "부산 거주 · 자연 선호 · 선호 지역 2곳",
+            isLoading = false,
+            processingAction = MyPageAction.LOGOUT,
+        ),
+    )
+}
+
+@Preview(
+    name = "H01 최초 프로필 조회 중",
+    showBackground = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 390,
+    heightDp = 760,
+)
+@Composable
+private fun MyPageScreenInitialLoadingPreview() {
+    MyPageScreenPreviewContent(uiState = MyPageUiState())
+}
+
+@Preview(
+    name = "H01 최초 프로필 조회 실패",
+    showBackground = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 390,
+    heightDp = 760,
+)
+@Composable
+private fun MyPageScreenProfileErrorPreview() {
+    MyPageScreenPreviewContent(uiState = MyPageUiState(isLoading = false))
+}
+
+@Preview(
+    name = "H01 프로필 없이 계정 처리 중",
+    showBackground = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 390,
+    heightDp = 760,
+)
+@Composable
+private fun MyPageScreenProfileErrorProcessingPreview() {
+    MyPageScreenPreviewContent(
+        uiState = MyPageUiState(
+            isLoading = false,
+            processingAction = MyPageAction.LOGOUT,
+        ),
+    )
+}
+
+/** 상태별 전체 화면 Preview에서 테마와 빈 콜백을 공통으로 제공합니다. */
+@Composable
+private fun MyPageScreenPreviewContent(uiState: MyPageUiState) {
     YadanbeopseokTheme {
         MyPageScreen(
-            uiState = MyPageUiState(
-                userProfile = previewUserProfile,
-                travelPreferenceSummary = "부산 거주 · 자연 선호 · 선호 지역 2곳",
-                isLoading = false,
-                processingAction = MyPageAction.LOGOUT,
-            ),
+            uiState = uiState,
             onRetryClick = {},
             onProfileClick = {},
             onDibsClick = {},

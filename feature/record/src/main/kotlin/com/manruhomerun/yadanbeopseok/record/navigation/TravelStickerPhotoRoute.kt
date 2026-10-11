@@ -6,7 +6,13 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.ColorSpace
 import android.graphics.ImageDecoder
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
+import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
@@ -20,32 +26,43 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.graphics.layer.drawLayer
-import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.ImageLoader
+import coil.imageLoader
+import coil.request.ErrorResult
+import coil.request.ImageRequest
+import coil.request.SuccessResult
+import coil.size.Scale
 import com.manruhomerun.yadanbeopseok.navigation.Navigator
 import com.manruhomerun.yadanbeopseok.record.component.TravelStickerPhotoImageState
 import com.manruhomerun.yadanbeopseok.record.screen.TravelStickerPhotoScreen
+import com.manruhomerun.yadanbeopseok.record.viewmodel.PlacedSticker
 import com.manruhomerun.yadanbeopseok.record.viewmodel.TravelStickerPhotoViewModel
 import java.io.IOException
+import kotlin.math.ceil
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
  * D04 스티커 사진 편집 화면을 ViewModel과 Android 시스템 기능에 연결합니다.
  *
- * 갤러리 사진 선택 실행, 스티커 편집 콜백 연결, 캔버스 캡처와
- * 갤러리 저장을 담당합니다.
+ * 갤러리 사진 선택, 스티커 편집 콜백 연결과 원본 기반 이미지 합성·저장을 담당합니다.
  */
 @Composable
 fun TravelStickerPhotoRoute(
@@ -56,7 +73,7 @@ fun TravelStickerPhotoRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current.applicationContext
-    val graphicsLayer = rememberGraphicsLayer()
+    val coroutineScope = rememberCoroutineScope()
     var isGalleryLaunchPending by rememberSaveable(travelId) { mutableStateOf(false) }
     var pendingPhotoUri by rememberSaveable(travelId) { mutableStateOf<String?>(null) }
     var isLeavingRoute by remember(travelId) { mutableStateOf(false) }
@@ -73,14 +90,24 @@ fun TravelStickerPhotoRoute(
         return imageState.isReady && imageState.matchesContent(photoRequestId, state.photoUri, state.placedStickers)
     }
 
-    /** 화면 재생성 전의 준비 상태를 재사용하지 않고 캡처 직전에도 현재 이미지를 검사합니다. */
-    fun requireReadyCanvasForExport() {
+    /** 저장 버튼을 누른 시점의 내용과 측정 정보를 고정하며 UI Bitmap은 가져오지 않습니다. */
+    fun createExportSnapshot(): StickerPhotoExportSnapshot {
         val state = viewModel.uiState.value
-        if (!state.isExporting || !state.hasSelectedPhoto || state.isLoading ||
-            pendingPhotoUri != null || isGalleryLaunchPending || isLeavingRoute || !isCanvasReady()
-        ) {
+        val imageState = canvasImageState
+        if (!canEditPhoto() || !state.canExport || imageState == null || !isCanvasReady()) {
             throw IOException("사진과 스티커가 저장할 준비를 마치지 못했습니다.")
         }
+
+        return StickerPhotoExportSnapshot(
+            photoUri = Uri.parse(checkNotNull(state.photoUri)),
+            photoAspectRatio = checkNotNull(state.photoAspectRatio),
+            placedStickers = state.placedStickers.toList(),
+            selectedStickerId = state.selectedStickerId,
+            imageState = imageState.copy(
+                stickerSources = imageState.stickerSources.toMap(),
+                stickerSizes = imageState.stickerSizes.toMap(),
+            ),
+        )
     }
 
     fun navigateBack() {
@@ -149,53 +176,42 @@ fun TravelStickerPhotoRoute(
         }
     }
 
-    /*
-     * 저장을 시작하면 편집용 테두리와 삭제 버튼이 사라집니다.
-     * 변경된 캔버스가 실제로 그려진 뒤 캡처하도록 두 프레임을 기다립니다.
-     */
-    LaunchedEffect(
-        uiState.isExporting,
-        graphicsLayer,
-        context,
-        viewModel,
-    ) {
-        if (!uiState.isExporting) {
-            return@LaunchedEffect
-        }
+    /** 화면이 재생성되면 작업을 취소하며, 저장 상태만으로 작업을 자동 재실행하지 않습니다. */
+    fun savePhoto() {
+        if (!canEditPhoto() || !viewModel.uiState.value.canExport || !isCanvasReady()) return
 
-        try {
-            withFrameNanos {
-                // isExporting 상태 변경을 화면에 반영합니다.
+        coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            var hasStarted = false
+            var errorMessage: String? = null
+
+            try {
+                ensureActive()
+                val snapshot = createExportSnapshot()
+                viewModel.startExport()
+                hasStarted = viewModel.uiState.value.isExporting
+                if (!hasStarted) return@launch
+
+                withContext(Dispatchers.IO) {
+                    exportStickerPhotoToGallery(context, context.imageLoader, snapshot)
+                }
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (_: OutOfMemoryError) {
+                ensureActive()
+                errorMessage = "사진을 저장할 메모리가 부족합니다. 다른 앱을 닫고 다시 시도해주세요."
+            } catch (_: Exception) {
+                ensureActive()
+                errorMessage = "사진을 저장하지 못했습니다. 다시 시도해주세요."
+            } finally {
+                if (hasStarted) viewModel.finishExport(errorMessage)
             }
 
-            withFrameNanos {
-                // 편집용 UI가 제거된 캔버스의 그리기를 기다립니다.
-            }
-
-            requireReadyCanvasForExport()
-            val bitmap = graphicsLayer.toImageBitmap().asAndroidBitmap()
             ensureActive()
-            requireReadyCanvasForExport()
-
-            withContext(Dispatchers.IO) {
-                saveBitmapToGallery(
-                    context = context,
-                    bitmap = bitmap,
-                )
-            }
-
-            viewModel.finishExport()
-
-            Toast.makeText(context, "사진이 갤러리에 저장되었습니다.", Toast.LENGTH_SHORT).show()
-        } catch (exception: CancellationException) {
-            viewModel.finishExport()
-            throw exception
-        } catch (_: Exception) {
-            val errorMessage = "사진을 저장하지 못했습니다. 다시 시도해주세요."
-
-            viewModel.finishExport(errorMessage)
-
-            Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                errorMessage ?: "사진이 갤러리에 저장되었습니다.",
+                Toast.LENGTH_SHORT,
+            ).show()
         }
     }
 
@@ -256,11 +272,7 @@ fun TravelStickerPhotoRoute(
         onRetryClick = {
             if (canEditPhoto()) viewModel.retry()
         },
-        onSaveClick = {
-            if (canEditPhoto() && viewModel.uiState.value.canExport && isCanvasReady()) {
-                viewModel.startExport()
-            }
-        },
+        onSaveClick = ::savePhoto,
         modifier = modifier,
         isReadingPhoto = isReadingPhoto,
         photoRequestId = photoRequestId,
@@ -273,14 +285,176 @@ fun TravelStickerPhotoRoute(
                 canvasImageState = imageState
             }
         },
-        canvasModifier = Modifier.drawWithContent {
-            graphicsLayer.record {
-                this@drawWithContent.drawContent()
-            }
-
-            drawLayer(graphicsLayer)
-        },
     )
+}
+
+/** 저장 작업에만 사용하는 불변 배치 정보이며 Bitmap이나 UI Painter는 보관하지 않습니다. */
+private data class StickerPhotoExportSnapshot(
+    val photoUri: Uri,
+    val photoAspectRatio: Float,
+    val placedStickers: List<PlacedSticker>,
+    val selectedStickerId: Long?,
+    val imageState: TravelStickerPhotoImageState,
+)
+
+/** 할당부터 갤러리 저장까지 같은 작업이 Bitmap을 소유해 취소 시에도 반드시 해제합니다. */
+private suspend fun exportStickerPhotoToGallery(
+    context: Context,
+    imageLoader: ImageLoader,
+    snapshot: StickerPhotoExportSnapshot,
+) {
+    var photoBitmap: Bitmap? = null
+    var exportBitmap: Bitmap? = null
+
+    try {
+        val photo = decodeExportPhoto(context, snapshot)
+        photoBitmap = photo
+        currentCoroutineContext().ensureActive()
+
+        val output = Bitmap.createBitmap(photo.width, photo.height, Bitmap.Config.ARGB_8888)
+        exportBitmap = output
+        val canvas = Canvas(output)
+        val layout = snapshot.imageState
+        val canvasWidth = layout.canvasSize.width.toFloat()
+        val canvasHeight = layout.canvasSize.height.toFloat()
+        val exportScale = min(output.width / canvasWidth, output.height / canvasHeight)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        val clip = checkNotNull(layout.clipRoundRect)
+
+        withContext(Dispatchers.Default) {
+            canvas.translate(
+                (output.width - canvasWidth * exportScale) / 2f,
+                (output.height - canvasHeight * exportScale) / 2f,
+            )
+            canvas.scale(exportScale, exportScale)
+            val clipPath = Path().apply {
+                addRoundRect(
+                    RectF(clip.left, clip.top, clip.right, clip.bottom),
+                    floatArrayOf(
+                        clip.topLeftCornerRadius.x, clip.topLeftCornerRadius.y,
+                        clip.topRightCornerRadius.x, clip.topRightCornerRadius.y,
+                        clip.bottomRightCornerRadius.x, clip.bottomRightCornerRadius.y,
+                        clip.bottomLeftCornerRadius.x, clip.bottomLeftCornerRadius.y,
+                    ),
+                    Path.Direction.CW,
+                )
+            }
+            canvas.clipPath(clipPath)
+            canvas.drawColor(layout.backgroundColor.toArgb())
+            val photoRect = fitImageRect(snapshot.photoAspectRatio, 1f, canvasWidth, canvasHeight)
+            canvas.drawBitmap(photo, null, photoRect, paint)
+        }
+        photo.recycle()
+        photoBitmap = null
+
+        // Compose의 zIndex와 동일하게 선택된 스티커만 마지막에 그립니다.
+        val orderedStickers = snapshot.placedStickers.sortedBy { it.id == snapshot.selectedStickerId }
+        for (sticker in orderedStickers) {
+            currentCoroutineContext().ensureActive()
+            drawExportSticker(context, imageLoader, canvas, paint, sticker, layout, exportScale)
+        }
+
+        currentCoroutineContext().ensureActive()
+        saveBitmapToGallery(context, output)
+    } finally {
+        photoBitmap?.recycle()
+        exportBitmap?.recycle()
+    }
+}
+
+/** 원본을 먼저 크게 펼치지 않고 방향이 반영된 크기에서 긴 변 최대 2,048px로 디코딩합니다. */
+private fun decodeExportPhoto(context: Context, snapshot: StickerPhotoExportSnapshot): Bitmap {
+    val source = ImageDecoder.createSource(context.contentResolver, snapshot.photoUri)
+    val bitmap = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+        val width = info.size.width
+        val height = info.size.height
+        if (width <= 0 || height <= 0 || width.toFloat() / height != snapshot.photoAspectRatio) {
+            throw IOException("선택한 사진의 크기가 변경되었습니다. 다시 선택해주세요.")
+        }
+
+        val scale = min(1.0, MAX_EXPORT_IMAGE_LENGTH.toDouble() / max(width, height))
+        decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+        decoder.setTargetColorSpace(ColorSpace.get(ColorSpace.Named.SRGB))
+        decoder.setTargetSize(
+            (width * scale).roundToInt().coerceAtLeast(1),
+            (height * scale).roundToInt().coerceAtLeast(1),
+        )
+    }
+
+    if (bitmap.width <= 0 || bitmap.height <= 0 || max(bitmap.width, bitmap.height) > MAX_EXPORT_IMAGE_LENGTH) {
+        bitmap.recycle()
+        throw IOException("저장할 사진의 크기가 유효하지 않습니다.")
+    }
+    return bitmap
+}
+
+/** 스티커를 하나씩 읽어 실제 측정 영역과 동일한 Fit·중심 회전·확대·이동으로 합성합니다. */
+private suspend fun drawExportSticker(
+    context: Context,
+    imageLoader: ImageLoader,
+    canvas: Canvas,
+    paint: Paint,
+    sticker: PlacedSticker,
+    layout: TravelStickerPhotoImageState,
+    exportScale: Float,
+) {
+    val size = checkNotNull(layout.stickerSizes[sticker.id])
+    val width = size.width.toFloat()
+    val height = size.height.toFloat()
+    val neededWidth = width * sticker.scale * exportScale
+    val neededHeight = height * sticker.scale * exportScale
+    // 화면 밖으로 크게 확대한 스티커도 이미지 요청 크기는 출력 상한에 맞춥니다.
+    val decodeScale = min(1f, MAX_EXPORT_IMAGE_LENGTH / max(neededWidth, neededHeight))
+    val request = ImageRequest.Builder(context)
+        .data(sticker.sticker.imageUrl)
+        .size(
+            ceil((neededWidth * decodeScale).toDouble()).toInt().coerceIn(1, MAX_EXPORT_IMAGE_LENGTH),
+            ceil((neededHeight * decodeScale).toDouble()).toInt().coerceIn(1, MAX_EXPORT_IMAGE_LENGTH),
+        )
+        .scale(Scale.FIT)
+        .allowHardware(false)
+        .bitmapConfig(Bitmap.Config.ARGB_8888)
+        .build()
+    val result = imageLoader.execute(request)
+    val drawable = (result as? SuccessResult)?.drawable as? BitmapDrawable
+        ?: throw IOException("저장할 스티커를 불러오지 못했습니다.", (result as? ErrorResult)?.throwable)
+    val bitmap = drawable.bitmap
+    if (bitmap.isRecycled || bitmap.width <= 0 || bitmap.height <= 0) {
+        throw IOException("저장할 스티커 이미지가 유효하지 않습니다.")
+    }
+
+    withContext(Dispatchers.Default) {
+        val offsetX = (layout.canvasSize.width * sticker.centerXFraction - layout.stickerSizePx / 2f).roundToInt()
+        val left = if (layout.layoutDirection == LayoutDirection.Ltr) {
+            offsetX.toFloat()
+        } else {
+            layout.canvasSize.width - width - offsetX
+        }
+        val top = (layout.canvasSize.height * sticker.centerYFraction - layout.stickerSizePx / 2f).roundToInt()
+        val saveCount = canvas.save()
+        try {
+            canvas.translate(left + width / 2f, top + height / 2f)
+            canvas.rotate(sticker.rotationDegrees)
+            canvas.scale(sticker.scale, sticker.scale)
+            canvas.translate(-width / 2f, -height / 2f)
+            canvas.clipRect(0f, 0f, width, height)
+            val imageRect = fitImageRect(bitmap.width.toFloat(), bitmap.height.toFloat(), width, height)
+            canvas.drawBitmap(bitmap, null, imageRect, paint)
+        } finally {
+            canvas.restoreToCount(saveCount)
+        }
+    }
+    // Coil 캐시 소유 Bitmap은 복사하거나 recycle하지 않습니다.
+}
+
+/** 사진과 스티커 모두 ContentScale.Fit / Alignment.Center와 같은 영역을 사용합니다. */
+private fun fitImageRect(sourceWidth: Float, sourceHeight: Float, width: Float, height: Float): RectF {
+    val scale = min(width / sourceWidth, height / sourceHeight)
+    val imageWidth = sourceWidth * scale
+    val imageHeight = sourceHeight * scale
+    val left = (width - imageWidth) / 2f
+    val top = (height - imageHeight) / 2f
+    return RectF(left, top, left + imageWidth, top + imageHeight)
 }
 
 /** 이미지 방향이 반영된 원본 비율을 읽고, 정보 확인용 작은 Bitmap은 즉시 해제합니다. */
@@ -305,12 +479,10 @@ private fun readPhotoAspectRatio(context: Context, photoUri: Uri): Float {
 }
 
 /**
- * 캡처한 캔버스 이미지를 Pictures/Yadanbeopseok 폴더에 저장합니다.
+ * 합성한 이미지를 저장하고, 게시 전 실패·취소된 파일만 제거합니다.
  */
-private fun saveBitmapToGallery(
-    context: Context,
-    bitmap: Bitmap,
-) {
+private suspend fun saveBitmapToGallery(context: Context, bitmap: Bitmap) {
+    currentCoroutineContext().ensureActive()
     val contentResolver = context.contentResolver
     val displayName = "yadanbeopseok_${System.currentTimeMillis()}.png"
 
@@ -332,8 +504,10 @@ private fun saveBitmapToGallery(
         imageCollection,
         contentValues,
     ) ?: throw IOException("이미지 저장 위치를 생성하지 못했습니다.")
+    var isPublished = false
 
     try {
+        currentCoroutineContext().ensureActive()
         contentResolver.openOutputStream(imageUri)?.use { outputStream ->
             val isSaved = bitmap.compress(
                 Bitmap.CompressFormat.PNG,
@@ -346,6 +520,7 @@ private fun saveBitmapToGallery(
             }
         } ?: throw IOException("이미지 출력 스트림을 열지 못했습니다.")
 
+        currentCoroutineContext().ensureActive()
         val publishValues = ContentValues().apply {
             put(MediaStore.Images.Media.IS_PENDING, 0)
         }
@@ -357,17 +532,18 @@ private fun saveBitmapToGallery(
             null,
         )
 
-        if (updatedRows == 0) {
+        if (updatedRows <= 0) {
             throw IOException("저장한 이미지를 갤러리에 게시하지 못했습니다.")
         }
-    } catch (exception: Exception) {
-        contentResolver.delete(
-            imageUri,
-            null,
-            null,
-        )
-
-        throw exception
+        isPublished = true
+    } finally {
+        if (!isPublished) {
+            try {
+                contentResolver.delete(imageUri, null, null)
+            } catch (_: Exception) {
+                // 미완성 파일 정리 실패가 원래 저장 오류나 취소를 덮어쓰지 않게 합니다.
+            }
+        }
     }
 }
 
@@ -375,3 +551,4 @@ private const val IMAGE_MIME_TYPE = "image/png"
 private const val IMAGE_PICKER_MIME_TYPE = "image/*"
 private const val GALLERY_DIRECTORY_NAME = "Yadanbeopseok"
 private const val PNG_QUALITY = 100
+private const val MAX_EXPORT_IMAGE_LENGTH = 2_048

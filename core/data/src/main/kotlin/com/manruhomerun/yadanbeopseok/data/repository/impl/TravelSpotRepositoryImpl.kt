@@ -1,7 +1,6 @@
 package com.manruhomerun.yadanbeopseok.data.repository.impl
 
 import com.manruhomerun.yadanbeopseok.common.InvalidResponseException
-import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.mapper.toTravelSpot
 import com.manruhomerun.yadanbeopseok.data.mapper.toTravelSpotDetail
 import com.manruhomerun.yadanbeopseok.data.mapper.toTravelSpotListPage
@@ -16,7 +15,6 @@ import com.manruhomerun.yadanbeopseok.model.TravelSpotListPage
 import com.manruhomerun.yadanbeopseok.network.common.error.ApiCallExecutor
 import com.manruhomerun.yadanbeopseok.network.travel.api.TravelSpotApi
 import javax.inject.Inject
-import kotlinx.coroutines.CancellationException
 
 /**
  * 관광지 조회, 검색, 추천 및 찜 API의 Repository 구현체입니다.
@@ -76,19 +74,17 @@ internal class TravelSpotRepositoryImpl @Inject constructor(
             travelSpotApi.getTravelSpotDetail(contentId = spotId)
         }
 
-        val imagesResponse = try {
-            apiCallExecutor.execute {
-                travelSpotApi.getTravelSpotImages(contentId = spotId)
-            }
-        } catch (exception: CancellationException) {
-            throw exception
-        } catch (exception: SessionExpiredException) {
-            throw exception
-        } catch (_: Exception) {
-            emptyList()
+        return detailResponse.toTravelSpotDetail()
+    }
+
+    override suspend fun getTravelSpotImages(spotId: String): List<String> {
+        val imageUrls = apiCallExecutor.execute {
+            travelSpotApi.getTravelSpotImages(contentId = spotId)
         }
 
-        return detailResponse.toTravelSpotDetail(imageUrls = imagesResponse)
+        return imageUrls.mapNotNull { imageUrl ->
+            imageUrl.trim().takeIf { it.isNotEmpty() }
+        }.distinct()
     }
 
     override suspend fun getTravelSpotDibs(

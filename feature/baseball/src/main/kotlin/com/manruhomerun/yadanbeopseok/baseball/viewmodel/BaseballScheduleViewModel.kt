@@ -11,15 +11,15 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-
 /**
- * A·05의 구단 선택과 구단별 경기 일정을 관리합니다.
+ * 경기 일정 화면의 구단 선택, 최초 조회와 기존 결과를 유지하는 갱신을 관리합니다.
  */
 @HiltViewModel
 class BaseballScheduleViewModel @Inject constructor(
@@ -29,73 +29,124 @@ class BaseballScheduleViewModel @Inject constructor(
     val uiState: StateFlow<BaseballScheduleUiState> = _uiState.asStateFlow()
 
     private var scheduleLoadJob: Job? = null
+    private var scheduleRequestGeneration = 0L
+    private var hasInitialized = false
+    private var hasExpiredSession = false
 
-    init {
-        loadTeamSchedule(_uiState.value.selectedTeam)
+    /** 최초 진입에만 전달받은 구단을 적용하고, 이후 복귀에서는 현재 구단을 갱신합니다. */
+    fun onScreenResumed(initialTeamId: Long? = null) {
+        if (hasExpiredSession) return
+
+        if (!hasInitialized) {
+            hasInitialized = true
+            val team = initialTeamId?.let(KboTeam::findByServerId) ?: _uiState.value.selectedTeam
+            loadTeamSchedule(team)
+            return
+        }
+
+        refresh()
     }
 
     /**
-     * 선택한 구단으로 필터를 변경하고 해당 구단의 경기 일정을 조회합니다.
+     * 다른 구단은 새로 조회하고, 이미 선택된 구단은 기존 결과를 유지하며 갱신합니다.
      */
     fun selectTeam(team: KboTeam) {
-        if (_uiState.value.selectedTeam == team) return
+        if (hasExpiredSession) return
+
+        if (!hasInitialized) {
+            hasInitialized = true
+            loadTeamSchedule(team)
+            return
+        }
+
+        if (_uiState.value.selectedTeam == team) {
+            refresh()
+            return
+        }
 
         loadTeamSchedule(team)
     }
 
-    /**
-     * 현재 선택된 구단의 경기 일정 조회를 다시 시도합니다.
-     */
-    fun retry() {
-        if (_uiState.value.isLoading) return
+    /** 현재 구단을 갱신하며 최초 조회 및 갱신 중의 중복 요청은 차단합니다. */
+    fun refresh() {
+        val state = _uiState.value
+        if (hasExpiredSession || !hasInitialized || state.isLoading || state.isRefreshing) return
 
-        loadTeamSchedule(_uiState.value.selectedTeam)
+        loadTeamSchedule(state.selectedTeam)
+    }
+
+    /** 최초 조회 실패 화면에서 현재 구단을 다시 조회합니다. */
+    fun retry() {
+        refresh()
+    }
+
+    /** 표시를 마친 갱신 오류만 제거하고 최초 조회 실패 안내는 유지합니다. */
+    fun clearErrorMessage(message: String) {
+        _uiState.update { state ->
+            if (state.hasLoadedSchedule && state.errorMessage == message) {
+                state.copy(errorMessage = null)
+            } else {
+                state
+            }
+        }
     }
 
     /**
      * 선택한 구단의 요청일 기준 최대 2주 경기 일정을 조회합니다.
      */
     private fun loadTeamSchedule(team: KboTeam) {
+        val state = _uiState.value
+        val keepsCurrentResult = state.selectedTeam == team && state.hasLoadedSchedule
+        val generation = ++scheduleRequestGeneration
         scheduleLoadJob?.cancel()
 
-        _uiState.value = BaseballScheduleUiState(
-            selectedTeam = team,
-            isLoading = true,
-        )
+        _uiState.value = if (keepsCurrentResult) {
+            state.copy(isLoading = false, isRefreshing = true, errorMessage = null)
+        } else {
+            BaseballScheduleUiState(selectedTeam = team, isLoading = true)
+        }
 
         scheduleLoadJob = viewModelScope.launch {
             try {
                 val games = baseballRepository.getTeamGameSchedule(team)
-                val sortedGames = games.sortedBy { it.gameDateTime }
+                ensureActive()
+                if (!isCurrentScheduleRequest(generation, team)) return@launch
 
-                if (_uiState.value.selectedTeam == team) {
-                    _uiState.update {
-                        it.copy(
-                            games = sortedGames,
-                            isLoading = false,
-                            errorMessage = null,
-                        )
-                    }
+                _uiState.update {
+                    it.copy(
+                        games = games.sortedBy { game -> game.gameDateTime },
+                        isLoading = false,
+                        isRefreshing = false,
+                        hasLoadedSchedule = true,
+                        errorMessage = null,
+                    )
                 }
             } catch (exception: CancellationException) {
                 throw exception
             } catch (_: SessionExpiredException) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = null) }
-            } catch (exception: Exception) {
-                if (_uiState.value.selectedTeam == team) {
-                    val errorMessage = exception.toBaseballScheduleErrorMessage()
+                ensureActive()
+                if (!isCurrentScheduleRequest(generation, team)) return@launch
 
-                    _uiState.update {
-                        it.copy(
-                            games = emptyList(),
-                            isLoading = false,
-                            errorMessage = errorMessage,
-                        )
-                    }
+                hasExpiredSession = true
+                _uiState.update { it.copy(isLoading = false, isRefreshing = false, errorMessage = null) }
+            } catch (exception: Exception) {
+                ensureActive()
+                if (!isCurrentScheduleRequest(generation, team)) return@launch
+
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        errorMessage = exception.toBaseballScheduleErrorMessage(),
+                    )
                 }
             }
         }
     }
+
+    /** 취소되거나 교체된 요청이 현재 구단의 결과와 오류를 덮어쓰지 않게 합니다. */
+    private fun isCurrentScheduleRequest(generation: Long, team: KboTeam): Boolean =
+        !hasExpiredSession && generation == scheduleRequestGeneration && _uiState.value.selectedTeam == team
 }
 
 /**

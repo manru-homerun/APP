@@ -79,18 +79,8 @@ internal fun PopularTravelSpotResponseDto.toTravelSpot(region: Region): TravelSp
         dibs = dibs,
     )
 
-/**
- * 관광지 상세 응답과 이미지 목록을 앱 내부 상세 모델로 변환합니다.
- *
- * 이미지 목록의 첫 번째 이미지는 기존 [TravelSpot]의 대표 이미지로도 사용합니다.
- */
-internal fun TravelSpotDetailResponseDto.toTravelSpotDetail(
-    imageUrls: List<String>,
-): TravelSpotDetail {
-    val normalizedImageUrls = imageUrls.mapNotNull { imageUrl ->
-        imageUrl.trim().takeIf { it.isNotEmpty() }
-    }.distinct()
-
+/** 관광지 상세 응답을 변환하며 이미지는 별도 조회 결과로 채웁니다. */
+internal fun TravelSpotDetailResponseDto.toTravelSpotDetail(): TravelSpotDetail {
     return TravelSpotDetail(
         spot = TravelSpot(
             id = id,
@@ -100,7 +90,6 @@ internal fun TravelSpotDetailResponseDto.toTravelSpotDetail(
                 Region.findByLegalDongCode(code)
             },
             category = category.toTravelSpotCategory(),
-            imageUrl = normalizedImageUrls.firstOrNull(),
             dibs = dibs,
         ),
         telephone = tel?.trim()?.takeIf { it.isNotEmpty() },
@@ -108,7 +97,6 @@ internal fun TravelSpotDetailResponseDto.toTravelSpotDetail(
         longitude = longitude?.trim()?.toDoubleOrNull(),
         latitude = latitude?.trim()?.toDoubleOrNull(),
         overview = overview?.trim()?.takeIf { it.isNotEmpty() },
-        imageUrls = normalizedImageUrls,
     )
 }
 

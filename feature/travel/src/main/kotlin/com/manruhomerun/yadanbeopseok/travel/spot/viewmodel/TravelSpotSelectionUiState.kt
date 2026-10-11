@@ -41,6 +41,9 @@ data class TravelSpotSelectionUiState(
     /** 관광지 검색창에 입력한 검색어입니다. */
     val searchQuery: String = "",
 
+    /** 현재 검색어의 첫 페이지 조회가 성공했는지 나타냅니다. 빈 결과도 성공으로 처리합니다. */
+    val hasSearchCompleted: Boolean = false,
+
     /** 검색 결과에 적용할 카테고리이며 null이면 전체를 표시합니다. */
     val selectedCategory: TravelSpotCategory? = null,
 
@@ -52,6 +55,9 @@ data class TravelSpotSelectionUiState(
 
     /** 찜 목록의 전체 페이지 수입니다. */
     val dibsTotalPages: Int = 0,
+
+    /** 현재 여행 지역과 찜 카테고리 조건에 해당하는 서버 전체 관광지 수입니다. */
+    val dibsTotalElements: Long = 0L,
 
     /** 맞춤 추천 관광지를 불러오고 있는지 나타냅니다. */
     val isSuggestedSpotsLoading: Boolean = false,

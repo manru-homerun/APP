@@ -76,15 +76,11 @@ fun MyPageRoute(
     }
 
     /*
-     * 기존 화면 데이터가 있는 상태에서 발생한 작업 오류만 스낵바로 표시합니다.
-     * 최초 조회 실패는 MyPageScreen의 오류 화면에서 처리합니다.
+     * 프로필 유무와 관계없이 조회 및 계정 작업 오류를 스낵바로 안내합니다.
+     * 프로필 조회 실패 영역은 Screen에서 별도로 유지합니다.
      */
-    LaunchedEffect(
-        uiState.errorMessage,
-        uiState.userProfile,
-    ) {
+    LaunchedEffect(uiState.errorMessage) {
         val errorMessage = uiState.errorMessage ?: return@LaunchedEffect
-        if (uiState.userProfile == null) return@LaunchedEffect
 
         snackbarHostState.showSnackbar(errorMessage)
         viewModel.clearErrorMessage()

@@ -190,6 +190,30 @@ private fun TravelCourseSpotDibsPreview() {
             selectedTab = TravelSpotSelectionTab.DIBS,
             selectedDibsCategory = TravelSpotFilterCategory.SHOPPING,
             dibsSpots = previewCourseSpots.filter { it.dibs },
+            dibsTotalElements = previewCourseSpots.count { it.dibs }.toLong(),
+        ),
+    )
+}
+
+@Preview(name = "C01c 검색어 입력 중", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelCourseSpotSearchAwaitingPreview() {
+    TravelCourseSpotSelectionPreview(selectionState = TravelSpotSelectionUiState(searchQuery = "전포"))
+}
+
+@Preview(name = "C01c 검색 첫 페이지 조회 중", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelCourseSpotSearchLoadingPreview() {
+    TravelCourseSpotSelectionPreview(selectionState = TravelSpotSelectionUiState(searchQuery = "전포", isSearchLoading = true))
+}
+
+@Preview(name = "C01c 검색 첫 페이지 조회 실패", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelCourseSpotSearchErrorPreview() {
+    TravelCourseSpotSelectionPreview(
+        selectionState = TravelSpotSelectionUiState(
+            searchQuery = "전포",
+            errorMessage = "관광지를 검색하지 못했습니다.",
         ),
     )
 }
@@ -206,6 +230,9 @@ private fun TravelCourseSpotSearchPreview() {
         selectionState = TravelSpotSelectionUiState(
             searchQuery = "전포",
             searchResults = listOf(previewCourseSpots.last()),
+            searchPageNumber = 1,
+            searchTotalPages = 1,
+            hasSearchCompleted = true,
         ),
         selectedTravelSpots = listOf(previewCourseSpots.last()),
     )
@@ -226,6 +253,7 @@ private fun TravelCourseSpotSearchNextPagePreview() {
             searchResults = previewCourseSpots,
             searchPageNumber = 1,
             searchTotalPages = 3,
+            hasSearchCompleted = true,
             isSearchLoadingMore = true,
         ),
     )
@@ -240,7 +268,11 @@ private fun TravelCourseSpotSearchNextPagePreview() {
 @Composable
 private fun TravelCourseSpotEmptyPreview() {
     TravelCourseSpotSelectionPreview(
-        selectionState = TravelSpotSelectionUiState(searchQuery = "검색어"),
+        selectionState = TravelSpotSelectionUiState(
+            searchQuery = "검색어",
+            searchPageNumber = 1,
+            hasSearchCompleted = true,
+        ),
     )
 }
 
@@ -305,11 +337,32 @@ private fun TravelCourseSpotSelectionPreview(
     }
 }
 
+@Preview(name = "일정 편집 관광지 선택 - 찜 전체 23개 중 첫 10개", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelCourseSpotDibsTotalCountPreview() {
+    TravelCourseSpotSelectionPreview(
+        selectionState = TravelSpotSelectionUiState(
+            selectedTab = TravelSpotSelectionTab.DIBS,
+            dibsSpots = List(10) { index ->
+                previewCourseSpots[index % previewCourseSpots.size].copy(id = "preview-dibs-$index", dibs = true)
+            },
+            dibsPageNumber = 1,
+            dibsTotalPages = 3,
+            dibsTotalElements = 23L,
+        ),
+    )
+}
+
 @Preview(name = "C01b 찜 목록 갱신", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun TravelCourseSpotDibsRefreshingPreview() {
     TravelCourseSpotSelectionPreview(
-        TravelSpotSelectionUiState(selectedTab = TravelSpotSelectionTab.DIBS, dibsSpots = previewCourseSpots, isDibsRefreshing = true),
+        TravelSpotSelectionUiState(
+            selectedTab = TravelSpotSelectionTab.DIBS,
+            dibsSpots = previewCourseSpots,
+            dibsTotalElements = 23L,
+            isDibsRefreshing = true,
+        ),
         selectedTravelSpots = listOf(previewCourseSpots.first()),
     )
 }
@@ -323,6 +376,7 @@ private fun TravelCourseSpotDibsRefreshErrorPreview() {
             dibsSpots = previewCourseSpots,
             dibsPageNumber = 2,
             dibsTotalPages = 3,
+            dibsTotalElements = 23L,
             dibsRefreshErrorMessage = "찜 목록을 갱신하지 못했습니다. 다시 시도해주세요.",
         ),
     )
@@ -337,6 +391,7 @@ private fun TravelCourseSpotDibsLoadMoreErrorPreview() {
             dibsSpots = previewCourseSpots,
             dibsPageNumber = 1,
             dibsTotalPages = 3,
+            dibsTotalElements = 23L,
             dibsLoadMoreErrorMessage = "다음 찜 목록을 불러오지 못했습니다.",
         ),
     )

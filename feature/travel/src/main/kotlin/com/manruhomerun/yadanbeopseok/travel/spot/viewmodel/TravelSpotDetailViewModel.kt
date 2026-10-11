@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** 관광지 상세 정보와 찜 상태를 관리합니다. */
+/** 관광지 상세 본문, 별도 이미지 조회와 찜 상태를 관리합니다. */
 @HiltViewModel
 class TravelSpotDetailViewModel @Inject constructor(
     private val travelSpotRepository: TravelSpotRepository,
@@ -26,7 +26,10 @@ class TravelSpotDetailViewModel @Inject constructor(
 
     private var currentSpotId: String? = null
     private var loadJob: Job? = null
+    private var imagesJob: Job? = null
     private var dibsJob: Job? = null
+    private var currentLoadRequest: Any? = null
+    private var currentImagesRequest: Any? = null
 
     /** 전달받은 관광지 ID에 해당하는 상세 정보를 조회합니다. */
     fun loadTravelSpot(spotId: String) {
@@ -34,8 +37,7 @@ class TravelSpotDetailViewModel @Inject constructor(
 
         if (normalizedSpotId.isEmpty()) {
             currentSpotId = null
-            loadJob?.cancel()
-            dibsJob?.cancel()
+            cancelRequests()
 
             _uiState.value = TravelSpotDetailUiState(
                 isLoading = false,
@@ -44,7 +46,8 @@ class TravelSpotDetailViewModel @Inject constructor(
             return
         }
 
-        val isAlreadyLoaded = currentSpotId == normalizedSpotId && _uiState.value.detail != null
+        val state = _uiState.value
+        val isAlreadyLoaded = currentSpotId == normalizedSpotId && (state.isLoading || state.hasDetail)
 
         if (isAlreadyLoaded) return
 
@@ -54,8 +57,21 @@ class TravelSpotDetailViewModel @Inject constructor(
 
     /** 현재 관광지 상세 조회를 다시 시도합니다. */
     fun retry() {
-        if (_uiState.value.isLoading) return
+        val state = _uiState.value
+        if (state.isLoading || state.hasDetail) return
         requestTravelSpot(currentSpotId ?: return)
+    }
+
+    /** 본문을 유지한 채 실패한 이미지 목록 조회만 다시 시도합니다. */
+    fun retryImages() {
+        val state = _uiState.value
+        if (state.isLoadingImages || state.imageErrorMessage == null) return
+
+        val spotId = currentSpotId ?: return
+        val request = currentLoadRequest ?: return
+        if (state.detail?.spot?.id != spotId) return
+
+        requestTravelSpotImages(spotId, request)
     }
 
     /** 현재 찜 상태에 따라 찜 등록 또는 취소를 요청합니다. */
@@ -64,6 +80,8 @@ class TravelSpotDetailViewModel @Inject constructor(
         if (_uiState.value.isUpdatingDibs) return
 
         val spotId = detail.spot.id
+        val request = currentLoadRequest ?: return
+        if (!isCurrentLoadRequest(spotId, request)) return
         val wasDibs = detail.spot.dibs
 
         _uiState.update {
@@ -78,7 +96,7 @@ class TravelSpotDetailViewModel @Inject constructor(
                     travelSpotRepository.addTravelSpotDibs(spotId)
                 }
 
-                if (currentSpotId == spotId) {
+                if (isCurrentLoadRequest(spotId, request)) {
                     _uiState.update { state ->
                         val currentDetail = state.detail ?: return@update state
                         state.copy(
@@ -96,15 +114,17 @@ class TravelSpotDetailViewModel @Inject constructor(
                  * 찜 변경 진행 상태는 finally에서 정리합니다.
                  */
             } catch (exception: Exception) {
-                _uiState.update {
-                    it.copy(
-                        errorMessage = exception.toTravelSpotErrorMessage(
-                            fallbackMessage = "찜 상태를 변경하지 못했습니다.",
-                        ),
-                    )
+                if (isCurrentLoadRequest(spotId, request)) {
+                    _uiState.update {
+                        it.copy(
+                            errorMessage = exception.toTravelSpotErrorMessage(
+                                fallbackMessage = "찜 상태를 변경하지 못했습니다.",
+                            ),
+                        )
+                    }
                 }
             } finally {
-                if (currentSpotId == spotId) {
+                if (isCurrentLoadRequest(spotId, request)) {
                     _uiState.update { it.copy(isUpdatingDibs = false) }
                 }
             }
@@ -116,10 +136,11 @@ class TravelSpotDetailViewModel @Inject constructor(
         _uiState.update { it.copy(errorMessage = null) }
     }
 
-    /** Repository를 통해 관광지 상세 정보를 조회합니다. */
+    /** 상세 본문을 먼저 반영한 다음 이미지 목록 조회를 시작합니다. */
     private fun requestTravelSpot(spotId: String) {
-        loadJob?.cancel()
-        dibsJob?.cancel()
+        cancelRequests()
+        val request = Any()
+        currentLoadRequest = request
 
         _uiState.value = TravelSpotDetailUiState(isLoading = true)
 
@@ -127,32 +148,98 @@ class TravelSpotDetailViewModel @Inject constructor(
             try {
                 val detail = travelSpotRepository.getTravelSpotDetail(spotId)
 
-                if (currentSpotId == spotId) {
-                    _uiState.value = TravelSpotDetailUiState(
-                        detail = detail,
-                        isLoading = false,
-                    )
-                }
+                if (!isCurrentLoadRequest(spotId, request)) return@launch
+
+                _uiState.value = TravelSpotDetailUiState(
+                    detail = detail,
+                    isLoading = false,
+                    isLoadingImages = true,
+                )
+                requestTravelSpotImages(spotId, request)
             } catch (exception: CancellationException) {
                 throw exception
             } catch (_: SessionExpiredException) {
                 /*
                  * 로그인 이동은 앱의 공통 세션 관찰이 처리합니다.
                  */
-                _uiState.update {
-                    it.copy(isLoading = false, errorMessage = null)
+                if (isCurrentLoadRequest(spotId, request)) {
+                    _uiState.update { it.copy(isLoading = false, errorMessage = null) }
                 }
             } catch (exception: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = exception.toTravelSpotErrorMessage(
-                            fallbackMessage = "관광지 정보를 불러오지 못했습니다.",
-                        ),
-                    )
+                if (isCurrentLoadRequest(spotId, request)) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = exception.toTravelSpotErrorMessage(
+                                fallbackMessage = "관광지 정보를 불러오지 못했습니다.",
+                            ),
+                        )
+                    }
                 }
             }
         }
+    }
+
+    /** 이미지 결과만 최신 상세 상태에 합쳐 찜 상태와 본문을 보존합니다. */
+    private fun requestTravelSpotImages(spotId: String, loadRequest: Any) {
+        if (!isCurrentLoadRequest(spotId, loadRequest)) return
+
+        val imagesRequest = Any()
+        currentImagesRequest = imagesRequest
+        imagesJob?.cancel()
+        _uiState.update { it.copy(isLoadingImages = true, imageErrorMessage = null) }
+
+        imagesJob = viewModelScope.launch {
+            try {
+                val imageUrls = travelSpotRepository.getTravelSpotImages(spotId)
+
+                if (isCurrentImagesRequest(spotId, loadRequest, imagesRequest)) {
+                    _uiState.update { state ->
+                        val detail = state.detail ?: return@update state
+                        state.copy(
+                            detail = detail.copy(
+                                spot = detail.spot.copy(imageUrl = imageUrls.firstOrNull()),
+                                imageUrls = imageUrls,
+                            ),
+                        )
+                    }
+                }
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (_: SessionExpiredException) {
+                // 세션 만료는 이미지 오류로 표시하지 않고 공통 로그인 이동에 맡깁니다.
+            } catch (exception: Exception) {
+                if (isCurrentImagesRequest(spotId, loadRequest, imagesRequest)) {
+                    _uiState.update {
+                        it.copy(
+                            imageErrorMessage = exception.toTravelSpotErrorMessage(
+                                fallbackMessage = "이미지를 불러오지 못했습니다.",
+                            ),
+                        )
+                    }
+                }
+            } finally {
+                if (isCurrentImagesRequest(spotId, loadRequest, imagesRequest)) {
+                    _uiState.update { it.copy(isLoadingImages = false) }
+                }
+            }
+        }
+    }
+
+    /** 동일한 관광지의 이전 요청도 현재 화면 상태를 변경하지 못하게 구분합니다. */
+    private fun isCurrentLoadRequest(spotId: String, request: Any): Boolean =
+        currentSpotId == spotId && currentLoadRequest === request
+
+    private fun isCurrentImagesRequest(spotId: String, loadRequest: Any, imagesRequest: Any): Boolean =
+        isCurrentLoadRequest(spotId, loadRequest) && currentImagesRequest === imagesRequest
+
+    /** 요청 식별자를 먼저 무효화한 뒤 이전 작업을 취소합니다. */
+    private fun cancelRequests() {
+        currentLoadRequest = null
+        currentImagesRequest = null
+        loadJob?.cancel()
+        imagesJob?.cancel()
+        dibsJob?.cancel()
     }
 }
 

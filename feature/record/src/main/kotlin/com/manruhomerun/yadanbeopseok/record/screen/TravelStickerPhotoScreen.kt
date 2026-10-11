@@ -18,12 +18,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,9 +61,8 @@ import com.manruhomerun.yadanbeopseok.ui.component.YadanStickerView
  * 갤러리 실행과 완성된 이미지의 갤러리 저장은 Route에서 처리합니다.
  * 이 화면은 현재 상태를 표시하고 사용자의 동작을 콜백으로 전달합니다.
  *
- * [canvasModifier]는 사진과 스티커가 표시되는 캔버스를 캡처할 때 사용합니다.
  * [isReadingPhoto]가 true이면 사진 정보 조회 상태를 표시하고 편집을 제한합니다.
- * [imageState]가 현재 사진과 배치 목록의 성공 상태일 때만 저장 버튼을 활성화합니다.
+ * [imageState]가 현재 이미지와 실제 배치 측정을 마친 경우에만 저장 버튼을 활성화합니다.
  */
 @Composable
 fun TravelStickerPhotoScreen(
@@ -79,7 +84,6 @@ fun TravelStickerPhotoScreen(
     onRetryClick: () -> Unit,
     onSaveClick: () -> Unit,
     modifier: Modifier = Modifier,
-    canvasModifier: Modifier = Modifier,
     isReadingPhoto: Boolean = false,
     photoRequestId: Long = 0L,
     imageState: TravelStickerPhotoImageState? = null,
@@ -117,7 +121,7 @@ fun TravelStickerPhotoScreen(
             style = YadanTopAppBarStyle.ON_DARK,
         )
 
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -127,103 +131,114 @@ fun TravelStickerPhotoScreen(
                     bottom = 20.dp,
                 ),
         ) {
-            BoxWithConstraints(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center,
-            ) {
-                val photoAspectRatio = uiState.photoAspectRatio
-                val hasAvailableSpace = maxWidth > 0.dp && maxHeight > 0.dp
-                val photoCanvasModifier =
-                    if (hasPhoto && photoAspectRatio != null && hasAvailableSpace) {
-                        val availableAspectRatio = maxWidth.value / maxHeight.value
+            // 조작 영역이 길어져도 사진 편집에 남은 높이의 절반 이상을 확보합니다.
+            val controlsMaxHeight = (maxHeight - 13.dp).coerceAtLeast(0.dp) / 2f
 
-                        if (photoAspectRatio >= availableAspectRatio) {
-                            Modifier.size(
-                                width = maxWidth,
-                                height = maxWidth / photoAspectRatio,
-                            )
+            Column(modifier = Modifier.fillMaxSize()) {
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val photoAspectRatio = uiState.photoAspectRatio
+                    val hasAvailableSpace = maxWidth > 0.dp && maxHeight > 0.dp
+                    val photoCanvasModifier =
+                        if (hasPhoto && photoAspectRatio != null && hasAvailableSpace) {
+                            val availableAspectRatio = maxWidth.value / maxHeight.value
+
+                            if (photoAspectRatio >= availableAspectRatio) {
+                                Modifier.size(
+                                    width = maxWidth,
+                                    height = maxWidth / photoAspectRatio,
+                                )
+                            } else {
+                                Modifier.size(
+                                    width = maxHeight * photoAspectRatio,
+                                    height = maxHeight,
+                                )
+                            }
                         } else {
-                            Modifier.size(
-                                width = maxHeight * photoAspectRatio,
-                                height = maxHeight,
+                            Modifier.fillMaxSize()
+                        }
+
+                    if (isReadingPhoto) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState()),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                text = "사진 정보를 확인하고 있어요",
+                                style = YadanTypography.bodySmall,
+                                color = YadanOnPrimary.copy(alpha = 0.65f),
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            LinearProgressIndicator(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = YadanPrimary,
+                                trackColor = YadanOnPrimary.copy(alpha = 0.14f),
                             )
                         }
                     } else {
-                        Modifier.fillMaxSize()
+                        TravelStickerPhotoCanvas(
+                            photoUri = uiState.photoUri,
+                            placedStickers = uiState.placedStickers,
+                            selectedStickerId = uiState.selectedStickerId,
+                            onPhotoSelectClick = onPhotoSelectClick,
+                            onClearStickerSelection = onClearStickerSelection,
+                            onStickerSelect = onStickerSelect,
+                            onStickerTransform = onStickerTransform,
+                            onDeleteSelectedSticker = onDeleteSelectedSticker,
+                            isEditingEnabled = isEditingEnabled,
+                            photoRequestId = photoRequestId,
+                            onImageStateChange = onCanvasImageStateChange,
+                            modifier = photoCanvasModifier,
+                        )
                     }
+                }
 
-                if (isReadingPhoto) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(
-                            text = "사진 정보를 확인하고 있어요",
-                            style = YadanTypography.bodySmall,
-                            color = YadanOnPrimary.copy(alpha = 0.65f),
-                            textAlign = TextAlign.Center,
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        LinearProgressIndicator(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = YadanPrimary,
-                            trackColor = YadanOnPrimary.copy(alpha = 0.14f),
-                        )
-                    }
-                } else {
-                    TravelStickerPhotoCanvas(
-                        photoUri = uiState.photoUri,
-                        placedStickers = uiState.placedStickers,
-                        selectedStickerId = uiState.selectedStickerId,
-                        onPhotoSelectClick = onPhotoSelectClick,
-                        onClearStickerSelection = onClearStickerSelection,
-                        onStickerSelect = onStickerSelect,
-                        onStickerTransform = onStickerTransform,
-                        onDeleteSelectedSticker = onDeleteSelectedSticker,
-                        isEditingEnabled = isEditingEnabled,
-                        photoRequestId = photoRequestId,
-                        onImageStateChange = onCanvasImageStateChange,
-                        modifier = photoCanvasModifier.then(
-                            if (hasPhoto) canvasModifier else Modifier,
-                        ),
+                Spacer(modifier = Modifier.height(13.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = controlsMaxHeight)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    StickerTray(
+                        stickers = uiState.availableStickers,
+                        isLoading = uiState.isLoading,
+                        errorMessage = uiState.errorMessage,
+                        canAddStickers = hasPhoto && isEditingEnabled,
+                        isRetryEnabled = isEditingEnabled,
+                        onStickerClick = onStickerClick,
+                        onRetryClick = onRetryClick,
+                    )
+
+                    // 최소 두 줄은 유지하되 큰 글꼴의 안내 문구는 필요한 만큼 늘어납니다.
+                    Text(
+                        text = imageStatusMessage,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        style = YadanTypography.labelSmall,
+                        color = YadanOnPrimary.copy(alpha = 0.65f),
+                        textAlign = TextAlign.Center,
+                        minLines = 2,
+                    )
+
+                    PhotoActionButtons(
+                        canReselect = hasPhoto && isEditingEnabled,
+                        canSave = canSave,
+                        isSaving = uiState.isExporting,
+                        onReselectClick = onPhotoResetClick,
+                        onSaveClick = onSaveClick,
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(13.dp))
-
-            StickerTray(
-                stickers = uiState.availableStickers,
-                isLoading = uiState.isLoading,
-                errorMessage = uiState.errorMessage,
-                canAddStickers = hasPhoto && isEditingEnabled,
-                isRetryEnabled = isEditingEnabled,
-                onStickerClick = onStickerClick,
-                onRetryClick = onRetryClick,
-            )
-
-            // 항상 두 줄 공간을 확보해 로딩·저장 안내가 캔버스 크기를 바꾸지 않게 합니다.
-            Text(
-                text = imageStatusMessage,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 6.dp),
-                style = YadanTypography.labelSmall,
-                color = YadanOnPrimary.copy(alpha = 0.65f),
-                textAlign = TextAlign.Center,
-                minLines = 2,
-                maxLines = 2,
-            )
-
-            PhotoActionButtons(
-                canReselect = hasPhoto && isEditingEnabled,
-                canSave = canSave,
-                isSaving = uiState.isExporting,
-                onReselectClick = onPhotoResetClick,
-                onSaveClick = onSaveClick,
-            )
         }
     }
 }
@@ -271,7 +286,7 @@ private fun StickerTray(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
+                        .heightIn(min = 52.dp),
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     Text(
@@ -423,6 +438,10 @@ private fun PhotoActionButtons(
     widthDp = 360,
     heightDp = 800,
 )
+@Preview(name = "사진 선택 전 · 작은 화면", widthDp = 320, heightDp = 480)
+@Preview(name = "사진 선택 전 · 작은 화면 · 글꼴 1.5", widthDp = 320, heightDp = 480, fontScale = 1.5f)
+@Preview(name = "사진 선택 전 · 작은 화면 · 글꼴 2", widthDp = 320, heightDp = 480, fontScale = 2f)
+@Preview(name = "사진 선택 전 · 가로 화면 · 글꼴 2", widthDp = 640, heightDp = 360, fontScale = 2f)
 @Composable
 private fun TravelStickerPhotoScreenEmptyPreview() {
     TravelStickerPhotoScreenPreview(photoAspectRatio = null)
@@ -435,6 +454,8 @@ private fun TravelStickerPhotoScreenEmptyPreview() {
     widthDp = 360,
     heightDp = 800,
 )
+@Preview(name = "사진 정보 조회 · 작은 화면 · 글꼴 2", widthDp = 320, heightDp = 480, fontScale = 2f)
+@Preview(name = "사진 정보 조회 · 가로 화면 · 글꼴 2", widthDp = 640, heightDp = 360, fontScale = 2f)
 @Composable
 private fun TravelStickerPhotoScreenReadingPreview() {
     TravelStickerPhotoScreenPreview(photoAspectRatio = null, isReadingPhoto = true)
@@ -447,6 +468,10 @@ private fun TravelStickerPhotoScreenReadingPreview() {
     widthDp = 360,
     heightDp = 800,
 )
+@Preview(name = "가로 사진 · 작은 화면 · 글꼴 1.5", widthDp = 320, heightDp = 480, fontScale = 1.5f)
+@Preview(name = "가로 사진 · 작은 화면 · 글꼴 2", widthDp = 320, heightDp = 480, fontScale = 2f)
+@Preview(name = "가로 사진 · 가로 화면", widthDp = 640, heightDp = 360)
+@Preview(name = "가로 사진 · 가로 화면 · 글꼴 2", widthDp = 640, heightDp = 360, fontScale = 2f)
 @Composable
 private fun TravelStickerPhotoScreenLandscapePreview() {
     TravelStickerPhotoScreenPreview(photoAspectRatio = 16f / 9f)
@@ -459,6 +484,8 @@ private fun TravelStickerPhotoScreenLandscapePreview() {
     widthDp = 360,
     heightDp = 800,
 )
+@Preview(name = "세로 사진 · 작은 화면 · 글꼴 2", widthDp = 320, heightDp = 480, fontScale = 2f)
+@Preview(name = "세로 사진 · 가로 화면 · 글꼴 2", widthDp = 640, heightDp = 360, fontScale = 2f)
 @Composable
 private fun TravelStickerPhotoScreenPortraitPreview() {
     TravelStickerPhotoScreenPreview(photoAspectRatio = 3f / 4f)
@@ -471,18 +498,23 @@ private fun TravelStickerPhotoScreenPortraitPreview() {
     widthDp = 360,
     heightDp = 800,
 )
+@Preview(name = "정사각형 사진 · 작은 화면 · 글꼴 2", widthDp = 320, heightDp = 480, fontScale = 2f)
+@Preview(name = "정사각형 사진 · 가로 화면 · 글꼴 2", widthDp = 640, heightDp = 360, fontScale = 2f)
 @Composable
 private fun TravelStickerPhotoScreenSquarePreview() {
     TravelStickerPhotoScreenPreview(photoAspectRatio = 1f)
 }
 
 @Preview(name = "D04 전체 화면 · 이미지 로딩 중", widthDp = 360, heightDp = 800)
+@Preview(name = "이미지 로딩 · 작은 화면 · 글꼴 2", widthDp = 320, heightDp = 480, fontScale = 2f)
 @Composable
 private fun TravelStickerPhotoScreenImageLoadingPreview() {
     TravelStickerPhotoScreenPreview(photoAspectRatio = 3f / 4f, imageLoadState = YadanImageLoadState.LOADING)
 }
 
 @Preview(name = "D04 전체 화면 · 사진 이미지 오류", widthDp = 360, heightDp = 800)
+@Preview(name = "사진 이미지 오류 · 작은 화면 · 글꼴 2", widthDp = 320, heightDp = 480, fontScale = 2f)
+@Preview(name = "사진 이미지 오류 · 가로 화면 · 글꼴 2", widthDp = 640, heightDp = 360, fontScale = 2f)
 @Composable
 private fun TravelStickerPhotoScreenPhotoErrorPreview() {
     TravelStickerPhotoScreenPreview(
@@ -493,18 +525,22 @@ private fun TravelStickerPhotoScreenPhotoErrorPreview() {
 }
 
 @Preview(name = "D04 전체 화면 · 스티커 이미지 오류", widthDp = 360, heightDp = 800)
+@Preview(name = "스티커 이미지 오류 · 작은 화면 · 글꼴 2", widthDp = 320, heightDp = 480, fontScale = 2f)
 @Composable
 private fun TravelStickerPhotoScreenStickerErrorPreview() {
     TravelStickerPhotoScreenPreview(photoAspectRatio = 3f / 4f, imageLoadState = YadanImageLoadState.ERROR)
 }
 
 @Preview(name = "D04 전체 화면 · 사진 저장 중", widthDp = 360, heightDp = 800)
+@Preview(name = "사진 저장 중 · 작은 화면 · 글꼴 2", widthDp = 320, heightDp = 480, fontScale = 2f)
 @Composable
 private fun TravelStickerPhotoScreenSavingPreview() {
     TravelStickerPhotoScreenPreview(photoAspectRatio = 3f / 4f, isSaving = true)
 }
 
 @Preview(name = "D04 전체 화면 · 여러 스티커 중 두 번째 선택", widthDp = 360, heightDp = 800)
+@Preview(name = "여러 스티커 편집 · 작은 화면 · 글꼴 2", widthDp = 320, heightDp = 480, fontScale = 2f)
+@Preview(name = "여러 스티커 편집 · 가로 화면 · 글꼴 2", widthDp = 640, heightDp = 360, fontScale = 2f)
 @Composable
 private fun TravelStickerPhotoScreenMultipleStickersPreview() {
     TravelStickerPhotoScreenPreview(
@@ -535,6 +571,30 @@ private fun TravelStickerPhotoScreenMultipleStickersSavingPreview() {
     )
 }
 
+@Preview(name = "스티커 없음 · 작은 화면 · 글꼴 2", widthDp = 320, heightDp = 480, fontScale = 2f)
+@Preview(name = "스티커 없음 · 가로 화면 · 글꼴 2", widthDp = 640, heightDp = 360, fontScale = 2f)
+@Composable
+private fun TravelStickerPhotoScreenNoStickersPreview() {
+    TravelStickerPhotoScreenPreview(photoAspectRatio = null, hasStickerPack = false)
+}
+
+@Preview(name = "스티커 조회 중 · 작은 화면 · 글꼴 2", widthDp = 320, heightDp = 480, fontScale = 2f)
+@Composable
+private fun TravelStickerPhotoScreenStickersLoadingPreview() {
+    TravelStickerPhotoScreenPreview(photoAspectRatio = null, isLoadingStickers = true)
+}
+
+@Preview(name = "스티커 조회 오류 · 작은 화면 · 글꼴 2", widthDp = 320, heightDp = 480, fontScale = 2f)
+@Preview(name = "스티커 조회 오류 · 가로 화면 · 글꼴 2", widthDp = 640, heightDp = 360, fontScale = 2f)
+@Composable
+private fun TravelStickerPhotoScreenStickersErrorPreview() {
+    TravelStickerPhotoScreenPreview(
+        photoAspectRatio = null,
+        hasStickerPack = false,
+        stickerErrorMessage = "스티커를 불러오지 못했어요. 네트워크 연결을 확인한 뒤 다시 시도해 주세요.",
+    )
+}
+
 @Composable
 private fun TravelStickerPhotoScreenPreview(
     photoAspectRatio: Float?,
@@ -544,16 +604,22 @@ private fun TravelStickerPhotoScreenPreview(
     isSaving: Boolean = false,
     hasMultipleStickers: Boolean = false,
     selectedStickerId: Long? = 1L,
+    hasStickerPack: Boolean = true,
+    isLoadingStickers: Boolean = false,
+    stickerErrorMessage: String? = null,
 ) {
     val previewState = stickerPhotoPreviewState(photoAspectRatio, hasMultipleStickers)
     val uiState = previewState.copy(
         isExporting = isSaving,
         selectedStickerId = selectedStickerId?.takeIf { id -> previewState.placedStickers.any { it.id == id } },
+        stickerPack = previewState.stickerPack.takeIf { hasStickerPack },
+        isLoading = isLoadingStickers,
+        errorMessage = stickerErrorMessage,
     )
-    val imageState = TravelStickerPhotoImageState(
-        photoRequestId = 0L,
-        photoUri = uiState.photoUri,
-        stickerSources = uiState.placedStickers.associate { it.id to it.sticker.imageUrl },
+    var measuredImageState by remember(uiState.photoUri, uiState.placedStickers) {
+        mutableStateOf<TravelStickerPhotoImageState?>(null)
+    }
+    val imageState = measuredImageState?.copy(
         loadState = imageLoadState,
         hasPhotoError = hasPhotoError,
     )
@@ -572,6 +638,7 @@ private fun TravelStickerPhotoScreenPreview(
             onSaveClick = {},
             isReadingPhoto = isReadingPhoto,
             imageState = imageState,
+            onCanvasImageStateChange = { measuredImageState = it },
         )
     }
 }

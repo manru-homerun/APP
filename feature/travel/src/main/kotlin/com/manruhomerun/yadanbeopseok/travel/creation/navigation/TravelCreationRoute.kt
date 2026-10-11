@@ -23,6 +23,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -79,6 +80,8 @@ import kotlinx.datetime.todayIn
  *
  * B·07 원본은 생성 ViewModel에 유지하고, C·01 편집본은 별도 ViewModel에서 관리합니다.
  * 편집본 저장 성공 시 C·02를 표시하고, 편집 종료 요청 시 원본 저장 후 홈으로 이동합니다.
+ *
+ * 화면 상태는 같은 생성 ViewModel에서만 복원하며, 프로세스 종료 후에는 처음부터 시작합니다.
  */
 @Composable
 fun TravelCreationRoute(
@@ -87,6 +90,38 @@ fun TravelCreationRoute(
     modifier: Modifier = Modifier,
     viewModel: TravelCreationViewModel = hiltViewModel(),
     editViewModel: TravelCourseEditViewModel = hiltViewModel(),
+) {
+    val creationStateHolder = rememberSaveableStateHolder()
+    val creationFlowId = viewModel.creationFlowId
+    var savedCreationFlowId by rememberSaveable { mutableStateOf(creationFlowId) }
+
+    if (savedCreationFlowId != creationFlowId) {
+        val previousFlowId = savedCreationFlowId
+        SideEffect {
+            creationStateHolder.removeState(previousFlowId)
+            savedCreationFlowId = creationFlowId
+        }
+    }
+
+    creationStateHolder.SaveableStateProvider(key = creationFlowId) {
+        TravelCreationContent(
+            baseballGameId = baseballGameId,
+            navigator = navigator,
+            viewModel = viewModel,
+            editViewModel = editViewModel,
+            modifier = modifier,
+        )
+    }
+}
+
+/** 생성 흐름에 종속된 입력 단계, 결과 및 내부 일정 편집 화면을 표시합니다. */
+@Composable
+private fun TravelCreationContent(
+    baseballGameId: String?,
+    navigator: Navigator,
+    viewModel: TravelCreationViewModel,
+    editViewModel: TravelCourseEditViewModel,
+    modifier: Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val editUiState by editViewModel.uiState.collectAsStateWithLifecycle()

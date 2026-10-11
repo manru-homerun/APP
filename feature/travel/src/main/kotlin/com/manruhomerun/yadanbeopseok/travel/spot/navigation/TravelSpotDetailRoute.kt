@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
 /**
  * 관광지 상세 화면과 ViewModel을 연결합니다.
  *
- * 관광지 상세 조회, 찜 상태 변경, 연락처 실행, 뒤로가기와 오류 메시지 표시를 처리합니다.
+ * 관광지 상세 조회, 이미지 목록 재시도, 찜 변경, 연락처와 뒤로가기를 연결합니다.
  * 세션 만료에 따른 로그인 화면 전환은 앱의 공통 세션 관찰이 처리합니다.
  */
 @Composable
@@ -85,6 +85,7 @@ fun TravelSpotDetailRoute(
             onBackClick = onBackClick,
             onDibsClick = viewModel::toggleDibs,
             onRetryClick = viewModel::retry,
+            onImagesRetryClick = viewModel::retryImages,
             onHomepageClick = { homepage ->
                 if (!tryOpenExternalActivity { uriHandler.openUri(homepage) }) {
                     coroutineScope.launch {

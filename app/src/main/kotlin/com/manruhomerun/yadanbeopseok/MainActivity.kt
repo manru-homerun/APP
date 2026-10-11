@@ -35,6 +35,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
@@ -46,6 +47,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanBottomNavigation
@@ -68,6 +70,7 @@ import com.manruhomerun.yadanbeopseok.navigation.route.TermsAgreementNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.TopLevelNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.TravelCreationNavKey
 import com.manruhomerun.yadanbeopseok.navigation.route.TravelRecordNavKey
+import com.manruhomerun.yadanbeopseok.navigation.route.TravelStickerPhotoNavKey
 import com.manruhomerun.yadanbeopseok.notification.navigation.navigateToNotificationDestination
 import com.manruhomerun.yadanbeopseok.notifications.NotificationPayload
 import com.manruhomerun.yadanbeopseok.notifications.consumeNotificationPayloadOrNull
@@ -98,6 +101,11 @@ class MainActivity : ComponentActivity() {
                 ),
         )
 
+        val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+        val onStatusBarAppearanceChange: (Boolean) -> Unit = { useDarkIcons ->
+            insetsController.isAppearanceLightStatusBars = useDarkIcons
+        }
+
         setContent {
             val startupState by viewModel.startupState.collectAsStateWithLifecycle()
             val pendingNotification by viewModel.pendingNotification.collectAsStateWithLifecycle()
@@ -111,7 +119,15 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     label = "app_startup_screen",
                 ) { currentInitialNavKey ->
+                    val isActive = currentInitialNavKey == initialNavKey
+
                     if (currentInitialNavKey == null) {
+                        SideEffect {
+                            if (isActive) {
+                                onStatusBarAppearanceChange(true)
+                            }
+                        }
+
                         AppStartupScreen(
                             state = startupState,
                             onRetry = viewModel::restoreSession,
@@ -120,7 +136,9 @@ class MainActivity : ComponentActivity() {
                         key(currentInitialNavKey) {
                             YadanbeopseokApp(
                                 initialNavKey = currentInitialNavKey,
+                                isActive = isActive,
                                 pendingNotification = pendingNotification,
+                                onStatusBarAppearanceChange = onStatusBarAppearanceChange,
                                 onNotificationConsumed = viewModel::consumePendingNotification,
                                 onExit = ::finish,
                             )
@@ -147,11 +165,14 @@ class MainActivity : ComponentActivity() {
 /**
  * 결정된 초기 화면을 기준으로 Nav3 백스택과
  * 최상위 화면의 하단 내비게이션을 구성합니다.
+ * 활성 루트에서는 현재 화면에 맞춰 상태바 아이콘 밝기도 적용합니다.
  */
 @Composable
 private fun YadanbeopseokApp(
     initialNavKey: NavKey,
+    isActive: Boolean,
     pendingNotification: NotificationPayload?,
+    onStatusBarAppearanceChange: (Boolean) -> Unit,
     onNotificationConsumed: () -> Unit,
     onExit: () -> Unit,
 ) {
@@ -161,6 +182,13 @@ private fun YadanbeopseokApp(
     val currentKey = navigationState.currentKey
     val isTopLevelDestination = currentKey is TopLevelNavKey
     var lastBackPressedAt by remember(currentKey) { mutableLongStateOf(0L) }
+
+    // 전환 중 남아 있는 이전 앱 루트는 상태바 설정을 변경하지 않습니다.
+    SideEffect {
+        if (isActive) {
+            onStatusBarAppearanceChange(currentKey !is TravelStickerPhotoNavKey)
+        }
+    }
 
     LaunchedEffect(pendingNotification, initialNavKey) {
         val payload = pendingNotification ?: return@LaunchedEffect

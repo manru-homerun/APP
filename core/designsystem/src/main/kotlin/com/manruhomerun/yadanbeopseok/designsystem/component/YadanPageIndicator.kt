@@ -20,6 +20,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOutline
@@ -35,6 +36,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
  *
  * 페이지가 한 개 이하라면 HTML의 `solo` 상태와 동일하게
  * 아무것도 표시하지 않습니다.
+ * 최대 9개 점을 표시하며 숨겨진 페이지가 있는 방향의 양끝 점을 축소합니다.
  *
  * @param pageCount 전체 페이지 개수입니다.
  * @param currentPage 현재 선택된 페이지의 인덱스입니다.
@@ -46,28 +48,22 @@ fun YadanPageIndicator(
     currentPage: Int,
     modifier: Modifier = Modifier,
 ) {
-    /*
-     * 카드가 하나뿐이거나 없는 경우에는 페이지 이동이 없으므로
-     * 표시기를 구성하지 않습니다.
-     */
     if (pageCount <= 1) {
         return
     }
 
-    /*
-     * Pager 상태가 갱신되는 순간 잘못된 인덱스가 전달되더라도
-     * 유효한 범위 안에서 선택 상태를 표시합니다.
-     */
-    val selectedPage =
-        currentPage.coerceIn(
-            minimumValue = 0,
-            maximumValue = pageCount - 1,
-        )
+    val selectedPage = currentPage.coerceIn(0, pageCount - 1)
+    val visibleCount = minOf(pageCount, MAX_VISIBLE_INDICATORS)
+    val startPage = (selectedPage - MAX_VISIBLE_INDICATORS / 2).coerceIn(0, pageCount - visibleCount)
+    val endPageExclusive = startPage + visibleCount
+    val hasPreviousPages = startPage > 0
+    val hasNextPages = endPageExclusive < pageCount
 
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
+                .height(INDICATOR_SIZE)
                 /*
                  * 페이지 점은 시각적 표시만 담당하므로
                  * 전체 표시기를 하나의 접근성 요소로 제공합니다.
@@ -85,9 +81,18 @@ fun YadanPageIndicator(
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        repeat(pageCount) { pageIndex ->
+        // 전역 페이지가 아닌 표시 슬롯을 유지해 구간이 바뀌어도 크기 애니메이션을 이어갑니다.
+        repeat(visibleCount) { slot ->
+            val pageIndex = startPage + slot
+            val size = when {
+                (hasPreviousPages && slot == 0) || (hasNextPages && slot == visibleCount - 1) -> OUTER_INDICATOR_SIZE
+                (hasPreviousPages && slot == 1) || (hasNextPages && slot == visibleCount - 2) -> INNER_INDICATOR_SIZE
+                else -> INDICATOR_SIZE
+            }
+
             YadanPageIndicatorItem(
                 selected = pageIndex == selectedPage,
+                size = size,
             )
         }
     }
@@ -96,30 +101,21 @@ fun YadanPageIndicator(
 /**
  * 페이지 표시기를 구성하는 개별 점입니다.
  *
- * 선택되면 너비가 늘어나고 대표 색상으로 변경됩니다.
+ * 선택되면 축소 크기보다 선택 크기를 우선하고 대표 색상으로 변경됩니다.
  */
 @Composable
 private fun YadanPageIndicatorItem(
     selected: Boolean,
+    size: Dp,
     modifier: Modifier = Modifier,
 ) {
-    val targetWidth =
-        if (selected) {
-            SELECTED_INDICATOR_WIDTH
-        } else {
-            INDICATOR_SIZE
-        }
-
-    val targetColor =
-        if (selected) {
-            YadanPrimary
-        } else {
-            YadanOutline
-        }
+    val targetWidth = if (selected) SELECTED_INDICATOR_WIDTH else size
+    val targetHeight = if (selected) INDICATOR_SIZE else size
+    val targetColor = if (selected) YadanPrimary else YadanOutline
 
     /*
      * HTML의 transition: .2s에 대응합니다.
-     * 선택 위치가 변경될 때 너비와 색상을 함께 전환합니다.
+     * 선택 위치와 표시 구간이 변경될 때 크기와 색상을 함께 전환합니다.
      */
     val animatedWidth by
     animateDpAsState(
@@ -129,6 +125,12 @@ private fun YadanPageIndicatorItem(
                 durationMillis = INDICATOR_ANIMATION_DURATION_MILLIS,
             ),
         label = "YadanPageIndicatorWidth",
+    )
+
+    val animatedHeight by animateDpAsState(
+        targetValue = targetHeight,
+        animationSpec = tween(durationMillis = INDICATOR_ANIMATION_DURATION_MILLIS),
+        label = "YadanPageIndicatorHeight",
     )
 
     val animatedColor by
@@ -145,7 +147,7 @@ private fun YadanPageIndicatorItem(
         modifier =
             modifier
                 .width(animatedWidth)
-                .height(INDICATOR_SIZE)
+                .height(animatedHeight)
                 .background(
                     color = animatedColor,
                     shape = YadanPillShape,
@@ -160,10 +162,13 @@ private fun YadanPageIndicatorItem(
  * 공통 크기 토큰으로 분리하지 않고 이 파일 안에서 관리합니다.
  */
 private val INDICATOR_SIZE = 6.dp
+private val OUTER_INDICATOR_SIZE = 2.dp
+private val INNER_INDICATOR_SIZE = 4.dp
 private val SELECTED_INDICATOR_WIDTH = 17.dp
 private val INDICATOR_SPACING = 5.dp
 
 private const val INDICATOR_ANIMATION_DURATION_MILLIS = 200
+private const val MAX_VISIBLE_INDICATORS = 9
 
 @Preview(
     name = "Yadan page indicators",
@@ -213,6 +218,33 @@ private fun YadanPageIndicatorPreview() {
                 pageCount = 2,
                 currentPage = 1,
             )
+        }
+    }
+}
+
+@Preview(name = "페이지 점 - 개수와 구간 경계", showBackground = true, widthDp = 320)
+@Composable
+private fun YadanPageIndicatorBoundaryPreview() {
+    YadanbeopseokTheme {
+        Column(
+            modifier = Modifier.fillMaxWidth().background(YadanBackground).padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            YadanPageIndicator(pageCount = 0, currentPage = 0)
+            YadanPageIndicator(pageCount = 1, currentPage = 0)
+            YadanPageIndicator(pageCount = 2, currentPage = 0)
+            YadanPageIndicator(pageCount = 9, currentPage = 4)
+            YadanPageIndicator(pageCount = 10, currentPage = 0)
+            YadanPageIndicator(pageCount = 10, currentPage = 4)
+            YadanPageIndicator(pageCount = 10, currentPage = 5)
+            YadanPageIndicator(pageCount = 10, currentPage = 9)
+            YadanPageIndicator(pageCount = 30, currentPage = 0)
+            YadanPageIndicator(pageCount = 30, currentPage = 4)
+            YadanPageIndicator(pageCount = 30, currentPage = 5)
+            YadanPageIndicator(pageCount = 30, currentPage = 14)
+            YadanPageIndicator(pageCount = 30, currentPage = 24)
+            YadanPageIndicator(pageCount = 30, currentPage = 25)
+            YadanPageIndicator(pageCount = 30, currentPage = 29)
         }
     }
 }

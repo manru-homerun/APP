@@ -36,11 +36,14 @@ interface TravelSpotRepository {
     ): TravelSpotListPage
 
     /**
-     * 관광지의 상세 정보와 갤러리 이미지 목록을 조회합니다.
+     * 이미지 목록 조회를 기다리지 않고 관광지의 상세 정보를 조회합니다.
      *
      * @param spotId 조회할 관광지의 고유 식별자
      */
     suspend fun getTravelSpotDetail(spotId: String): TravelSpotDetail
+
+    /** 관광지 갤러리의 이미지 URL을 조회하고 빈 주소와 중복을 제거합니다. */
+    suspend fun getTravelSpotImages(spotId: String): List<String>
 
     /**
      * 현재 사용자가 찜한 관광지 목록을 조회합니다.

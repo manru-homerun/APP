@@ -94,6 +94,7 @@ internal class TravelSpotQueryStateHolder(
                 searchResults = emptyList(),
                 searchPageNumber = 0,
                 searchTotalPages = 0,
+                hasSearchCompleted = false,
                 selectedCategory = if (query.isBlank()) null else it.selectedCategory,
                 errorMessage = null,
                 searchLoadMoreErrorMessage = null,
@@ -126,6 +127,7 @@ internal class TravelSpotQueryStateHolder(
                 searchResults = emptyList(),
                 searchPageNumber = 0,
                 searchTotalPages = 0,
+                hasSearchCompleted = false,
                 isSearchLoading = true,
                 errorMessage = null,
                 searchLoadMoreErrorMessage = null,
@@ -149,6 +151,7 @@ internal class TravelSpotQueryStateHolder(
                             searchResults = page.travelSpots,
                             searchPageNumber = page.pageNumber,
                             searchTotalPages = page.totalPages,
+                            hasSearchCompleted = true,
                             searchLoadMoreErrorMessage = null,
                         )
                     }
@@ -194,6 +197,7 @@ internal class TravelSpotQueryStateHolder(
                 dibsSpots = emptyList(),
                 dibsPageNumber = 0,
                 dibsTotalPages = 0,
+                dibsTotalElements = 0L,
                 errorMessage = null,
                 dibsLoadMoreErrorMessage = null,
                 dibsRefreshErrorMessage = null,
@@ -347,6 +351,7 @@ internal class TravelSpotQueryStateHolder(
                                 .distinctBy { travelSpot -> travelSpot.id },
                             dibsPageNumber = page.pageNumber,
                             dibsTotalPages = page.totalPages,
+                            dibsTotalElements = page.totalElements,
                             dibsLoadMoreErrorMessage = null,
                         )
                     }
@@ -438,6 +443,7 @@ internal class TravelSpotQueryStateHolder(
                                     dibsSpots = page.travelSpots,
                                     dibsPageNumber = page.pageNumber,
                                     dibsTotalPages = page.totalPages,
+                                    dibsTotalElements = page.totalElements,
                                     dibsLoadMoreErrorMessage = null,
                                 )
                             }
@@ -492,6 +498,7 @@ internal class TravelSpotQueryStateHolder(
                         dibsSpots = page.travelSpots,
                         dibsPageNumber = page.pageNumber,
                         dibsTotalPages = page.totalPages,
+                        dibsTotalElements = page.totalElements,
                         dibsLoadMoreErrorMessage = null,
                         dibsRefreshErrorMessage = null,
                     )

@@ -23,6 +23,7 @@ import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotSelectionT
 import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotSelectionUiState
 import com.manruhomerun.yadanbeopseok.travel.util.toTravelErrorMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -67,6 +68,9 @@ class TravelCreationViewModel @Inject constructor(
     private val travelSpotRepository: TravelSpotRepository,
     private val friendRepository: FriendRepository,
 ) : ViewModel() {
+    /** 같은 ViewModel에서만 화면 상태를 유지하는 메모리 전용 생성 흐름 식별자입니다. */
+    internal val creationFlowId = UUID.randomUUID().toString()
+
     private val _uiState = MutableStateFlow(TravelCreationUiState())
     val uiState: StateFlow<TravelCreationUiState> = _uiState.asStateFlow()
 
@@ -122,6 +126,8 @@ class TravelCreationViewModel @Inject constructor(
         if (currentState.isScheduleLoading || currentState.isGameDetailLoading) return
         if (currentState.games.none { game -> game.id == gameId }) return
         if (currentState.selectedGameId == gameId) return
+
+        clearErrorMessage()
 
         _gameSelectionUiState.update {
             it.copy(
@@ -452,7 +458,7 @@ class TravelCreationViewModel @Inject constructor(
         }
     }
 
-    /** Snackbar에 오류를 표시한 뒤 현재 오류 문구를 제거합니다. */
+    /** 여행 만들기의 공통 오류 안내를 제거합니다. */
     fun clearErrorMessage() {
         _uiState.update {
             it.copy(errorMessage = null)
@@ -478,9 +484,13 @@ class TravelCreationViewModel @Inject constructor(
      *
      * [requireCurrentSelection]이 true이면 B·01에서 현재 선택된 경기와
      * 조회 결과의 경기 ID가 일치할 때만 저장합니다.
+     * 경기 선택 중 실패는 공통 오류 안내로, 경기 일정에서 직접 진입한 실패는
+     * 경기 조회 상태로 전달해 기존 재시도 동작을 유지합니다.
      */
     private fun loadSelectedGame(gameId: String, requireCurrentSelection: Boolean) {
         gameDetailLoadJob?.cancel()
+
+        if (requireCurrentSelection) clearErrorMessage()
 
         _gameSelectionUiState.update {
             it.copy(
@@ -515,13 +525,19 @@ class TravelCreationViewModel @Inject constructor(
             } catch (_: SessionExpiredException) {
                 _gameSelectionUiState.update { it.copy(isGameDetailLoading = false) }
             } catch (exception: Exception) {
+                val errorMessage = exception.toTravelErrorMessage(
+                    fallbackMessage = "경기 정보를 불러오지 못했습니다.",
+                )
+
                 _gameSelectionUiState.update {
                     it.copy(
                         isGameDetailLoading = false,
-                        errorMessage = exception.toTravelErrorMessage(
-                            fallbackMessage = "경기 정보를 불러오지 못했습니다.",
-                        ),
+                        errorMessage = if (requireCurrentSelection) null else errorMessage,
                     )
+                }
+
+                if (requireCurrentSelection) {
+                    _uiState.update { it.copy(errorMessage = errorMessage) }
                 }
             }
         }
@@ -531,6 +547,7 @@ class TravelCreationViewModel @Inject constructor(
     private fun loadGameSchedule(team: KboTeam) {
         scheduleLoadJob?.cancel()
         gameDetailLoadJob?.cancel()
+        clearErrorMessage()
 
         val confirmedGameId = _uiState.value.selectedGame?.id
 

@@ -5,18 +5,22 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
@@ -60,33 +64,34 @@ fun TravelCourseSavedScreen(
     onHomeClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .background(YadanPrimaryGradient)
             .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .heightIn(min = maxHeight),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Box(
+            // 내용이 화면보다 클 때는 여백만 줄이고 본문과 버튼은 스크롤로 표시합니다.
+            Spacer(modifier = Modifier.weight(1f))
+
+            SavedTravelContent(
+                travelName = travelName,
+                travelSpotCount = travelSpotCount,
+                companionCount = companionCount,
+                dDayText = startDate?.toDdayText(currentDate),
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.Center,
-            ) {
-                SavedTravelContent(
-                    travelName = travelName,
-                    travelSpotCount = travelSpotCount,
-                    companionCount = companionCount,
-                    dDayText = startDate?.toDdayText(currentDate),
-                    modifier = Modifier
-                        .widthIn(max = 420.dp)
-                        .fillMaxWidth()
-                        .padding(horizontal = 28.dp),
-                )
-            }
+                    .widthIn(max = 420.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 28.dp),
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
 
             YadanButton(
                 text = "나의 여행에서 보기",
@@ -277,6 +282,11 @@ private fun LocalDate.toDdayText(currentDate: LocalDate): String? {
     widthDp = 390,
     heightDp = 844,
 )
+@Preview(name = "여행 저장 완료 · 작은 화면", widthDp = 320, heightDp = 480)
+@Preview(name = "여행 저장 완료 · 작은 화면 · 글꼴 1.5", widthDp = 320, heightDp = 480, fontScale = 1.5f)
+@Preview(name = "여행 저장 완료 · 작은 화면 · 글꼴 2", widthDp = 320, heightDp = 480, fontScale = 2f)
+@Preview(name = "여행 저장 완료 · 가로 화면", widthDp = 640, heightDp = 360)
+@Preview(name = "여행 저장 완료 · 가로 화면 · 글꼴 2", widthDp = 640, heightDp = 360, fontScale = 2f)
 @Composable
 private fun TravelCourseSavedScreenPreview() {
     YadanbeopseokTheme {

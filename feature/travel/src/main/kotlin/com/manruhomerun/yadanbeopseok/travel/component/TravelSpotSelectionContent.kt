@@ -54,7 +54,7 @@ import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotCategoryFilter
  * @param disabledSpotIds 표시하되 선택할 수 없는 관광지 ID입니다.
  * @param canAddMoreSpots 선택되지 않은 관광지를 추가할 수 있는지 나타냅니다.
  * @param selectedSpotsContent 검색 중이 아닐 때 검색창과 추천 탭 사이에 표시할 영역입니다.
- * @param searchResultHeader 검색 중 카테고리 필터 아래에 표시할 제목 영역입니다.
+ * @param searchResultHeader 첫 페이지 검색 성공 후 카테고리 필터 아래에 표시할 제목 영역입니다.
  * @param onLoadNextSearchPage 검색 결과의 다음 페이지를 불러오는 콜백입니다.
  */
 internal fun LazyListScope.travelSpotSelectionContent(
@@ -94,7 +94,9 @@ internal fun LazyListScope.travelSpotSelectionContent(
             )
         }
 
-        searchResultHeader()
+        if (uiState.hasSearchCompleted && !uiState.isSearchLoading) {
+            searchResultHeader()
+        }
     } else {
         selectedSpotsContent()
 
@@ -104,7 +106,7 @@ internal fun LazyListScope.travelSpotSelectionContent(
                     YadanTabItem(label = "맞춤 추천"),
                     YadanTabItem(
                         label = "찜",
-                        count = uiState.dibsSpots.size.takeIf { it > 0 },
+                        count = uiState.dibsTotalElements.takeIf { it > 0L }?.coerceAtMost(Int.MAX_VALUE.toLong())?.toInt(),
                     ),
                 ),
                 selectedIndex = uiState.selectedTab.ordinal,
@@ -130,6 +132,7 @@ internal fun LazyListScope.travelSpotSelectionContent(
 
     val spots = uiState.displayedSpots
     val emptyMessage = when {
+        uiState.isSearchMode && !uiState.hasSearchCompleted -> "검색어 입력 중"
         uiState.isSearchMode -> "검색 결과가 없습니다"
         uiState.selectedTab == TravelSpotSelectionTab.SUGGESTED -> "추천 관광지가 없습니다"
         else -> "찜한 관광지가 없습니다"

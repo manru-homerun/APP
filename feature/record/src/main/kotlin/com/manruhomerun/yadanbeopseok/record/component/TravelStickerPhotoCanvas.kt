@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.outlined.Delete
@@ -33,13 +35,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -53,6 +59,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOnPrimary
@@ -66,16 +73,27 @@ import com.manruhomerun.yadanbeopseok.ui.component.YadanAsyncImage
 import com.manruhomerun.yadanbeopseok.ui.component.YadanImageLoadState
 import kotlin.math.roundToInt
 
-/** 현재 사진 요청과 배치된 스티커에 대응하는 캔버스 이미지 준비 상태입니다. */
+/** 현재 이미지 요청과 저장에 필요한 캔버스 측정 정보를 함께 전달합니다. */
 data class TravelStickerPhotoImageState(
     val photoRequestId: Long,
     val photoUri: String?,
     val stickerSources: Map<Long, String>,
     val loadState: YadanImageLoadState,
     val hasPhotoError: Boolean = false,
+    val canvasSize: IntSize = IntSize.Zero,
+    val stickerSizePx: Float = 0f,
+    val stickerSizes: Map<Long, IntSize> = emptyMap(),
+    val clipRoundRect: RoundRect? = null,
+    val backgroundColor: Color = PhotoCanvasBackground,
+    val layoutDirection: LayoutDirection = LayoutDirection.Ltr,
 ) {
     val isReady: Boolean
-        get() = loadState == YadanImageLoadState.SUCCESS
+        get() = loadState == YadanImageLoadState.SUCCESS &&
+            canvasSize.width > 0 && canvasSize.height > 0 &&
+            stickerSizePx.isFinite() && stickerSizePx > 0f && clipRoundRect != null &&
+            stickerSources.keys.all { id ->
+                stickerSizes[id]?.let { it.width > 0 && it.height > 0 } == true
+            }
 
     /** 이전 사진이나 변경 전 배치 목록의 완료 상태를 사용하지 않도록 검사합니다. */
     fun matchesContent(requestId: Long, uri: String?, stickers: List<PlacedSticker>): Boolean =
@@ -91,7 +109,7 @@ data class TravelStickerPhotoImageState(
  * 저장하거나 공유할 때 [isEditingEnabled]를 false로 전달하면
  * 선택 테두리와 삭제 버튼이 이미지에 포함되지 않습니다.
  * 이때 스티커의 크기, 위치, 회전과 겹치는 순서는 유지합니다.
- * [onImageStateChange]는 사진과 배치된 스티커만 검사한 결과를 전달합니다.
+ * [onImageStateChange]는 이미지 준비 상태와 실제 측정 크기, 클립 정보를 전달합니다.
  */
 @Composable
 fun TravelStickerPhotoCanvas(
@@ -128,12 +146,26 @@ fun TravelStickerPhotoCanvas(
     }
 
     val stickerSources = placedStickers.associate { it.id to it.sticker.imageUrl }
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
+    val stickerSizePx = with(density) { PlacedStickerSize.toPx() }
+    val clipRoundRect = if (canvasSize.width > 0 && canvasSize.height > 0) {
+        val outline = YadanShapes.large.createOutline(
+            size = Size(canvasSize.width.toFloat(), canvasSize.height.toFloat()),
+            layoutDirection = layoutDirection,
+            density = density,
+        )
+        (outline as? Outline.Rounded)?.roundRect
+    } else {
+        null
+    }
     var photoLoadState by remember(photoRequestId, photoUri) {
         mutableStateOf(if (hasPhoto) YadanImageLoadState.LOADING else YadanImageLoadState.FALLBACK)
     }
     val stickerLoadStates = remember(photoRequestId, photoUri) {
         mutableStateMapOf<Pair<Long, String>, YadanImageLoadState>()
     }
+    val stickerSizes = remember(photoRequestId, photoUri) { mutableStateMapOf<Long, IntSize>() }
     val currentPhotoRequestId by rememberUpdatedState(photoRequestId)
     val currentPhotoUri by rememberUpdatedState(photoUri)
     val currentStickerSources by rememberUpdatedState(stickerSources)
@@ -141,6 +173,7 @@ fun TravelStickerPhotoCanvas(
 
     LaunchedEffect(photoRequestId, photoUri, stickerSources) {
         stickerLoadStates.keys.removeAll { (id, url) -> stickerSources[id] != url }
+        stickerSizes.keys.removeAll { it !in stickerSources }
     }
 
     val hasPhotoError = hasPhoto &&
@@ -164,6 +197,11 @@ fun TravelStickerPhotoCanvas(
         stickerSources = stickerSources,
         loadState = loadState,
         hasPhotoError = hasPhotoError,
+        canvasSize = canvasSize,
+        stickerSizePx = stickerSizePx,
+        stickerSizes = stickerSources.keys.associateWith { stickerSizes[it] ?: IntSize.Zero },
+        clipRoundRect = clipRoundRect,
+        layoutDirection = layoutDirection,
     )
 
     LaunchedEffect(imageState) {
@@ -220,6 +258,7 @@ fun TravelStickerPhotoCanvas(
                             placedSticker = placedSticker,
                             stickerNumber = index + 1,
                             canvasSize = canvasSize,
+                            stickerSizePx = stickerSizePx,
                             isSelected = selectedStickerId == placedSticker.id,
                             isEditingEnabled = isEditingEnabled,
                             onSelect = {
@@ -248,6 +287,13 @@ fun TravelStickerPhotoCanvas(
                                     stickerLoadStates[placedSticker.id to imageUrl] = state
                                 }
                             },
+                            onSizeChange = { size ->
+                                if (currentPhotoRequestId == photoRequestId && currentPhotoUri == photoUri &&
+                                    placedSticker.id in currentStickerSources
+                                ) {
+                                    stickerSizes[placedSticker.id] = size
+                                }
+                            },
                         )
                     }
                 }
@@ -273,11 +319,13 @@ private fun PhotoPlaceholder(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.clickable(
-            enabled = enabled,
-            role = Role.Button,
-            onClick = onClick,
-        ),
+        modifier = modifier
+            .verticalScroll(rememberScrollState())
+            .clickable(
+                enabled = enabled,
+                role = Role.Button,
+                onClick = onClick,
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -304,6 +352,7 @@ private fun PlacedStickerItem(
     placedSticker: PlacedSticker,
     stickerNumber: Int,
     canvasSize: IntSize,
+    stickerSizePx: Float,
     isSelected: Boolean,
     isEditingEnabled: Boolean,
     onSelect: () -> Unit,
@@ -315,6 +364,7 @@ private fun PlacedStickerItem(
         rotationChange: Float,
     ) -> Unit,
     onImageLoadStateChange: (YadanImageLoadState) -> Unit,
+    onSizeChange: (IntSize) -> Unit,
 ) {
     val canInteract = isEditingEnabled && canvasSize.width > 0 && canvasSize.height > 0
     val currentCanInteract by rememberUpdatedState(canInteract)
@@ -382,10 +432,6 @@ private fun PlacedStickerItem(
         "크기 ${(placedSticker.scale * 100).roundToInt()}%, " +
         "회전 ${placedSticker.rotationDegrees.roundToInt()}도"
 
-    val stickerSizePx = with(LocalDensity.current) {
-        PlacedStickerSize.toPx()
-    }
-
     val interactionModifier =
         if (canInteract) {
             Modifier
@@ -424,6 +470,7 @@ private fun PlacedStickerItem(
                 )
             }
             .size(PlacedStickerSize)
+            .onSizeChanged(onSizeChange)
             .graphicsLayer {
                 scaleX = placedSticker.scale
                 scaleY = placedSticker.scale

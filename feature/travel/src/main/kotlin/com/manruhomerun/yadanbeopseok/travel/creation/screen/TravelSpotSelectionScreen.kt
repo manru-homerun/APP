@@ -91,10 +91,10 @@ fun TravelSpotSelectionScreen(
 
     val selectedCount = selectedTravelSpots.size
     val canAddMoreSpots = selectedCount < MAX_SELECTED_TRAVEL_SPOT_COUNT
-    val screenTitle = if (uiState.isSearchMode) {
-        "‘${uiState.searchQuery}’ 검색 결과"
-    } else {
-        "가고 싶은 곳이 있나요?"
+    val screenTitle = when {
+        !uiState.isSearchMode -> "가고 싶은 곳이 있나요?"
+        uiState.hasSearchCompleted && !uiState.isSearchLoading -> "‘${uiState.searchQuery}’ 검색 결과"
+        else -> "관광지 검색"
     }
 
     val screenDescription = if (uiState.isSearchMode) {
@@ -329,8 +329,44 @@ private fun TravelSpotSelectionSelectedPreview() {
         uiState = TravelSpotSelectionUiState(
             suggestedSpots = previewSuggestedSpots,
             dibsSpots = listOf(previewSuggestedSpots.last()),
+            dibsTotalElements = 1L,
         ),
         selectedTravelSpots = previewSelectedSpots,
+    )
+}
+
+@Preview(name = "B06b 검색어 입력 중", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelSpotSelectionSearchAwaitingPreview() {
+    TravelSpotSelectionPreview(uiState = TravelSpotSelectionUiState(searchQuery = "감천"))
+}
+
+@Preview(name = "B06b 검색 첫 페이지 조회 중", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelSpotSelectionSearchLoadingPreview() {
+    TravelSpotSelectionPreview(uiState = TravelSpotSelectionUiState(searchQuery = "감천", isSearchLoading = true))
+}
+
+@Preview(name = "B06b 검색 첫 페이지 조회 실패", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelSpotSelectionSearchErrorPreview() {
+    TravelSpotSelectionPreview(
+        uiState = TravelSpotSelectionUiState(
+            searchQuery = "감천",
+            errorMessage = "관광지를 검색하지 못했습니다.",
+        ),
+    )
+}
+
+@Preview(name = "B06b 검색 성공 후 결과 없음", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelSpotSelectionSearchEmptyPreview() {
+    TravelSpotSelectionPreview(
+        uiState = TravelSpotSelectionUiState(
+            searchQuery = "검색어",
+            searchPageNumber = 1,
+            hasSearchCompleted = true,
+        ),
     )
 }
 
@@ -346,6 +382,9 @@ private fun TravelSpotSelectionSearchPreview() {
         uiState = TravelSpotSelectionUiState(
             searchQuery = "감천",
             searchResults = previewSearchSpots,
+            searchPageNumber = 1,
+            searchTotalPages = 1,
+            hasSearchCompleted = true,
         ),
         selectedTravelSpots = listOf(previewSearchSpots.first()),
     )
@@ -365,6 +404,7 @@ private fun TravelSpotSelectionSearchLoadingMorePreview() {
             searchResults = previewSearchSpots,
             searchPageNumber = 1,
             searchTotalPages = 3,
+            hasSearchCompleted = true,
             isSearchLoadingMore = true,
         ),
     )
@@ -384,6 +424,7 @@ private fun TravelSpotSelectionSearchLoadMoreErrorPreview() {
             searchResults = previewSearchSpots,
             searchPageNumber = 1,
             searchTotalPages = 3,
+            hasSearchCompleted = true,
             searchLoadMoreErrorMessage = "다음 검색 결과를 불러오지 못했습니다.",
         ),
     )
@@ -448,11 +489,32 @@ private fun TravelSpotSelectionPreview(
     }
 }
 
+@Preview(name = "관광지 선택 - 찜 전체 23개 중 첫 10개", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelSpotSelectionDibsTotalCountPreview() {
+    TravelSpotSelectionPreview(
+        uiState = TravelSpotSelectionUiState(
+            selectedTab = TravelSpotSelectionTab.DIBS,
+            dibsSpots = List(10) { index ->
+                previewSuggestedSpots[index % previewSuggestedSpots.size].copy(id = "preview-dibs-$index", dibs = true)
+            },
+            dibsPageNumber = 1,
+            dibsTotalPages = 3,
+            dibsTotalElements = 23L,
+        ),
+    )
+}
+
 @Preview(name = "B06 찜 목록 갱신", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun TravelSpotSelectionDibsRefreshingPreview() {
     TravelSpotSelectionPreview(
-        TravelSpotSelectionUiState(selectedTab = TravelSpotSelectionTab.DIBS, dibsSpots = previewSuggestedSpots, isDibsRefreshing = true),
+        TravelSpotSelectionUiState(
+            selectedTab = TravelSpotSelectionTab.DIBS,
+            dibsSpots = previewSuggestedSpots,
+            dibsTotalElements = 23L,
+            isDibsRefreshing = true,
+        ),
         selectedTravelSpots = previewSelectedSpots,
     )
 }
@@ -466,6 +528,7 @@ private fun TravelSpotSelectionDibsRefreshErrorPreview() {
             dibsSpots = previewSuggestedSpots,
             dibsPageNumber = 2,
             dibsTotalPages = 3,
+            dibsTotalElements = 23L,
             dibsRefreshErrorMessage = "찜 목록을 갱신하지 못했습니다. 다시 시도해주세요.",
         ),
     )
@@ -480,6 +543,7 @@ private fun TravelSpotSelectionDibsLoadMoreErrorPreview() {
             dibsSpots = previewSuggestedSpots,
             dibsPageNumber = 1,
             dibsTotalPages = 3,
+            dibsTotalElements = 23L,
             dibsLoadMoreErrorMessage = "다음 찜 목록을 불러오지 못했습니다.",
         ),
     )

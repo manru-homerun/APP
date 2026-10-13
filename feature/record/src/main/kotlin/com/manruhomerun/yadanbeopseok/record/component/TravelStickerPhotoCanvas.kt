@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -71,7 +72,9 @@ import com.manruhomerun.yadanbeopseok.model.Sticker
 import com.manruhomerun.yadanbeopseok.record.viewmodel.PlacedSticker
 import com.manruhomerun.yadanbeopseok.ui.component.YadanAsyncImage
 import com.manruhomerun.yadanbeopseok.ui.component.YadanImageLoadState
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 /** 현재 이미지 요청과 저장에 필요한 캔버스 측정 정보를 함께 전달합니다. */
 data class TravelStickerPhotoImageState(
@@ -258,6 +261,7 @@ fun TravelStickerPhotoCanvas(
                             placedSticker = placedSticker,
                             stickerNumber = index + 1,
                             canvasSize = canvasSize,
+                            layoutDirection = layoutDirection,
                             stickerSizePx = stickerSizePx,
                             isSelected = selectedStickerId == placedSticker.id,
                             isEditingEnabled = isEditingEnabled,
@@ -352,6 +356,7 @@ private fun PlacedStickerItem(
     placedSticker: PlacedSticker,
     stickerNumber: Int,
     canvasSize: IntSize,
+    layoutDirection: LayoutDirection,
     stickerSizePx: Float,
     isSelected: Boolean,
     isEditingEnabled: Boolean,
@@ -368,6 +373,8 @@ private fun PlacedStickerItem(
 ) {
     val canInteract = isEditingEnabled && canvasSize.width > 0 && canvasSize.height > 0
     val currentCanInteract by rememberUpdatedState(canInteract)
+    val currentPlacedSticker by rememberUpdatedState(placedSticker)
+    val currentLayoutDirection by rememberUpdatedState(layoutDirection)
     val currentSelected by rememberUpdatedState(isSelected)
     val currentOnSelect by rememberUpdatedState(onSelect)
     val currentOnClearSelection by rememberUpdatedState(onClearSelection)
@@ -437,13 +444,23 @@ private fun PlacedStickerItem(
             Modifier
                 .pointerInput(placedSticker.id, canvasSize) {
                     detectTransformGestures { _, pan, zoom, rotation ->
+                        if (!currentCanInteract) return@detectTransformGestures
+
+                        val sticker = currentPlacedSticker
+                        val canvasPan = pan.toCanvasPan(sticker.scale, sticker.rotationDegrees)
+                        val horizontalPan = if (currentLayoutDirection == LayoutDirection.Ltr) {
+                            canvasPan.x
+                        } else {
+                            -canvasPan.x
+                        }
+
                         if (!currentSelected) {
                             currentOnSelect()
                         }
 
                         currentOnTransform(
-                            pan.x / canvasSize.width.toFloat(),
-                            pan.y / canvasSize.height.toFloat(),
+                            horizontalPan / canvasSize.width.toFloat(),
+                            canvasPan.y / canvasSize.height.toFloat(),
                             zoom,
                             rotation,
                         )
@@ -510,6 +527,18 @@ private fun PlacedStickerItem(
             )
         }
     }
+}
+
+/** 로컬 터치 이동량에 현재 확대율과 회전각을 적용해 캔버스 픽셀 이동량으로 변환합니다. */
+private fun Offset.toCanvasPan(scale: Float, rotationDegrees: Float): Offset {
+    val radians = Math.toRadians(rotationDegrees.toDouble())
+    val cosine = cos(radians).toFloat()
+    val sine = sin(radians).toFloat()
+
+    return Offset(
+        x = scale * (x * cosine - y * sine),
+        y = scale * (x * sine + y * cosine),
+    )
 }
 
 @Composable

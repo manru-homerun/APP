@@ -1,7 +1,6 @@
  package com.manruhomerun.yadanbeopseok.mypage.screen
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -37,6 +36,7 @@ import com.manruhomerun.yadanbeopseok.model.ProfileRegion
 import com.manruhomerun.yadanbeopseok.model.TravelPreference
 import com.manruhomerun.yadanbeopseok.model.TravelStyleScore
 import com.manruhomerun.yadanbeopseok.mypage.viewmodel.TravelPreferenceEditUiState
+import com.manruhomerun.yadanbeopseok.ui.component.YadanScrollableStateContent
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelPreferenceForm
 
 /** H·03 여행 취향 수정 화면입니다. */
@@ -110,12 +110,8 @@ private fun TravelPreferenceEditErrorContent(
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    YadanScrollableStateContent(
+        modifier = modifier.navigationBarsPadding().padding(horizontal = 24.dp),
     ) {
         Text(
             text = "여행 취향을 확인할 수 없습니다",
@@ -261,13 +257,16 @@ private fun TravelPreferenceEditLoadingPreview() {
 }
 
 @Preview(name = "H03 취향 조회 오류", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "여행 취향 조회 실패 - 작은 화면", showBackground = true, widthDp = 320, heightDp = 480)
+@Preview(name = "여행 취향 조회 실패 - 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Preview(name = "여행 취향 조회 실패 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
 @Composable
 private fun TravelPreferenceEditErrorPreview() {
     YadanbeopseokTheme {
         TravelPreferenceEditScreen(
             uiState = TravelPreferenceEditUiState(
                 isLoading = false,
-                errorMessage = "인터넷 연결을 확인한 후 다시 시도해주세요.",
+                errorMessage = "여행 취향을 불러오지 못했습니다. 인터넷 연결을 확인한 후 다시 시도해주세요. ".repeat(5),
             ),
             onBackClick = {},
             onRetryClick = {},

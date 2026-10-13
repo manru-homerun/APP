@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -93,6 +94,27 @@ fun NotificationSettingScreen(
                     onTravelNotificationChange = onTravelNotificationChange,
                     modifier = Modifier.weight(1f),
                 )
+
+                if (uiState.isUpdating) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            text = "알림 설정을 저장하고 있어요",
+                            modifier = Modifier.fillMaxWidth(),
+                            style = YadanTypography.bodySmall,
+                            color = YadanTextSecondary,
+                            textAlign = TextAlign.Center,
+                        )
+
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = YadanPrimary,
+                            trackColor = YadanDivider,
+                        )
+                    }
+                }
             }
         }
     }
@@ -225,7 +247,11 @@ private class NotificationSettingPreviewProvider : PreviewParameterProvider<Noti
     )
     override val values = sequenceOf(
         NotificationSettingUiState(setting = setting, isLoading = false),
-        NotificationSettingUiState(setting = setting, isLoading = false, isUpdating = true),
+        NotificationSettingUiState(
+            setting = setting.copy(friendNotificationEnabled = false),
+            isLoading = false,
+            isUpdating = true,
+        ),
         NotificationSettingUiState(isLoading = true),
         NotificationSettingUiState(
             isLoading = false,

@@ -16,20 +16,25 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanButton
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanTopAppBar
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextSecondary
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
 import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
 import com.manruhomerun.yadanbeopseok.travel.component.PreserveTravelSpotScrollPosition
 import com.manruhomerun.yadanbeopseok.travel.component.travelSpotSelectionContent
+import com.manruhomerun.yadanbeopseok.travel.course.viewmodel.MAX_TRAVEL_PLACE_COUNT_PER_DAY
 import com.manruhomerun.yadanbeopseok.travel.course.viewmodel.TravelCourseSpotSelectionUiState
 import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotSelectionTab
 import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotSelectionUiState
@@ -73,11 +78,7 @@ fun TravelCourseSpotSelectionScreen(
     val selectedSpotIds = remember(uiState.selectedTravelSpots) {
         uiState.selectedTravelSpots.mapTo(mutableSetOf()) { it.id }
     }
-    val buttonText = when {
-        selectionState.isSearchMode -> "완료"
-        uiState.selectedCount > 0 -> "${uiState.selectedCount}곳 추가 · 완료"
-        else -> "완료"
-    }
+    val buttonText = if (uiState.selectedCount > 0) "${uiState.selectedCount}곳 추가 · 완료" else "완료"
 
     Column(
         modifier = modifier
@@ -123,10 +124,7 @@ fun TravelCourseSpotSelectionScreen(
             )
         }
 
-        YadanButton(
-            text = buttonText,
-            onClick = onDoneClick,
-            enabled = !selectionState.isLoading,
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
@@ -135,13 +133,29 @@ fun TravelCourseSpotSelectionScreen(
                     end = 24.dp,
                     bottom = 20.dp,
                 ),
-            trailingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null,
-                )
-            },
-        )
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "DAY ${targetDay}에 최대 ${uiState.maxSelectableCount}곳 추가할 수 있어요",
+                modifier = Modifier.fillMaxWidth(),
+                style = YadanTypography.bodySmall,
+                color = YadanTextSecondary,
+                textAlign = TextAlign.Center,
+            )
+
+            YadanButton(
+                text = buttonText,
+                onClick = onDoneClick,
+                enabled = !selectionState.isLoading,
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                    )
+                },
+            )
+        }
     }
 }
 
@@ -177,6 +191,19 @@ private fun TravelCourseSpotSelectedPreview() {
     )
 }
 
+@Preview(name = "일정 편집 관광지 추가 - 최대 3곳 선택", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "일정 편집 관광지 추가 - 좁은 화면", showBackground = true, widthDp = 320, heightDp = 640)
+@Preview(name = "일정 편집 관광지 추가 - 큰 글씨", showBackground = true, widthDp = 320, heightDp = 640, fontScale = 2f)
+@Composable
+private fun TravelCourseSpotSelectionLimitPreview() {
+    TravelCourseSpotSelectionPreview(
+        selectionState = TravelSpotSelectionUiState(suggestedSpots = previewCourseSpots),
+        selectedTravelSpots = previewCourseSpots,
+        targetDay = 3,
+        maxSelectableCount = previewCourseSpots.size,
+    )
+}
+
 @Preview(
     name = "C01b 찜 목록",
     showBackground = true,
@@ -192,6 +219,21 @@ private fun TravelCourseSpotDibsPreview() {
             dibsSpots = previewCourseSpots.filter { it.dibs },
             dibsTotalElements = previewCourseSpots.count { it.dibs }.toLong(),
         ),
+    )
+}
+
+@Preview(name = "일정 편집 찜 목록 - 관광지 선택", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelCourseSpotDibsSelectedPreview() {
+    val dibsSpots = previewCourseSpots.filter { it.dibs }
+    TravelCourseSpotSelectionPreview(
+        selectionState = TravelSpotSelectionUiState(
+            selectedTab = TravelSpotSelectionTab.DIBS,
+            dibsSpots = dibsSpots,
+            dibsTotalElements = dibsSpots.size.toLong(),
+        ),
+        selectedTravelSpots = dibsSpots,
+        maxSelectableCount = previewCourseSpots.size,
     )
 }
 
@@ -224,6 +266,8 @@ private fun TravelCourseSpotSearchErrorPreview() {
     widthDp = 390,
     heightDp = 844,
 )
+@Preview(name = "일정 편집 검색 - 좁은 화면", showBackground = true, widthDp = 320, heightDp = 640)
+@Preview(name = "일정 편집 검색 - 큰 글씨", showBackground = true, widthDp = 320, heightDp = 640, fontScale = 2f)
 @Composable
 private fun TravelCourseSpotSearchPreview() {
     TravelCourseSpotSelectionPreview(
@@ -235,6 +279,21 @@ private fun TravelCourseSpotSearchPreview() {
             hasSearchCompleted = true,
         ),
         selectedTravelSpots = listOf(previewCourseSpots.last()),
+    )
+}
+
+@Preview(name = "일정 편집 검색 - 선택한 관광지 없음", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelCourseSpotSearchUnselectedPreview() {
+    TravelCourseSpotSelectionPreview(
+        selectionState = TravelSpotSelectionUiState(
+            searchQuery = "전포",
+            searchResults = listOf(previewCourseSpots.last()),
+            searchPageNumber = 1,
+            searchTotalPages = 1,
+            hasSearchCompleted = true,
+        ),
+        maxSelectableCount = previewCourseSpots.size,
     )
 }
 
@@ -256,6 +315,8 @@ private fun TravelCourseSpotSearchNextPagePreview() {
             hasSearchCompleted = true,
             isSearchLoadingMore = true,
         ),
+        selectedTravelSpots = listOf(previewCourseSpots.first(), previewCourseSpots.last()),
+        maxSelectableCount = previewCourseSpots.size,
     )
 }
 
@@ -273,6 +334,20 @@ private fun TravelCourseSpotEmptyPreview() {
             searchPageNumber = 1,
             hasSearchCompleted = true,
         ),
+    )
+}
+
+@Preview(name = "일정 편집 검색 - 결과 없어도 기존 선택 유지", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelCourseSpotEmptyWithSelectionPreview() {
+    TravelCourseSpotSelectionPreview(
+        selectionState = TravelSpotSelectionUiState(
+            searchQuery = "검색어",
+            searchPageNumber = 1,
+            hasSearchCompleted = true,
+        ),
+        selectedTravelSpots = listOf(previewCourseSpots.first()),
+        maxSelectableCount = previewCourseSpots.size,
     )
 }
 
@@ -312,13 +387,16 @@ private fun TravelCourseSpotSelectionPreview(
     selectionState: TravelSpotSelectionUiState,
     selectedTravelSpots: List<TravelSpot> = emptyList(),
     disabledSpotIds: Set<String> = emptySet(),
+    targetDay: Int = 1,
+    maxSelectableCount: Int = MAX_TRAVEL_PLACE_COUNT_PER_DAY,
 ) {
     YadanbeopseokTheme {
         TravelCourseSpotSelectionScreen(
             uiState = TravelCourseSpotSelectionUiState(
-                targetDay = 1,
+                targetDay = targetDay,
                 selectionState = selectionState,
                 selectedTravelSpots = selectedTravelSpots,
+                maxSelectableCount = maxSelectableCount,
             ),
             disabledSpotIds = disabledSpotIds,
             onSearchQueryChange = {},

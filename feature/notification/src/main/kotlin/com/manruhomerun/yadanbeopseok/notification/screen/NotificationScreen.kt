@@ -43,6 +43,7 @@ import com.manruhomerun.yadanbeopseok.model.NotificationType
 import com.manruhomerun.yadanbeopseok.notification.component.YadanNotificationItem
 import com.manruhomerun.yadanbeopseok.notification.viewmodel.NotificationListItem
 import com.manruhomerun.yadanbeopseok.notification.viewmodel.NotificationUiState
+import com.manruhomerun.yadanbeopseok.ui.component.YadanScrollableStateContent
 import kotlinx.datetime.LocalDateTime
 
 /** E·01 알림 센터 화면입니다. */
@@ -138,12 +139,8 @@ fun NotificationScreen(
 
 @Composable
 private fun NotificationEmptyContent(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    YadanScrollableStateContent(
+        modifier = modifier.padding(horizontal = 24.dp),
     ) {
         Icon(
             imageVector = Icons.Default.NotificationsNone,
@@ -172,12 +169,8 @@ private fun NotificationEmptyContent(modifier: Modifier = Modifier) {
 
 @Composable
 private fun NotificationErrorContent(message: String, onRetryClick: () -> Unit, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    YadanScrollableStateContent(
+        modifier = modifier.padding(horizontal = 24.dp),
     ) {
         Text(
             text = "알림을 확인할 수 없습니다",
@@ -285,6 +278,9 @@ private fun NotificationScreenLoadingPreview() {
     widthDp = 390,
     heightDp = 844,
 )
+@Preview(name = "알림 목록 없음 - 작은 화면", showBackground = true, widthDp = 320, heightDp = 480)
+@Preview(name = "알림 목록 없음 - 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Preview(name = "알림 목록 없음 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
 @Composable
 private fun NotificationScreenEmptyPreview() {
     YadanbeopseokTheme {
@@ -306,13 +302,16 @@ private fun NotificationScreenEmptyPreview() {
     widthDp = 390,
     heightDp = 844,
 )
+@Preview(name = "알림 목록 조회 실패 - 작은 화면", showBackground = true, widthDp = 320, heightDp = 480)
+@Preview(name = "알림 목록 조회 실패 - 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Preview(name = "알림 목록 조회 실패 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
 @Composable
 private fun NotificationScreenErrorPreview() {
     YadanbeopseokTheme {
         NotificationScreen(
             uiState = NotificationUiState(
                 isLoading = false,
-                errorMessage = "인터넷 연결을 확인한 후 다시 시도해주세요.",
+                errorMessage = "알림을 불러오지 못했습니다. 인터넷 연결을 확인한 후 다시 시도해주세요. ".repeat(5),
             ),
             onBackClick = {},
             onSettingClick = {},

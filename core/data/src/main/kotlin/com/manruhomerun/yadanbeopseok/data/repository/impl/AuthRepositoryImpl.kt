@@ -13,6 +13,7 @@ import com.manruhomerun.yadanbeopseok.network.auth.api.AuthApi
 import com.manruhomerun.yadanbeopseok.network.auth.dto.LoginRequestDto
 import com.manruhomerun.yadanbeopseok.network.auth.dto.TokenRefreshRequestDto
 import com.manruhomerun.yadanbeopseok.network.common.error.ApiCallExecutor
+import com.manruhomerun.yadanbeopseok.network.di.TokenRefreshNetwork
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -31,6 +32,7 @@ import kotlinx.coroutines.withContext
  */
 internal class AuthRepositoryImpl @Inject constructor(
     private val authApi: AuthApi,
+    @TokenRefreshNetwork private val tokenRefreshApi: AuthApi,
     private val apiCallExecutor: ApiCallExecutor,
     private val authTokenDataSource: AuthTokenDataSource,
     private val notificationRepository: NotificationRepository,
@@ -84,6 +86,7 @@ internal class AuthRepositoryImpl @Inject constructor(
      * DataStore에 저장된 refresh token으로 서비스 토큰을 재발급합니다.
      *
      * 저장된 인증 정보가 없으면 [SessionExpiredException]을 발생시킵니다.
+     * 일반 API와 독립된 실행 대기열을 사용하는 재발급 API를 호출합니다.
      * 재발급에 성공하면 access token만 교체하고 기존 refresh token은 유지합니다.
      */
     override suspend fun refreshAccessToken() {
@@ -91,7 +94,7 @@ internal class AuthRepositoryImpl @Inject constructor(
             ?: throw SessionExpiredException()
 
         val refreshResponse = apiCallExecutor.execute {
-            authApi.refreshToken(
+            tokenRefreshApi.refreshToken(
                 request = TokenRefreshRequestDto(
                     refreshToken = storedTokens.refreshToken,
                 ),

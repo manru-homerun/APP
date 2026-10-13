@@ -76,8 +76,9 @@ import kotlinx.datetime.LocalDateTime
 /**
  * C03 여행 일정 이미지 미리보기와 저장 작업을 표시합니다.
  *
- * [posterModifier]는 다음 단계에서 포스터 전체를 이미지로 캡처할 때 사용합니다.
+ * [posterModifier]는 포스터 전체를 이미지로 캡처할 때 사용합니다.
  * 화면에 보이는 일부가 아니라 스크롤 영역의 전체 포스터에 적용됩니다.
+ * [isPosterReady]가 true인 경우에만 이미지 저장 버튼을 활성화합니다.
  */
 @Composable
 fun TravelShareScreen(
@@ -88,6 +89,7 @@ fun TravelShareScreen(
     modifier: Modifier = Modifier,
     posterModifier: Modifier = Modifier,
     isSaving: Boolean = false,
+    isPosterReady: Boolean = true,
 ) {
     val scrollState = rememberScrollState()
 
@@ -155,6 +157,7 @@ fun TravelShareScreen(
                     end = 20.dp,
                     bottom = 20.dp,
                 ),
+                enabled = isPosterReady,
                 isLoading = isSaving,
                 trailingIcon = {
                     Icon(

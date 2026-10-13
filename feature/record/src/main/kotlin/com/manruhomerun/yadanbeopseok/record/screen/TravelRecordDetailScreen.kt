@@ -69,6 +69,7 @@ import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
 import com.manruhomerun.yadanbeopseok.model.TravelStatus
 import com.manruhomerun.yadanbeopseok.record.viewmodel.TravelRecordDetailUiState
+import com.manruhomerun.yadanbeopseok.ui.component.YadanScrollableStateContent
 import com.manruhomerun.yadanbeopseok.ui.component.YadanStickerSize
 import com.manruhomerun.yadanbeopseok.ui.component.YadanStickerView
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelHeader
@@ -630,12 +631,8 @@ private fun TravelRecordDetailErrorContent(
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    YadanScrollableStateContent(
+        modifier = modifier.padding(horizontal = 24.dp),
     ) {
         Text(
             text = "지난 여행을 확인할 수 없습니다",
@@ -758,13 +755,16 @@ private fun TravelRecordDetailLoadingPreview() {
     widthDp = 390,
     heightDp = 844,
 )
+@Preview(name = "지난 여행 상세 조회 실패 - 작은 화면", showBackground = true, widthDp = 320, heightDp = 480)
+@Preview(name = "지난 여행 상세 조회 실패 - 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Preview(name = "지난 여행 상세 조회 실패 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
 @Composable
 private fun TravelRecordDetailErrorPreview() {
     YadanbeopseokTheme {
         TravelRecordDetailScreen(
             uiState = TravelRecordDetailUiState(
                 isLoading = false,
-                errorMessage = "인터넷 연결을 확인한 후 다시 시도해주세요.",
+                errorMessage = "지난 여행을 불러오지 못했습니다. 인터넷 연결을 확인한 후 다시 시도해주세요. ".repeat(5),
             ),
             onBackClick = {},
             onRetryClick = {},

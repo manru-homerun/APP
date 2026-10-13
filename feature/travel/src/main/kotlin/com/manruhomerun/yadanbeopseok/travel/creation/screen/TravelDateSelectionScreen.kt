@@ -5,12 +5,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -329,7 +333,8 @@ private fun TravelMonthCalendar(
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 calendarCells.chunked(DAYS_PER_WEEK).forEach { week ->
-                    Row(modifier = Modifier.fillMaxWidth()) {
+                    // 큰 글꼴에 필요한 높이를 같은 주의 빈 칸까지 함께 적용합니다.
+                    Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
                         week.forEach { date ->
                             TravelCalendarDay(
                                 date = date,
@@ -354,6 +359,7 @@ private fun TravelMonthCalendar(
     }
 }
 
+/** 날짜 숫자와 경기일 표시가 커져도 같은 주의 셀 높이에 맞춰 표시합니다. */
 @Composable
 private fun TravelCalendarDay(
     date: LocalDate?,
@@ -364,8 +370,10 @@ private fun TravelCalendarDay(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val cellModifier = modifier.fillMaxHeight().heightIn(min = 48.dp)
+
     if (date == null) {
-        Box(modifier = modifier.aspectRatio(1f))
+        Box(modifier = cellModifier)
         return
     }
 
@@ -375,8 +383,7 @@ private fun TravelCalendarDay(
     val isGameDate = date == gameDate
 
     Box(
-        modifier = modifier
-            .aspectRatio(1f)
+        modifier = cellModifier
             .semantics {
                 contentDescription = date.toAccessibleDateText(isGameDate)
                 this.selected = isRangeSelected
@@ -385,12 +392,13 @@ private fun TravelCalendarDay(
                 enabled = enabled,
                 role = Role.Button,
                 onClick = onClick,
-            ),
+            )
+            .padding(vertical = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(
             modifier = Modifier
-                .size(36.dp)
+                .sizeIn(minWidth = 36.dp, minHeight = 36.dp)
                 .background(
                     color = if (isRangeSelected) {
                         YadanPrimary
@@ -404,6 +412,8 @@ private fun TravelCalendarDay(
         ) {
             Text(
                 text = date.day.toString(),
+                maxLines = 1,
+                softWrap = false,
                 style = YadanTypography.labelMedium.copy(
                     fontWeight = FontWeight.Bold,
                 ),
@@ -682,6 +692,37 @@ private fun TravelDateSelectionNarrowPreview() {
         startDate = LocalDate(2026, 5, 22),
         endDate = LocalDate(2026, 5, 23),
         pendingStartDate = LocalDate(2026, 5, 21),
+    )
+}
+
+@Preview(
+    name = "여행 기간 큰 글꼴",
+    showBackground = true,
+    widthDp = 390,
+    heightDp = 844,
+    fontScale = 2.0f,
+)
+@Composable
+private fun TravelDateSelectionLargeFontPreview() {
+    TravelDateSelectionPreview(
+        startDate = LocalDate(2026, 5, 22),
+        endDate = LocalDate(2026, 5, 24),
+    )
+}
+
+@Preview(
+    name = "여행 기간 좁은 화면 큰 글꼴",
+    showBackground = true,
+    widthDp = 320,
+    heightDp = 740,
+    fontScale = 2.0f,
+)
+@Composable
+private fun TravelDateSelectionNarrowLargeFontPreview() {
+    TravelDateSelectionPreview(
+        startDate = LocalDate(2026, 5, 22),
+        endDate = LocalDate(2026, 5, 24),
+        pendingStartDate = LocalDate(2026, 5, 22),
     )
 }
 

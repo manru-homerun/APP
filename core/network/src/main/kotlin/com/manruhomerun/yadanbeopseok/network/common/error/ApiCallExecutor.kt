@@ -5,6 +5,7 @@ import com.manruhomerun.yadanbeopseok.common.InvalidResponseException
 import com.manruhomerun.yadanbeopseok.common.NetworkConnectionException
 import com.manruhomerun.yadanbeopseok.common.NetworkTimeoutException
 import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
+import com.manruhomerun.yadanbeopseok.network.auth.interceptor.TokenRefreshIOException
 import com.manruhomerun.yadanbeopseok.network.auth.token.AuthSessionProvider
 import com.manruhomerun.yadanbeopseok.network.common.dto.ApiErrorResponseDto
 import java.io.IOException
@@ -28,6 +29,7 @@ class ApiCallExecutor @Inject constructor(
      *
      * 로그인 이외의 API에서 최종 401 응답을 받으면
      * 로컬 인증 세션을 삭제하고 세션 만료 예외로 변환합니다.
+     * 일시적인 토큰 재발급 실패는 세션을 유지하고 원본 오류를 전달합니다.
      */
     suspend fun <T> execute(apiCall: suspend () -> T): T {
         return executeInternal(
@@ -52,7 +54,8 @@ class ApiCallExecutor @Inject constructor(
     /**
      * Retrofit API를 호출하고 발생한 예외를 앱 공통 예외로 변환합니다.
      *
-     * 코루틴의 CancellationException은 잡지 않으므로 그대로 전달됩니다.
+     * 재발급 중 발생한 오류는 내부 전달 타입에서 복원합니다.
+     * CancellationException은 직접 발생하거나 내부 전달 타입에 포함되어도 그대로 전달합니다.
      */
     private suspend fun <T> executeInternal(
         expiresSessionOnUnauthorized: Boolean,
@@ -60,6 +63,8 @@ class ApiCallExecutor @Inject constructor(
     ): T {
         return try {
             apiCall()
+        } catch (exception: TokenRefreshIOException) {
+            throw exception.originalException
         } catch (exception: InterruptedIOException) {
             throw NetworkTimeoutException(cause = exception)
         } catch (exception: HttpException) {

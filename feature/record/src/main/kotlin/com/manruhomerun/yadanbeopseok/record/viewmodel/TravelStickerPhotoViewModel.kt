@@ -32,16 +32,20 @@ class TravelStickerPhotoViewModel @Inject constructor(
     private var loadJob: Job? = null
     private var nextPlacedStickerId = 0L
     private var isSessionExpired = false
+    private var savedPhotoUri: String? = null
+    private var savedPhotoAspectRatio: Float? = null
+    private var savedStickersInRenderOrder: List<PlacedSticker> = emptyList()
 
     /** 여행 ID로 획득한 스티커팩을 조회합니다. */
     fun loadStickers(travelId: String) {
-        if (isSessionExpired || loadJob?.isActive == true) return
+        if (isSessionExpired || loadJob?.isActive == true || _uiState.value.isExporting) return
 
         val normalizedTravelId = travelId.trim()
 
         if (normalizedTravelId.isEmpty()) {
             loadJob?.cancel()
             currentTravelId = null
+            resetSavedPhoto()
 
             _uiState.value = TravelStickerPhotoUiState(
                 isLoading = false,
@@ -57,6 +61,7 @@ class TravelStickerPhotoViewModel @Inject constructor(
 
         currentTravelId = normalizedTravelId
         nextPlacedStickerId = 0L
+        resetSavedPhoto()
         _uiState.value = TravelStickerPhotoUiState()
 
         requestStickerPack(normalizedTravelId)
@@ -75,11 +80,12 @@ class TravelStickerPhotoViewModel @Inject constructor(
         val normalizedPhotoUri = photoUri.trim()
         val hasInvalidAspectRatio = !aspectRatio.isFinite() || aspectRatio <= 0f
 
-        if (normalizedPhotoUri.isEmpty() || hasInvalidAspectRatio) return
+        if (normalizedPhotoUri.isEmpty() || hasInvalidAspectRatio || _uiState.value.isExporting) return
 
         nextPlacedStickerId = 0L
+        resetSavedPhoto()
 
-        _uiState.update {
+        updateEditedPhoto {
             it.copy(
                 photoUri = normalizedPhotoUri,
                 photoAspectRatio = aspectRatio,
@@ -92,7 +98,7 @@ class TravelStickerPhotoViewModel @Inject constructor(
     /** 하단 목록에서 선택한 스티커를 사진 중앙에 추가합니다. */
     fun addSticker(sticker: Sticker) {
         val state = _uiState.value
-        if (!state.hasSelectedPhoto) return
+        if (!state.hasSelectedPhoto || state.isExporting) return
 
         val availableSticker = state.availableStickers.firstOrNull {
             it.id == sticker.id
@@ -103,7 +109,7 @@ class TravelStickerPhotoViewModel @Inject constructor(
             sticker = availableSticker,
         )
 
-        _uiState.update {
+        updateEditedPhoto {
             it.copy(
                 placedStickers = it.placedStickers + placedSticker,
                 selectedStickerId = placedSticker.id,
@@ -114,7 +120,7 @@ class TravelStickerPhotoViewModel @Inject constructor(
     /** 사진 위에서 편집할 스티커를 선택하거나 선택을 해제합니다. */
     fun selectSticker(stickerId: Long?) {
         if (stickerId == null) {
-            _uiState.update {
+            updateEditedPhoto {
                 it.copy(selectedStickerId = null)
             }
             return
@@ -126,16 +132,19 @@ class TravelStickerPhotoViewModel @Inject constructor(
 
         if (!hasSticker) return
 
-        _uiState.update {
+        updateEditedPhoto {
             it.copy(selectedStickerId = stickerId)
         }
     }
 
     /** 현재 사진과 사진 위에 배치된 모든 스티커를 초기화합니다. */
     fun clearPhoto() {
-        nextPlacedStickerId = 0L
+        if (_uiState.value.isExporting) return
 
-        _uiState.update {
+        nextPlacedStickerId = 0L
+        resetSavedPhoto()
+
+        updateEditedPhoto {
             it.copy(
                 photoUri = null,
                 photoAspectRatio = null,
@@ -161,13 +170,13 @@ class TravelStickerPhotoViewModel @Inject constructor(
 
         if (hasInvalidValue) return
 
-        _uiState.update { state ->
+        updateEditedPhoto { state ->
             val hasSticker = state.placedStickers.any {
                 it.id == stickerId
             }
 
             if (!hasSticker) {
-                return@update state
+                return@updateEditedPhoto state
             }
 
             val updatedStickers = state.placedStickers.map { placedSticker ->
@@ -205,7 +214,7 @@ class TravelStickerPhotoViewModel @Inject constructor(
     fun deleteSelectedSticker() {
         val selectedStickerId = _uiState.value.selectedStickerId ?: return
 
-        _uiState.update {
+        updateEditedPhoto {
             it.copy(
                 placedStickers = it.placedStickers.filterNot { placedSticker ->
                     placedSticker.id == selectedStickerId
@@ -229,6 +238,22 @@ class TravelStickerPhotoViewModel @Inject constructor(
         }
     }
 
+    /** 갤러리 게시가 성공한 스냅샷만 마지막 저장 내용으로 기록합니다. */
+    fun markPhotoSaved(
+        photoUri: String,
+        aspectRatio: Float,
+        placedStickers: List<PlacedSticker>,
+        selectedStickerId: Long?,
+    ) {
+        val state = _uiState.value
+        if (!state.isExporting || state.photoUri != photoUri || state.photoAspectRatio != aspectRatio) return
+
+        savedPhotoUri = photoUri
+        savedPhotoAspectRatio = aspectRatio
+        savedStickersInRenderOrder = placedStickers.inRenderOrder(selectedStickerId)
+        _uiState.update { it.withUnsavedChanges() }
+    }
+
     /** 사진 저장 또는 공유 작업을 종료합니다. */
     fun finishExport(errorMessage: String? = null) {
         _uiState.update {
@@ -244,6 +269,37 @@ class TravelStickerPhotoViewModel @Inject constructor(
         _uiState.update {
             it.copy(errorMessage = null)
         }
+    }
+
+    /** 저장 중 편집을 막고, 모든 편집 결과에 같은 미저장 판단 기준을 적용합니다. */
+    private fun updateEditedPhoto(transform: (TravelStickerPhotoUiState) -> TravelStickerPhotoUiState) {
+        _uiState.update { state ->
+            if (state.isExporting) state else transform(state).withUnsavedChanges()
+        }
+    }
+
+    private fun TravelStickerPhotoUiState.withUnsavedChanges(): TravelStickerPhotoUiState = copy(
+        hasUnsavedChanges = hasSelectedPhoto && (
+            photoUri != savedPhotoUri || photoAspectRatio != savedPhotoAspectRatio ||
+                !placedStickers.inRenderOrder(selectedStickerId).matchesSavedStickers()
+            ),
+    )
+
+    /** 인스턴스 ID가 달라도 실제 이미지와 배치가 같으면 같은 저장 내용입니다. */
+    private fun List<PlacedSticker>.matchesSavedStickers(): Boolean =
+        size == savedStickersInRenderOrder.size && indices.all { index ->
+            val current = this[index]
+            val saved = savedStickersInRenderOrder[index]
+            current.sticker.imageUrl == saved.sticker.imageUrl &&
+                current.centerXFraction == saved.centerXFraction && current.centerYFraction == saved.centerYFraction &&
+                current.scale == saved.scale && current.rotationDegrees == saved.rotationDegrees
+        }
+
+    /** 새로운 사진 편집을 시작할 때 이전 사진의 저장 기준을 제거합니다. */
+    private fun resetSavedPhoto() {
+        savedPhotoUri = null
+        savedPhotoAspectRatio = null
+        savedStickersInRenderOrder = emptyList()
     }
 
     private fun requestStickerPack(travelId: String) {

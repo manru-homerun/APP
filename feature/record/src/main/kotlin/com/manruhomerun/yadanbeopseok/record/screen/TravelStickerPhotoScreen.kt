@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
@@ -43,6 +44,9 @@ import com.manruhomerun.yadanbeopseok.designsystem.component.YadanTopAppBar
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanTopAppBarStyle
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOnPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryInk
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextSecondary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 import com.manruhomerun.yadanbeopseok.model.Sticker
@@ -88,13 +92,16 @@ fun TravelStickerPhotoScreen(
     photoRequestId: Long = 0L,
     imageState: TravelStickerPhotoImageState? = null,
     onCanvasImageStateChange: (TravelStickerPhotoImageState) -> Unit = {},
+    isExitConfirmationVisible: Boolean = false,
+    onExitConfirmationDismiss: () -> Unit = {},
+    onExitConfirmationConfirm: () -> Unit = {},
 ) {
     val hasPhoto = uiState.hasSelectedPhoto
-    val isEditingEnabled = !uiState.isExporting && !isReadingPhoto
+    val isEditingEnabled = !uiState.isExporting && !isReadingPhoto && !isExitConfirmationVisible
     val currentImageState = imageState?.takeIf {
         it.matchesContent(photoRequestId, uiState.photoUri, uiState.placedStickers)
     }
-    val canSave = uiState.canExport && !isReadingPhoto && currentImageState?.isReady == true
+    val canSave = uiState.canExport && !isReadingPhoto && !isExitConfirmationVisible && currentImageState?.isReady == true
     val imageStatusMessage = when {
         isReadingPhoto || !hasPhoto -> ""
         uiState.isExporting -> "사진을 갤러리에 저장하고 있어요."
@@ -241,6 +248,45 @@ fun TravelStickerPhotoScreen(
             }
         }
     }
+
+    if (isExitConfirmationVisible && uiState.hasUnsavedChanges && !uiState.isExporting) {
+        StickerPhotoExitConfirmationDialog(
+            onDismiss = onExitConfirmationDismiss,
+            onConfirm = onExitConfirmationConfirm,
+        )
+    }
+}
+
+/** 원본 사진을 삭제하지 않고 현재 미저장 편집만 종료할지 확인합니다. */
+@Composable
+private fun StickerPhotoExitConfirmationDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "저장하지 않고 나갈까요?",
+                style = YadanTypography.titleMedium,
+                color = YadanTextPrimary,
+            )
+        },
+        text = {
+            Text(
+                text = "저장하지 않은 편집 내용이 사라져요. 원본 사진은 삭제되지 않아요.",
+                style = YadanTypography.bodyMedium,
+                color = YadanTextSecondary,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(text = "나가기", color = YadanPrimaryInk)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = "계속 편집", color = YadanTextSecondary)
+            }
+        },
+    )
 }
 
 /**
@@ -505,6 +551,14 @@ private fun TravelStickerPhotoScreenSquarePreview() {
     TravelStickerPhotoScreenPreview(photoAspectRatio = 1f)
 }
 
+@Preview(name = "스티커 사진 · 나가기 확인", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "나가기 확인 · 좁은 화면", showBackground = true, widthDp = 320, heightDp = 640)
+@Preview(name = "나가기 확인 · 큰 글꼴", showBackground = true, widthDp = 320, heightDp = 640, fontScale = 2f)
+@Composable
+private fun TravelStickerPhotoScreenExitConfirmationPreview() {
+    TravelStickerPhotoScreenPreview(photoAspectRatio = 3f / 4f, isExitConfirmationVisible = true)
+}
+
 @Preview(name = "D04 전체 화면 · 이미지 로딩 중", widthDp = 360, heightDp = 800)
 @Preview(name = "이미지 로딩 · 작은 화면 · 글꼴 2", widthDp = 320, heightDp = 480, fontScale = 2f)
 @Composable
@@ -602,6 +656,7 @@ private fun TravelStickerPhotoScreenPreview(
     imageLoadState: YadanImageLoadState = YadanImageLoadState.SUCCESS,
     hasPhotoError: Boolean = false,
     isSaving: Boolean = false,
+    isExitConfirmationVisible: Boolean = false,
     hasMultipleStickers: Boolean = false,
     selectedStickerId: Long? = 1L,
     hasStickerPack: Boolean = true,
@@ -611,6 +666,7 @@ private fun TravelStickerPhotoScreenPreview(
     val previewState = stickerPhotoPreviewState(photoAspectRatio, hasMultipleStickers)
     val uiState = previewState.copy(
         isExporting = isSaving,
+        hasUnsavedChanges = previewState.hasSelectedPhoto,
         selectedStickerId = selectedStickerId?.takeIf { id -> previewState.placedStickers.any { it.id == id } },
         stickerPack = previewState.stickerPack.takeIf { hasStickerPack },
         isLoading = isLoadingStickers,
@@ -639,6 +695,7 @@ private fun TravelStickerPhotoScreenPreview(
             isReadingPhoto = isReadingPhoto,
             imageState = imageState,
             onCanvasImageStateChange = { measuredImageState = it },
+            isExitConfirmationVisible = isExitConfirmationVisible,
         )
     }
 }

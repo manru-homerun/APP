@@ -6,12 +6,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
@@ -71,7 +76,8 @@ fun BaseballScheduleScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(YadanBackground),
+            .background(YadanBackground)
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
     ) {
         if (onBackClick == null) {
             YadanMainHeader(
@@ -299,6 +305,8 @@ private fun LocalDate.toScheduleDateText(): String =
 @Preview(
     name = "경기 일정",
     showBackground = true,
+    widthDp = 390,
+    heightDp = 844,
 )
 @Composable
 private fun BaseballScheduleScreenPreview() {
@@ -307,6 +315,39 @@ private fun BaseballScheduleScreenPreview() {
             uiState = BaseballScheduleUiState(
                 selectedTeam = KboTeam.KIA,
                 games = previewBaseballGames,
+                isLoading = false,
+                hasLoadedSchedule = true,
+            ),
+            onTeamSelected = {},
+            onPlanClick = {},
+            onRetryClick = {},
+            onRefreshClick = {},
+        )
+    }
+}
+
+@Preview(name = "경기 일정 - 중간 구단 선택", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun BaseballScheduleMiddleTeamPreview() {
+    BaseballScheduleTeamFilterPreviewContent(team = KboTeam.KT)
+}
+
+@Preview(name = "경기 일정 - 마지막 구단 선택", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "경기 일정 - 마지막 구단과 좁은 화면", showBackground = true, widthDp = 320, heightDp = 640)
+@Preview(name = "경기 일정 - 마지막 구단과 큰 글씨", showBackground = true, widthDp = 320, heightDp = 640, fontScale = 2f)
+@Composable
+private fun BaseballScheduleLastTeamPreview() {
+    BaseballScheduleTeamFilterPreviewContent(team = KboTeam.NC)
+}
+
+/** 구단 필터를 전체 경기 일정 화면에서 확인하는 Preview입니다. */
+@Composable
+private fun BaseballScheduleTeamFilterPreviewContent(team: KboTeam) {
+    YadanbeopseokTheme {
+        BaseballScheduleScreen(
+            uiState = BaseballScheduleUiState(
+                selectedTeam = team,
+                games = previewBaseballGames.filter { it.homeTeam == team || it.awayTeam == team },
                 isLoading = false,
                 hasLoadedSchedule = true,
             ),
@@ -327,7 +368,7 @@ private fun BaseballScheduleLoadingPreview() {
     YadanbeopseokTheme {
         BaseballScheduleScreen(
             uiState = BaseballScheduleUiState(
-                selectedTeam = KboTeam.KIA,
+                selectedTeam = KboTeam.NC,
                 isLoading = true,
             ),
             onTeamSelected = {},
@@ -347,7 +388,7 @@ private fun BaseballScheduleErrorPreview() {
     YadanbeopseokTheme {
         BaseballScheduleScreen(
             uiState = BaseballScheduleUiState(
-                selectedTeam = KboTeam.KIA,
+                selectedTeam = KboTeam.NC,
                 isLoading = false,
                 errorMessage = "인터넷 연결을 확인한 후 다시 시도해주세요.",
             ),

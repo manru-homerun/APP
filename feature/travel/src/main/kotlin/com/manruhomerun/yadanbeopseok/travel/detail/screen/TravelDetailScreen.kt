@@ -66,6 +66,7 @@ import com.manruhomerun.yadanbeopseok.travel.detail.viewmodel.TravelDetailUiStat
 import com.manruhomerun.yadanbeopseok.travel.util.toDisplayDay
 import com.manruhomerun.yadanbeopseok.travel.util.toTravelDateRangeText
 import com.manruhomerun.yadanbeopseok.travel.util.toTravelDayDateText
+import com.manruhomerun.yadanbeopseok.ui.component.YadanScrollableStateContent
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelDaySelector
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelPlaceItemMode
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelProgress
@@ -403,10 +404,8 @@ private fun TravelDetailErrorContent(
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    YadanScrollableStateContent(
         modifier = modifier.padding(horizontal = 28.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = "여행 일정을 확인할 수 없습니다",
@@ -618,13 +617,16 @@ private fun TravelDetailLoadingPreview() {
     widthDp = 390,
     heightDp = 844,
 )
+@Preview(name = "여행 일정 조회 실패 - 작은 화면", showBackground = true, widthDp = 320, heightDp = 480)
+@Preview(name = "여행 일정 조회 실패 - 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Preview(name = "여행 일정 조회 실패 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
 @Composable
 private fun TravelDetailErrorPreview() {
     YadanbeopseokTheme {
         TravelDetailScreen(
             uiState = TravelDetailUiState(
                 isLoading = false,
-                errorMessage = "인터넷 연결을 확인한 후 다시 시도해주세요.",
+                errorMessage = "여행 일정을 불러오지 못했습니다. 인터넷 연결을 확인한 후 다시 시도해주세요. ".repeat(5),
             ),
             onBackClick = {},
             onDaySelected = {},

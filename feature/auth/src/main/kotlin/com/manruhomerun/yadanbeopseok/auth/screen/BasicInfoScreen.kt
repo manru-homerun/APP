@@ -45,6 +45,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
@@ -105,6 +107,9 @@ fun BasicInfoScreen(
     onNextClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     var isDatePickerVisible by
     rememberSaveable {
         mutableStateOf(false)
@@ -178,6 +183,8 @@ fun BasicInfoScreen(
                 keyboardActions =
                     KeyboardActions(
                         onDone = {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
                             if (isNextEnabled) {
                                 onNextClick()
                             }
@@ -288,7 +295,7 @@ fun BasicInfoScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "입력한 정보는 가입 후에도 수정할 수 있어요",
+                text = "닉네임은 가입 후 마이페이지에서 수정할 수 있어요",
                 modifier = Modifier.fillMaxWidth(),
                 style =
                     YadanTypography.bodySmall.copy(
@@ -699,6 +706,9 @@ private const val DEFAULT_NICKNAME_ERROR_MESSAGE =
     widthDp = 390,
     heightDp = 844,
 )
+@Preview(name = "기본 정보 - 좁은 화면", showBackground = true, widthDp = 320, heightDp = 640)
+@Preview(name = "기본 정보 - 큰 글꼴", showBackground = true, widthDp = 320, heightDp = 640, fontScale = 1.5f)
+@Preview(name = "기본 정보 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 640, fontScale = 2f)
 @Composable
 private fun BasicInfoScreenPreview() {
     YadanbeopseokTheme {

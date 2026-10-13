@@ -19,10 +19,10 @@ import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanDivider
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPillShape
-import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryTintStrong
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextMuted
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextSecondary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 
@@ -118,7 +118,8 @@ fun YadanSectionMetaText(
  * 섹션 제목 오른쪽에 표시하는 개수 배지입니다.
  *
  * HTML의 `.count`, `.count.zero` 형태를 기반으로 합니다.
- * 개수가 0이면 회색 배경과 글자로 표시합니다.
+ * 개수가 0이면 회색 배경, 그 외에는 파란 배경으로 표시합니다.
+ * 작은 숫자의 가독성을 위해 두 상태 모두 진한 텍스트 색상을 사용합니다.
  *
  * 글자 크기와 줄 높이는 [YadanTypography.bodySmall]을 사용합니다.
  *
@@ -139,18 +140,11 @@ fun YadanSectionCountBadge(
             YadanPrimaryTintStrong
         }
 
-    val contentColor =
-        if (isZero) {
-            YadanTextMuted
-        } else {
-            YadanPrimary
-        }
-
     Surface(
         modifier = modifier,
         shape = YadanPillShape,
         color = containerColor,
-        contentColor = contentColor,
+        contentColor = YadanTextSecondary,
     ) {
         Text(
             text = count.toString(),
@@ -243,6 +237,27 @@ private fun YadanSectionHeaderPreview() {
                     )
                 },
             )
+        }
+    }
+}
+
+@Preview(name = "섹션 개수 배지", showBackground = true, widthDp = 320)
+@Preview(name = "섹션 개수 배지 큰 글꼴", showBackground = true, widthDp = 320, fontScale = 2.0f)
+@Composable
+private fun YadanSectionCountBadgePreview() {
+    YadanbeopseokTheme {
+        Column(
+            modifier = Modifier.fillMaxWidth().background(YadanBackground).padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            listOf(0, 1, 12, 999).forEach { count ->
+                YadanSectionHeader(
+                    title = "내 원정 여행",
+                    trailingContent = {
+                        YadanSectionCountBadge(count = count)
+                    },
+                )
+            }
         }
     }
 }

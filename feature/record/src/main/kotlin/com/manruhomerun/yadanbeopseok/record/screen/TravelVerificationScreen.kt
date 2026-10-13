@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -64,6 +65,7 @@ import com.manruhomerun.yadanbeopseok.record.location.CurrentLocationResult
 import com.manruhomerun.yadanbeopseok.record.viewmodel.TravelVerificationPhase
 import com.manruhomerun.yadanbeopseok.record.viewmodel.TravelVerificationRetryAction
 import com.manruhomerun.yadanbeopseok.record.viewmodel.TravelVerificationUiState
+import com.manruhomerun.yadanbeopseok.ui.component.YadanScrollableStateContent
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelProgress
 import com.manruhomerun.yadanbeopseok.ui.component.displayTitle
 import kotlinx.datetime.LocalDate
@@ -238,13 +240,17 @@ fun TravelVerificationScreen(
                     modifier = Modifier.size(32.dp),
                 )
             } else {
-                Text(
-                    text = uiState.errorMessage ?: "방문 인증 정보를 확인할 수 없습니다.",
-                    modifier = Modifier.padding(24.dp),
-                    style = YadanTypography.bodyMedium,
-                    color = YadanTextMuted,
-                    textAlign = TextAlign.Center,
-                )
+                YadanScrollableStateContent(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(24.dp),
+                ) {
+                    Text(
+                        text = uiState.errorMessage ?: "방문 인증 정보를 확인할 수 없습니다.",
+                        style = YadanTypography.bodyMedium,
+                        color = YadanTextMuted,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
 
@@ -350,6 +356,27 @@ private fun TravelVerificationScreenPreview(
     YadanbeopseokTheme {
         TravelVerificationScreen(
             uiState = uiState,
+            onBackClick = {},
+            onVerifyClick = {},
+            onRetryClick = {},
+            onRequestLocationPermission = {},
+            onOpenLocationSettings = {},
+        )
+    }
+}
+
+@Preview(name = "방문 인증 정보 오류 - 작은 화면", showBackground = true, widthDp = 320, heightDp = 480)
+@Preview(name = "방문 인증 정보 오류 - 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Preview(name = "방문 인증 정보 오류 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
+@Composable
+private fun TravelVerificationContentErrorPreview() {
+    YadanbeopseokTheme {
+        TravelVerificationScreen(
+            uiState = TravelVerificationUiState(
+                phase = TravelVerificationPhase.ERROR,
+                retryAction = TravelVerificationRetryAction.LOAD_CONTENT,
+                errorMessage = "방문 인증 정보를 불러오지 못했습니다. 인터넷 연결을 확인한 후 다시 시도해주세요. ".repeat(5),
+            ),
             onBackClick = {},
             onVerifyClick = {},
             onRetryClick = {},

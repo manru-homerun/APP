@@ -34,6 +34,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanButton
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanTopAppBar
@@ -48,6 +50,7 @@ import com.manruhomerun.yadanbeopseok.model.TravelSpot
 import com.manruhomerun.yadanbeopseok.model.TravelSpotCategory
 import com.manruhomerun.yadanbeopseok.model.TravelSpotFilterCategory
 import com.manruhomerun.yadanbeopseok.mypage.viewmodel.TravelSpotDibsUiState
+import com.manruhomerun.yadanbeopseok.ui.component.YadanScrollableStateContent
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelRegionDropdown
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotAction
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelSpotCard
@@ -184,6 +187,11 @@ private fun TravelSpotDibsContent(
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val canCenterEmpty = travelSpots.isEmpty() &&
+        !isRefreshing && !isLoadingMore &&
+        refreshErrorMessage == null && loadMoreErrorMessage == null &&
+        !hasNextPage && updatingDibsSpotIds.isEmpty()
+
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxWidth(),
@@ -197,7 +205,13 @@ private fun TravelSpotDibsContent(
     ) {
         if (travelSpots.isEmpty() && !isRefreshing && refreshErrorMessage == null && updatingDibsSpotIds.isEmpty()) {
             item(key = "empty") {
-                TravelSpotDibsEmptyContent()
+                TravelSpotDibsEmptyContent(
+                    modifier = if (canCenterEmpty) {
+                        Modifier.fillParentMaxHeight()
+                    } else {
+                        Modifier.heightIn(min = 220.dp)
+                    },
+                )
             }
         } else {
             items(
@@ -316,13 +330,8 @@ private fun TravelSpotDibsErrorContent(
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 280.dp)
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    YadanScrollableStateContent(
+        modifier = modifier.padding(horizontal = 24.dp),
     ) {
         Text(
             text = "찜한 관광지를 확인할 수 없습니다",
@@ -355,11 +364,10 @@ private fun TravelSpotDibsErrorContent(
  * 선택한 지역과 카테고리에 찜한 관광지가 없음을 표시합니다.
  */
 @Composable
-private fun TravelSpotDibsEmptyContent() {
+private fun TravelSpotDibsEmptyContent(modifier: Modifier = Modifier) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 220.dp)
             .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -458,6 +466,9 @@ private fun TravelSpotDibsCategoryPreview() {
     widthDp = 390,
     heightDp = 760,
 )
+@Preview(name = "찜 목록 없음 - 작은 화면", showBackground = true, widthDp = 320, heightDp = 480)
+@Preview(name = "찜 목록 없음 - 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Preview(name = "찜 목록 없음 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
 @Composable
 private fun TravelSpotDibsEmptyPreview() {
     TravelSpotDibsPreview(
@@ -488,12 +499,15 @@ private fun TravelSpotDibsLoadingPreview() {
     widthDp = 390,
     heightDp = 760,
 )
+@Preview(name = "찜 목록 조회 실패 - 작은 화면", showBackground = true, widthDp = 320, heightDp = 480)
+@Preview(name = "찜 목록 조회 실패 - 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Preview(name = "찜 목록 조회 실패 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
 @Composable
 private fun TravelSpotDibsErrorPreview() {
     TravelSpotDibsPreview(
         uiState = TravelSpotDibsUiState(
             isLoading = false,
-            errorMessage = "인터넷 연결을 확인한 후 다시 시도해주세요.",
+            errorMessage = "찜 목록을 불러오지 못했습니다. 인터넷 연결을 확인한 후 다시 시도해주세요. ".repeat(5),
         ),
     )
 }
@@ -514,6 +528,32 @@ private fun TravelSpotDibsPreview(
             onLoadNextPage = {},
         )
     }
+}
+
+@Preview(name = "빈 찜 목록과 조회 상태 - 작은 화면", showBackground = true, widthDp = 320, heightDp = 480)
+@Preview(name = "빈 찜 목록과 조회 상태 - 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Preview(name = "빈 찜 목록과 조회 상태 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
+@Composable
+private fun TravelSpotDibsEmptyStatePreview(
+    @PreviewParameter(TravelSpotDibsEmptyStatePreviewProvider::class) uiState: TravelSpotDibsUiState,
+) {
+    TravelSpotDibsPreview(uiState)
+}
+
+class TravelSpotDibsEmptyStatePreviewProvider : PreviewParameterProvider<TravelSpotDibsUiState> {
+    override val values: Sequence<TravelSpotDibsUiState>
+        get() {
+            val empty = TravelSpotDibsUiState(isLoading = false)
+            return sequenceOf(
+                empty,
+                empty.copy(isRefreshing = true),
+                empty.copy(isLoadingMore = true),
+                empty.copy(loadMoreErrorMessage = "다음 찜 목록을 불러오지 못했습니다."),
+                empty.copy(refreshErrorMessage = "찜 목록을 갱신하지 못했습니다."),
+                empty.copy(totalPages = 1),
+                empty.copy(updatingDibsSpotIds = setOf("preview-updating-spot")),
+            )
+        }
 }
 
 @Preview(name = "H04 기존 목록 갱신", showBackground = true, widthDp = 390, heightDp = 760)

@@ -36,6 +36,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryTintStrong
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanShapes
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextMuted
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextSecondary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 
@@ -230,7 +231,7 @@ private fun YadanTabCountBadge(
         modifier = modifier,
         shape = YadanShapes.extraSmall,
         color = YadanPrimaryTintStrong,
-        contentColor = YadanPrimary,
+        contentColor = YadanTextSecondary,
     ) {
         Text(
             text = count.toString(),
@@ -326,6 +327,39 @@ private fun YadanTabRowPreview() {
                     ),
                 selectedIndex = 1,
                 onTabSelected = {},
+            )
+        }
+    }
+}
+
+@Preview(name = "탭 개수 배지", showBackground = true, widthDp = 320)
+@Preview(name = "탭 개수 배지 큰 글꼴", showBackground = true, widthDp = 320, fontScale = 2.0f)
+@Composable
+private fun YadanTabCountBadgePreview() {
+    YadanbeopseokTheme {
+        Column(
+            modifier = Modifier.fillMaxWidth().background(YadanBackground).padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            listOf(0, 1, 12, 999).forEachIndexed { index, count ->
+                YadanTabRow(
+                    tabs = listOf(
+                        YadanTabItem(label = "친구", count = count),
+                        YadanTabItem(label = "요청", count = count),
+                    ),
+                    selectedIndex = index % 2,
+                    onTabSelected = {},
+                )
+            }
+
+            YadanTabRow(
+                tabs = listOf(
+                    YadanTabItem(label = "친구", count = 1),
+                    YadanTabItem(label = "요청", count = 12),
+                ),
+                selectedIndex = 0,
+                onTabSelected = {},
+                enabled = false,
             )
         }
     }

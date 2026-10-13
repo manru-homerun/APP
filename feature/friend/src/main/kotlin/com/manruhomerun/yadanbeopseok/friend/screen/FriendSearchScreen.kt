@@ -25,18 +25,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanSearchBar
+import com.manruhomerun.yadanbeopseok.designsystem.component.YadanSectionHeader
+import com.manruhomerun.yadanbeopseok.designsystem.component.YadanSectionMetaText
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanTopAppBar
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanDivider
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryTint
-import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextMuted
-import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextSecondary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
@@ -45,6 +46,7 @@ import com.manruhomerun.yadanbeopseok.model.FriendRelationshipStatus
 import com.manruhomerun.yadanbeopseok.model.FriendSearchUser
 import com.manruhomerun.yadanbeopseok.model.KboTeam
 import com.manruhomerun.yadanbeopseok.model.UserProfile
+import com.manruhomerun.yadanbeopseok.ui.component.YadanScrollableStateContent
 import com.manruhomerun.yadanbeopseok.ui.component.YadanUserListItem
 
 /** F·03의 닉네임 검색 결과와 친구 요청 상태를 표시합니다. */
@@ -134,25 +136,13 @@ private fun FriendSearchResultContent(
         ),
     ) {
         item(key = "result-header") {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "'${uiState.searchedQuery}' 검색 결과",
-                    style = YadanTypography.labelMedium.copy(fontWeight = FontWeight.ExtraBold),
-                    color = YadanTextPrimary,
-                )
-
-                Text(
-                    text = "${uiState.resultCount}명",
-                    style = YadanTypography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = YadanTextMuted,
-                )
-            }
+            YadanSectionHeader(
+                title = "'${uiState.searchedQuery}' 검색 결과",
+                modifier = Modifier.padding(vertical = 8.dp),
+                trailingContent = {
+                    YadanSectionMetaText(text = "${uiState.resultCount}명")
+                },
+            )
         }
 
         items(
@@ -221,12 +211,8 @@ private fun FriendSearchResultRow(
 
 @Composable
 private fun FriendSearchInitialContent(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    YadanScrollableStateContent(
+        modifier = modifier.padding(horizontal = 20.dp),
     ) {
         Text(
             text = "찾고 싶은 친구의 닉네임을 입력해주세요.",
@@ -270,6 +256,36 @@ private fun FriendSearchInfoNote(modifier: Modifier = Modifier) {
     }
 }
 
+@Preview(name = "친구 검색 상태 - 작은 화면", showBackground = true, widthDp = 320, heightDp = 480)
+@Preview(name = "친구 검색 상태 - 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Preview(name = "친구 검색 상태 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
+@Composable
+private fun FriendSearchStatePreview(
+    @PreviewParameter(FriendSearchStatePreviewProvider::class) uiState: FriendSearchUiState,
+) {
+    YadanbeopseokTheme {
+        FriendSearchScreen(
+            uiState = uiState,
+            onBackClick = {},
+            onQueryChange = {},
+            onSearch = {},
+            onSendFriendRequest = {},
+            onReceivedRequestsClick = {},
+        )
+    }
+}
+
+class FriendSearchStatePreviewProvider : PreviewParameterProvider<FriendSearchUiState> {
+    override val values = sequenceOf(
+        FriendSearchUiState(query = "친구", searchedQuery = "친구"),
+        FriendSearchUiState(
+            query = "친구",
+            searchedQuery = "친구",
+            errorMessage = "친구 검색 결과를 불러오지 못했습니다. 인터넷 연결을 확인한 후 다시 시도해주세요. ".repeat(5),
+        ),
+    )
+}
+
 private val previewSearchUsers = listOf(
     FriendSearchUser(
         user = UserProfile(id = "user-1", nickname = "한별", favoriteTeam = KboTeam.LOTTE),
@@ -302,6 +318,9 @@ private fun FriendSearchScreenPreview() {
 }
 
 @Preview(name = "F03 검색 전", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "친구 검색 전 안내 - 작은 화면", showBackground = true, widthDp = 320, heightDp = 480)
+@Preview(name = "친구 검색 전 안내 - 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Preview(name = "친구 검색 전 안내 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
 @Composable
 private fun FriendSearchInitialPreview() {
     YadanbeopseokTheme {
@@ -364,6 +383,34 @@ private fun FriendSearchRequestingPreview() {
                 users = previewSearchUsers,
                 resultCount = previewSearchUsers.size,
                 requestingUserIds = setOf("user-1"),
+            ),
+            onBackClick = {},
+            onQueryChange = {},
+            onSearch = {},
+            onSendFriendRequest = {},
+            onReceivedRequestsClick = {},
+        )
+    }
+}
+
+@Preview(name = "친구 찾기 긴 검색어", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "친구 찾기 긴 검색어 좁은 화면", showBackground = true, widthDp = 320, heightDp = 640)
+@Preview(name = "친구 찾기 긴 검색어 큰 글꼴", showBackground = true, widthDp = 320, heightDp = 640, fontScale = 2.0f)
+@Composable
+private fun FriendSearchLongQueryPreview() {
+    val query = "야구직관같이가고싶은친구"
+    val users = List(12) { index ->
+        val sample = previewSearchUsers[index % previewSearchUsers.size]
+        sample.copy(user = sample.user.copy(id = "preview-long-query-${index + 1}"))
+    }
+
+    YadanbeopseokTheme {
+        FriendSearchScreen(
+            uiState = FriendSearchUiState(
+                query = query,
+                searchedQuery = query,
+                users = users,
+                resultCount = users.size,
             ),
             onBackClick = {},
             onQueryChange = {},

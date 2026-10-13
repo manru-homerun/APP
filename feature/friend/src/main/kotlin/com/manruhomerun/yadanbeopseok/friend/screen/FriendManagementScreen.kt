@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -46,6 +45,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanIconButton
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanIconButtonSize
@@ -70,6 +71,7 @@ import com.manruhomerun.yadanbeopseok.model.Friend
 import com.manruhomerun.yadanbeopseok.model.FriendRequest
 import com.manruhomerun.yadanbeopseok.model.KboTeam
 import com.manruhomerun.yadanbeopseok.model.UserProfile
+import com.manruhomerun.yadanbeopseok.ui.component.YadanScrollableStateContent
 import com.manruhomerun.yadanbeopseok.ui.component.YadanUserListItem
 import com.manruhomerun.yadanbeopseok.ui.displayNickname
 
@@ -238,9 +240,12 @@ private fun FriendListContent(
 
                 if (uiState.friends.isEmpty()) {
                     item(key = "friends-empty") {
-                        FriendEmptyListMessage(
-                            text = "아직 추가한 친구가 없습니다.",
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxWidth().fillParentMaxHeight(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            FriendEmptyListMessage(text = "아직 추가한 친구가 없습니다.")
+                        }
                     }
                 } else {
                     items(
@@ -622,13 +627,8 @@ internal fun FriendMessageContent(
     actionLabel: String? = null,
     onActionClick: (() -> Unit)? = null,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 260.dp)
-            .padding(horizontal = 28.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    YadanScrollableStateContent(
+        modifier = modifier.padding(horizontal = 28.dp),
     ) {
         Text(
             text = title,
@@ -711,6 +711,40 @@ private fun FriendSectionLoading() {
 }
 
 private fun Long?.toTabCount(): Int? = this?.coerceIn(0L, Int.MAX_VALUE.toLong())?.toInt()
+
+@Preview(name = "친구 목록 상태 - 작은 화면", showBackground = true, widthDp = 320, heightDp = 480)
+@Preview(name = "친구 목록 상태 - 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Preview(name = "친구 목록 상태 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
+@Composable
+private fun FriendManagementStatePreview(
+    @PreviewParameter(FriendManagementStatePreviewProvider::class) uiState: FriendManagementUiState,
+) {
+    YadanbeopseokTheme {
+        FriendManagementScreen(
+            uiState = uiState,
+            onBackClick = {},
+            onSearchClick = {},
+            onTabSelected = {},
+            onAcceptRequest = {},
+            onRejectRequest = {},
+            onCancelRequest = {},
+            onDeleteFriend = {},
+            onRetryFriends = {},
+            onRetryReceivedRequests = {},
+            onRetrySentRequests = {},
+        )
+    }
+}
+
+class FriendManagementStatePreviewProvider : PreviewParameterProvider<FriendManagementUiState> {
+    override val values = sequenceOf(
+        FriendManagementUiState(isFriendsLoading = false),
+        FriendManagementUiState(
+            isFriendsLoading = false,
+            friendsErrorMessage = "친구 목록을 불러오지 못했습니다. 인터넷 연결을 확인한 후 다시 시도해주세요. ".repeat(5),
+        ),
+    )
+}
 
 private val previewFriends = listOf(
     Friend(

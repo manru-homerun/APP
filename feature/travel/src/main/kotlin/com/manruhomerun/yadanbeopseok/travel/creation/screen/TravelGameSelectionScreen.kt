@@ -262,6 +262,38 @@ private fun TravelGameSelectionScreenPreview() {
     }
 }
 
+@Preview(name = "여행 만들기 경기 선택 - 중간 구단", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelGameSelectionMiddleTeamPreview() {
+    TravelGameSelectionTeamFilterPreviewContent(team = KboTeam.KT)
+}
+
+@Preview(name = "여행 만들기 경기 선택 - 마지막 구단", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "여행 만들기 경기 선택 - 마지막 구단과 좁은 화면", showBackground = true, widthDp = 320, heightDp = 640)
+@Preview(name = "여행 만들기 경기 선택 - 마지막 구단과 큰 글씨", showBackground = true, widthDp = 320, heightDp = 640, fontScale = 2f)
+@Composable
+private fun TravelGameSelectionLastTeamPreview() {
+    TravelGameSelectionTeamFilterPreviewContent(team = KboTeam.NC)
+}
+
+/** 구단 필터를 전체 여행 만들기 경기 선택 화면에서 확인하는 Preview입니다. */
+@Composable
+private fun TravelGameSelectionTeamFilterPreviewContent(team: KboTeam) {
+    YadanbeopseokTheme {
+        TravelGameSelectionScreen(
+            uiState = TravelGameSelectionUiState(
+                selectedTeam = team,
+                games = previewTravelGames.filter { it.homeTeam == team || it.awayTeam == team },
+            ),
+            onCloseClick = {},
+            onTeamSelected = {},
+            onGameSelected = {},
+            onNextClick = {},
+            onRetryClick = {},
+        )
+    }
+}
+
 @Preview(
     name = "B01 경기 선택 로딩",
     showBackground = true,
@@ -273,7 +305,7 @@ private fun TravelGameSelectionLoadingPreview() {
     YadanbeopseokTheme {
         TravelGameSelectionScreen(
             uiState = TravelGameSelectionUiState(
-                selectedTeam = KboTeam.KIA,
+                selectedTeam = KboTeam.NC,
                 isScheduleLoading = true,
             ),
             onCloseClick = {},
@@ -296,7 +328,7 @@ private fun TravelGameSelectionErrorPreview() {
     YadanbeopseokTheme {
         TravelGameSelectionScreen(
             uiState = TravelGameSelectionUiState(
-                selectedTeam = KboTeam.KIA,
+                selectedTeam = KboTeam.NC,
                 errorMessage = "인터넷 연결을 확인한 후 다시 시도해주세요.",
             ),
             onCloseClick = {},

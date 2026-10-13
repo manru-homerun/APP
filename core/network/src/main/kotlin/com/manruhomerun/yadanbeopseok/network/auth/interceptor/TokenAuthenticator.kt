@@ -1,6 +1,7 @@
 package com.manruhomerun.yadanbeopseok.network.auth.interceptor
 
 import com.manruhomerun.yadanbeopseok.common.AppException
+import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.network.auth.token.AuthSessionProvider
 import com.manruhomerun.yadanbeopseok.network.auth.token.TokenRefreshHandler
 import dagger.Lazy
@@ -8,6 +9,7 @@ import java.io.IOException
 import java.net.HttpURLConnection.HTTP_UNAUTHORIZED
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import okhttp3.Authenticator
 import okhttp3.Request
@@ -24,15 +26,15 @@ internal class TokenAuthenticator @Inject constructor(
     private val authSessionProvider: AuthSessionProvider,
 ) : Authenticator {
     /**
-     * 여러 요청이 동시에 401을 받더라도 재발급 요청이 한 번만 실행되도록 사용합니다.
+     * 동시 401의 재발급을 직렬화하고, 성공한 요청이 저장한 토큰을 재사용하도록 합니다.
      */
     private val refreshLock = Any()
 
     /**
      * 401 응답을 처리하고 새로운 인증 헤더가 준비되면 재시도할 요청을 반환합니다.
      *
-     * 재발급할 수 없거나 이미 재시도한 요청이면 null을 반환하여
-     * OkHttp가 더 이상 인증 재시도를 수행하지 않게 합니다.
+     * 세션이 만료되었거나 이미 재시도한 요청이면 null을 반환합니다.
+     * 일시적인 재발급 실패는 원래 401과 구분할 수 있도록 원인을 보존해 전달합니다.
      */
     override fun authenticate(
         route: Route?,
@@ -51,33 +53,38 @@ internal class TokenAuthenticator @Inject constructor(
             failedRequest.header(AUTHORIZATION_HEADER_NAME)
                 ?: return null
 
-        return synchronized(refreshLock) {
-            val currentAuthorizationHeader = getCurrentAuthorizationHeader()
+        return try {
+            synchronized(refreshLock) {
+                val currentAuthorizationHeader = getCurrentAuthorizationHeader()
 
-            /*
-             * 다른 요청이 먼저 재발급을 완료했다면 다시 재발급하지 않고
-             * 이미 저장된 새로운 Access Token으로 요청만 재시도합니다.
-             */
-            if (
-                currentAuthorizationHeader != null &&
-                currentAuthorizationHeader != failedAuthorizationHeader
-            ) {
-                return@synchronized failedRequest.withAuthorizationHeader(
-                    currentAuthorizationHeader,
-                )
-            }
+                /*
+                 * 다른 요청이 먼저 재발급을 완료했다면 다시 재발급하지 않고
+                 * 이미 저장된 새로운 Access Token으로 요청만 재시도합니다.
+                 */
+                if (
+                    currentAuthorizationHeader != null &&
+                    currentAuthorizationHeader != failedAuthorizationHeader
+                ) {
+                    return@synchronized failedRequest.withAuthorizationHeader(
+                        currentAuthorizationHeader,
+                    )
+                }
 
-            val refreshedAuthorizationHeader =
-                refreshAuthorizationHeader()
+                val refreshedAuthorizationHeader = refreshAuthorizationHeader()
                     ?: return@synchronized null
 
-            if (refreshedAuthorizationHeader == failedAuthorizationHeader) {
-                return@synchronized null
-            }
+                if (refreshedAuthorizationHeader == failedAuthorizationHeader) {
+                    return@synchronized null
+                }
 
-            failedRequest.withAuthorizationHeader(
-                refreshedAuthorizationHeader,
-            )
+                failedRequest.withAuthorizationHeader(refreshedAuthorizationHeader)
+            }
+        } catch (_: SessionExpiredException) {
+            null
+        } catch (exception: CancellationException) {
+            throw TokenRefreshIOException(exception)
+        } catch (exception: AppException) {
+            throw TokenRefreshIOException(exception)
         }
     }
 
@@ -85,31 +92,28 @@ internal class TokenAuthenticator @Inject constructor(
      * 현재 로컬에 저장된 인증 헤더를 조회합니다.
      */
     private fun getCurrentAuthorizationHeader(): String? =
-        try {
-            runBlocking {
-                authSessionProvider.getAuthorizationHeader()
-            }
-        } catch (_: IOException) {
-            null
+        runBlocking {
+            authSessionProvider.getAuthorizationHeader()
         }
 
     /**
      * Data 계층에 토큰 재발급을 요청한 후 새 인증 헤더를 조회합니다.
      *
-     * 재발급 실패는 원래 401 응답이 호출자에게 전달되도록 null로 처리합니다.
+     * 실패 원인은 authenticate에서 인증 만료와 일시적인 오류로 구분합니다.
      */
     private fun refreshAuthorizationHeader(): String? =
-        try {
-            runBlocking {
-                tokenRefreshHandler.get().refreshToken()
-                authSessionProvider.getAuthorizationHeader()
-            }
-        } catch (_: AppException) {
-            null
-        } catch (_: IOException) {
-            null
+        runBlocking {
+            tokenRefreshHandler.get().refreshToken()
+            authSessionProvider.getAuthorizationHeader()
         }
 }
+
+/**
+ * 재발급 오류나 취소를 OkHttp의 IOException 경계로 전달합니다.
+ * ApiCallExecutor에서 원본 예외를 복원하므로 인증 만료나 연결 오류로 오인하지 않습니다.
+ */
+internal class TokenRefreshIOException(val originalException: RuntimeException) :
+    IOException("Token refresh failed.", originalException)
 
 /**
  * 요청의 기존 Authorization 헤더를 새로운 값으로 교체합니다.

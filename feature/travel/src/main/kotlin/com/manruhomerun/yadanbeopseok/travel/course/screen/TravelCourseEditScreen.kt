@@ -78,6 +78,7 @@ import com.manruhomerun.yadanbeopseok.travel.util.toSchedulePlace
 import com.manruhomerun.yadanbeopseok.travel.util.toTimelineItems
 import com.manruhomerun.yadanbeopseok.travel.util.toTravelDateRangeText
 import com.manruhomerun.yadanbeopseok.travel.util.toTravelDayDateText
+import com.manruhomerun.yadanbeopseok.ui.component.YadanScrollableStateContent
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelDayAddPlaceRow
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelDayHeader
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelDaySelector
@@ -487,9 +488,9 @@ private fun CourseEditErrorContent(
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier.padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+    YadanScrollableStateContent(
+        modifier = modifier,
+        contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
     ) {
         Text(
@@ -703,11 +704,14 @@ private fun TravelCourseEditLoadingPreview() {
 }
 
 @Preview(name = "C01 - 조회 실패", widthDp = 390, heightDp = 844)
+@Preview(name = "여행 일정 편집 조회 실패 - 작은 화면", showBackground = true, widthDp = 320, heightDp = 480)
+@Preview(name = "여행 일정 편집 조회 실패 - 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Preview(name = "여행 일정 편집 조회 실패 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
 @Composable
 private fun TravelCourseEditErrorPreview() {
     CourseEditPreviewContent(
         TravelCourseEditUiState(
-            errorMessage = "여행 일정을 불러오지 못했습니다.",
+            errorMessage = "여행 일정을 불러오지 못했습니다. 인터넷 연결을 확인한 후 다시 시도해주세요. ".repeat(5),
         ),
     )
 }

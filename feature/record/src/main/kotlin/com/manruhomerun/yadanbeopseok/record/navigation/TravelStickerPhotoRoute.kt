@@ -46,6 +46,7 @@ import com.manruhomerun.yadanbeopseok.record.component.TravelStickerPhotoImageSt
 import com.manruhomerun.yadanbeopseok.record.screen.TravelStickerPhotoScreen
 import com.manruhomerun.yadanbeopseok.record.viewmodel.PlacedSticker
 import com.manruhomerun.yadanbeopseok.record.viewmodel.TravelStickerPhotoViewModel
+import com.manruhomerun.yadanbeopseok.record.viewmodel.inRenderOrder
 import java.io.IOException
 import kotlin.math.ceil
 import kotlin.math.max
@@ -54,6 +55,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
@@ -76,13 +78,14 @@ fun TravelStickerPhotoRoute(
     val coroutineScope = rememberCoroutineScope()
     var isGalleryLaunchPending by rememberSaveable(travelId) { mutableStateOf(false) }
     var pendingPhotoUri by rememberSaveable(travelId) { mutableStateOf<String?>(null) }
+    var isExitConfirmationVisible by rememberSaveable(travelId) { mutableStateOf(false) }
     var isLeavingRoute by remember(travelId) { mutableStateOf(false) }
     var photoRequestId by remember(travelId) { mutableLongStateOf(0L) }
     var canvasImageState by remember(travelId) { mutableStateOf<TravelStickerPhotoImageState?>(null) }
     val isReadingPhoto = pendingPhotoUri != null
 
     fun canEditPhoto(): Boolean = !viewModel.uiState.value.isExporting && !isGalleryLaunchPending &&
-        pendingPhotoUri == null && !isLeavingRoute
+        pendingPhotoUri == null && !isLeavingRoute && !isExitConfirmationVisible
 
     fun isCanvasReady(): Boolean {
         val state = viewModel.uiState.value
@@ -114,9 +117,22 @@ fun TravelStickerPhotoRoute(
         if (viewModel.uiState.value.isExporting || isLeavingRoute) return
 
         isLeavingRoute = true
+        isExitConfirmationVisible = false
         pendingPhotoUri = null
         isGalleryLaunchPending = false
         navigator.navigateBack()
+    }
+
+    /** 미저장 내용을 확인한 뒤 상단·시스템 뒤로가기를 같은 방식으로 처리합니다. */
+    fun requestNavigateBack() {
+        val state = viewModel.uiState.value
+        if (state.isExporting || isLeavingRoute || isExitConfirmationVisible) return
+
+        if (state.hasUnsavedChanges) {
+            isExitConfirmationVisible = true
+        } else {
+            navigateBack()
+        }
     }
 
     fun showGalleryLaunchFailure() {
@@ -143,6 +159,12 @@ fun TravelStickerPhotoRoute(
 
     LaunchedEffect(travelId, viewModel) {
         viewModel.loadStickers(travelId)
+    }
+
+    LaunchedEffect(uiState.hasUnsavedChanges, uiState.isExporting) {
+        if (!uiState.hasUnsavedChanges || uiState.isExporting) {
+            isExitConfirmationVisible = false
+        }
     }
 
     LaunchedEffect(travelId, pendingPhotoUri, viewModel) {
@@ -192,7 +214,14 @@ fun TravelStickerPhotoRoute(
                 if (!hasStarted) return@launch
 
                 withContext(Dispatchers.IO) {
-                    exportStickerPhotoToGallery(context, context.imageLoader, snapshot)
+                    exportStickerPhotoToGallery(context, context.imageLoader, snapshot) {
+                        viewModel.markPhotoSaved(
+                            photoUri = snapshot.photoUri.toString(),
+                            aspectRatio = snapshot.photoAspectRatio,
+                            placedStickers = snapshot.placedStickers,
+                            selectedStickerId = snapshot.selectedStickerId,
+                        )
+                    }
                 }
             } catch (exception: CancellationException) {
                 throw exception
@@ -215,14 +244,17 @@ fun TravelStickerPhotoRoute(
         }
     }
 
-    BackHandler(enabled = uiState.isExporting || isGalleryLaunchPending || isReadingPhoto) {
-        // 저장 중에는 이동하지 않고, 사진 조회 중에는 결과 반영을 취소한 뒤 이동합니다.
-        navigateBack()
+    BackHandler {
+        if (isExitConfirmationVisible) {
+            isExitConfirmationVisible = false
+        } else {
+            requestNavigateBack()
+        }
     }
 
     TravelStickerPhotoScreen(
         uiState = uiState,
-        onBackClick = ::navigateBack,
+        onBackClick = ::requestNavigateBack,
         onPhotoSelectClick = {
             if (canEditPhoto() && !viewModel.uiState.value.hasSelectedPhoto) {
                 isGalleryLaunchPending = true
@@ -277,6 +309,9 @@ fun TravelStickerPhotoRoute(
         isReadingPhoto = isReadingPhoto,
         photoRequestId = photoRequestId,
         imageState = canvasImageState,
+        isExitConfirmationVisible = isExitConfirmationVisible,
+        onExitConfirmationDismiss = { isExitConfirmationVisible = false },
+        onExitConfirmationConfirm = ::navigateBack,
         onCanvasImageStateChange = { imageState ->
             val state = viewModel.uiState.value
             if (!isLeavingRoute && pendingPhotoUri == null &&
@@ -302,6 +337,7 @@ private suspend fun exportStickerPhotoToGallery(
     context: Context,
     imageLoader: ImageLoader,
     snapshot: StickerPhotoExportSnapshot,
+    onPublished: () -> Unit,
 ) {
     var photoBitmap: Bitmap? = null
     var exportBitmap: Bitmap? = null
@@ -348,14 +384,14 @@ private suspend fun exportStickerPhotoToGallery(
         photoBitmap = null
 
         // Compose의 zIndex와 동일하게 선택된 스티커만 마지막에 그립니다.
-        val orderedStickers = snapshot.placedStickers.sortedBy { it.id == snapshot.selectedStickerId }
+        val orderedStickers = snapshot.placedStickers.inRenderOrder(snapshot.selectedStickerId)
         for (sticker in orderedStickers) {
             currentCoroutineContext().ensureActive()
             drawExportSticker(context, imageLoader, canvas, paint, sticker, layout, exportScale)
         }
 
         currentCoroutineContext().ensureActive()
-        saveBitmapToGallery(context, output)
+        saveBitmapToGallery(context, output, onPublished)
     } finally {
         photoBitmap?.recycle()
         exportBitmap?.recycle()
@@ -481,7 +517,7 @@ private fun readPhotoAspectRatio(context: Context, photoUri: Uri): Float {
 /**
  * 합성한 이미지를 저장하고, 게시 전 실패·취소된 파일만 제거합니다.
  */
-private suspend fun saveBitmapToGallery(context: Context, bitmap: Bitmap) {
+private suspend fun saveBitmapToGallery(context: Context, bitmap: Bitmap, onPublished: () -> Unit) {
     currentCoroutineContext().ensureActive()
     val contentResolver = context.contentResolver
     val displayName = "yadanbeopseok_${System.currentTimeMillis()}.png"
@@ -536,6 +572,10 @@ private suspend fun saveBitmapToGallery(context: Context, bitmap: Bitmap) {
             throw IOException("저장한 이미지를 갤러리에 게시하지 못했습니다.")
         }
         isPublished = true
+        // 게시가 끝난 내용의 기록만 취소로부터 보호하며, 이미지 생성·쓰기는 기존대로 취소합니다.
+        withContext(NonCancellable + Dispatchers.Main.immediate) {
+            onPublished()
+        }
     } finally {
         if (!isPublished) {
             try {

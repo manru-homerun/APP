@@ -9,15 +9,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -45,6 +49,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanButton
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanMainHeader
@@ -66,6 +72,7 @@ import com.manruhomerun.yadanbeopseok.model.Region
 import com.manruhomerun.yadanbeopseok.model.TravelSummary
 import com.manruhomerun.yadanbeopseok.record.component.TravelRecordMap
 import com.manruhomerun.yadanbeopseok.record.viewmodel.TravelRecordUiState
+import com.manruhomerun.yadanbeopseok.ui.component.YadanScrollableStateContent
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTravelRecordCard
 import kotlinx.datetime.LocalDate
 
@@ -89,7 +96,8 @@ fun TravelRecordScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(YadanBackground),
+            .background(YadanBackground)
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
     ) {
         YadanMainHeader(
             title = "여행 기록",
@@ -538,13 +546,8 @@ private fun TravelRecordErrorContent(
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 280.dp)
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    YadanScrollableStateContent(
+        modifier = modifier.padding(horizontal = 24.dp),
     ) {
         Text(
             text = "여행 기록을 확인할 수 없습니다",
@@ -582,13 +585,8 @@ private fun TravelRecordEmptyContent(
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 280.dp)
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    YadanScrollableStateContent(
+        modifier = modifier.padding(horizontal = 24.dp),
     ) {
         Text(
             text = "아직 종료된 여행이 없습니다",
@@ -670,13 +668,16 @@ private fun TravelRecordLoadingPreview() {
     widthDp = 390,
     heightDp = 844,
 )
+@Preview(name = "여행 기록 조회 실패 - 작은 화면", showBackground = true, widthDp = 320, heightDp = 480)
+@Preview(name = "여행 기록 조회 실패 - 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Preview(name = "여행 기록 조회 실패 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
 @Composable
 private fun TravelRecordErrorPreview() {
     YadanbeopseokTheme {
         TravelRecordScreen(
             uiState = TravelRecordUiState(
                 isLoading = false,
-                errorMessage = "인터넷 연결을 확인한 후 다시 시도해주세요.",
+                errorMessage = "여행 기록을 불러오지 못했습니다. 인터넷 연결을 확인한 후 다시 시도해주세요. ".repeat(5),
             ),
             onSeasonSelected = {},
             onTravelClick = {},
@@ -693,6 +694,9 @@ private fun TravelRecordErrorPreview() {
     widthDp = 390,
     heightDp = 844,
 )
+@Preview(name = "여행 기록 없음 - 작은 화면", showBackground = true, widthDp = 320, heightDp = 480)
+@Preview(name = "여행 기록 없음 - 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Preview(name = "여행 기록 없음 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
 @Composable
 private fun TravelRecordEmptyPreview() {
     YadanbeopseokTheme {
@@ -780,6 +784,27 @@ private fun TravelRecordStatePreview(uiState: TravelRecordUiState) {
             onLoadNextPage = {},
         )
     }
+}
+
+@Preview(name = "빈 여행 기록과 갱신 상태 - 작은 화면", showBackground = true, widthDp = 320, heightDp = 480)
+@Preview(name = "빈 여행 기록과 갱신 상태 - 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Preview(name = "빈 여행 기록과 갱신 상태 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
+@Composable
+private fun TravelRecordEmptyQueryPreview(
+    @PreviewParameter(TravelRecordEmptyQueryPreviewProvider::class) uiState: TravelRecordUiState,
+) {
+    TravelRecordStatePreview(uiState)
+}
+
+class TravelRecordEmptyQueryPreviewProvider : PreviewParameterProvider<TravelRecordUiState> {
+    override val values = sequenceOf(
+        TravelRecordUiState(hasCompleteStatistics = true),
+        TravelRecordUiState(
+            hasCompleteStatistics = true,
+            isLoading = false,
+            errorMessage = "여행 기록을 갱신하지 못했습니다. 인터넷 연결을 확인한 후 다시 시도해주세요. ".repeat(5),
+        ),
+    )
 }
 
 private val previewCompletedTravels = listOf(

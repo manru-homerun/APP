@@ -28,6 +28,9 @@ data class TravelStickerPhotoUiState(
     /** 완성된 이미지를 저장하거나 공유하는 중인지 나타냅니다. */
     val isExporting: Boolean = false,
 
+    /** 현재 사진과 스티커 배치가 마지막 저장 내용과 다른지 나타냅니다. */
+    val hasUnsavedChanges: Boolean = false,
+
     /** 사용자에게 표시할 오류 메시지입니다. */
     val errorMessage: String? = null,
 ) {
@@ -61,3 +64,7 @@ data class PlacedSticker(
     val scale: Float = 1f,
     val rotationDegrees: Float = 0f,
 )
+
+/** 캔버스의 zIndex와 동일하게 선택한 스티커를 마지막에 그리는 순서입니다. */
+internal fun List<PlacedSticker>.inRenderOrder(selectedStickerId: Long?): List<PlacedSticker> =
+    sortedBy { it.id == selectedStickerId }

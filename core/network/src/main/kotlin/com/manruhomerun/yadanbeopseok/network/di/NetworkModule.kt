@@ -14,13 +14,22 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import java.util.concurrent.TimeUnit
+import javax.inject.Qualifier
 import javax.inject.Singleton
 import kotlinx.serialization.json.Json
+import okhttp3.Authenticator
+import okhttp3.Dispatcher
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
+
+/** 일반 API와 독립된 실행 대기열을 사용하는 토큰 재발급 API를 구분합니다. */
+@Qualifier
+@Retention(AnnotationRetention.RUNTIME)
+annotation class TokenRefreshNetwork
 
 /**
  * 야단법석 백엔드 통신에 필요한 네트워크 객체를 제공합니다.
@@ -102,6 +111,26 @@ internal object NetworkModule {
     fun provideAuthApi(
         retrofit: Retrofit,
     ): AuthApi = retrofit.create(AuthApi::class.java)
+
+    /**
+     * 일반 요청이 인증 재시도를 기다리는 동안에도 실행할 수 있는 재발급 API를 제공합니다.
+     * 재발급 요청 자체는 인증 재시도를 하지 않으며, 호출 시간을 30초로 제한합니다.
+     */
+    @Provides
+    @Singleton
+    @TokenRefreshNetwork
+    fun provideTokenRefreshAuthApi(okHttpClient: OkHttpClient, retrofit: Retrofit): AuthApi {
+        val tokenRefreshClient = okHttpClient.newBuilder()
+            .dispatcher(Dispatcher())
+            .authenticator(Authenticator.NONE)
+            .callTimeout(30, TimeUnit.SECONDS)
+            .build()
+
+        return retrofit.newBuilder()
+            .client(tokenRefreshClient)
+            .build()
+            .create(AuthApi::class.java)
+    }
 
     /**
      * 사용자 및 온보딩 관련 백엔드 API 구현체를 제공합니다.

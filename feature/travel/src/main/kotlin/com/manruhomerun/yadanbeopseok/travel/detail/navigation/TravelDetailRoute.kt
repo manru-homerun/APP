@@ -11,11 +11,13 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
@@ -24,11 +26,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalGraphicsContext
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanBackwardTransition
 import com.manruhomerun.yadanbeopseok.designsystem.theme.yadanFadeTransition
@@ -41,10 +49,13 @@ import com.manruhomerun.yadanbeopseok.travel.course.navigation.TravelCourseEditR
 import com.manruhomerun.yadanbeopseok.travel.course.viewmodel.TravelCourseEditViewModel
 import com.manruhomerun.yadanbeopseok.travel.detail.screen.TravelDetailScreen
 import com.manruhomerun.yadanbeopseok.travel.detail.viewmodel.TravelDetailViewModel
+import com.manruhomerun.yadanbeopseok.travel.share.captureAndSaveTravelPosterImage
 import com.manruhomerun.yadanbeopseok.travel.share.openTravelPosterShareSheet
-import com.manruhomerun.yadanbeopseok.travel.share.saveTravelPosterImage
 import com.manruhomerun.yadanbeopseok.travel.share.screen.TravelShareScreen
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 /**
@@ -69,6 +80,10 @@ fun TravelDetailRoute(
     val snackbarHostState = remember { SnackbarHostState() }
     val detailStateHolder = rememberSaveableStateHolder()
     val context = LocalContext.current
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
+    val graphicsContext = LocalGraphicsContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     val coroutineScope = rememberCoroutineScope()
     val posterGraphicsLayer = rememberGraphicsLayer()
 
@@ -79,6 +94,7 @@ fun TravelDetailRoute(
     var isSavingPoster by remember(travelId) {
         mutableStateOf(false)
     }
+    var posterSaveJob by remember(travelId) { mutableStateOf<Job?>(null) }
 
     val isEditing = editUiState.isExistingTravel
     val travel = uiState.travel
@@ -89,28 +105,52 @@ fun TravelDetailRoute(
         isShareVisible && canOpenShare -> TravelDetailPage.SHARE
         else -> TravelDetailPage.DETAIL
     }
+    val activeShareTravelId by rememberUpdatedState(travelId.takeIf { currentPage == TravelDetailPage.SHARE })
+    var recordedPosterSize by remember(
+        travelId,
+        isShareVisible,
+        travel,
+        baseballGame,
+        density.density,
+        density.fontScale,
+        layoutDirection,
+    ) { mutableStateOf<IntSize?>(null) }
+    val isPosterReady = recordedPosterSize?.let { size ->
+        size.width > 0 && size.height > 0 && size == posterGraphicsLayer.size
+    } == true
 
     fun exitEdit() {
         editViewModel.reset()
     }
 
     fun closeShare() {
+        posterSaveJob?.cancel()
         isShareVisible = false
     }
 
+    /** 현재 포스터만 저장하며 화면 이탈이나 취소 후에는 공유창을 열지 않습니다. */
     fun saveAndSharePoster() {
-        if (isSavingPoster) return
+        if (isSavingPoster || !isPosterReady || currentPage != TravelDetailPage.SHARE) return
 
-        coroutineScope.launch {
+        val savingTravelId = travelId
+        posterSaveJob?.cancel()
+        posterSaveJob = coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
             isSavingPoster = true
             var feedbackMessage: String? = null
 
             try {
-                val imageBitmap = posterGraphicsLayer.toImageBitmap()
-                val imageUri = saveTravelPosterImage(
+                ensureActive()
+                val imageUri = captureAndSaveTravelPosterImage(
                     context = context,
-                    imageBitmap = imageBitmap,
+                    graphicsContext = graphicsContext,
+                    posterGraphicsLayer = posterGraphicsLayer,
+                    density = density,
+                    layoutDirection = layoutDirection,
                 )
+                ensureActive()
+                if (activeShareTravelId != savingTravelId || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                    return@launch
+                }
 
                 try {
                     openTravelPosterShareSheet(
@@ -119,21 +159,37 @@ fun TravelDetailRoute(
                     )
                 } catch (cancellationException: CancellationException) {
                     throw cancellationException
+                } catch (_: OutOfMemoryError) {
+                    feedbackMessage = "이미지는 저장됐지만 공유 화면을 열지 못했습니다."
                 } catch (_: Exception) {
                     feedbackMessage = "이미지는 저장됐지만 공유 화면을 열지 못했습니다."
                 }
             } catch (cancellationException: CancellationException) {
                 throw cancellationException
+            } catch (_: OutOfMemoryError) {
+                feedbackMessage = "이미지를 저장할 메모리가 부족합니다. 다른 앱을 닫고 다시 시도해 주세요."
             } catch (_: Exception) {
                 feedbackMessage = "이미지를 저장하지 못했습니다. 다시 시도해 주세요."
             } finally {
                 isSavingPoster = false
             }
 
+            ensureActive()
+            if (activeShareTravelId != savingTravelId) return@launch
             feedbackMessage?.let { message ->
                 snackbarHostState.showSnackbar(message)
             }
         }
+    }
+
+    DisposableEffect(travelId) {
+        onDispose { posterSaveJob?.cancel() }
+    }
+    LaunchedEffect(travelId, currentPage) {
+        if (currentPage != TravelDetailPage.SHARE) posterSaveJob?.cancel()
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        posterSaveJob?.cancel()
     }
 
     BackHandler(enabled = isShareVisible && !isEditing) {
@@ -208,14 +264,20 @@ fun TravelDetailRoute(
                             baseballGame = baseballGame,
                             onBackClick = ::closeShare,
                             onSaveImageClick = ::saveAndSharePoster,
-                            posterModifier = Modifier.drawWithContent {
-                                posterGraphicsLayer.record {
-                                    this@drawWithContent.drawContent()
+                            posterModifier = Modifier
+                                .onSizeChanged { size ->
+                                    if (recordedPosterSize != size) recordedPosterSize = null
                                 }
+                                .drawWithContent {
+                                    posterGraphicsLayer.record {
+                                        this@drawWithContent.drawContent()
+                                    }
 
-                                drawLayer(posterGraphicsLayer)
-                            },
+                                    recordedPosterSize = posterGraphicsLayer.size
+                                    drawLayer(posterGraphicsLayer)
+                                },
                             isSaving = isSavingPoster,
+                            isPosterReady = isPosterReady,
                             modifier = Modifier.fillMaxSize(),
                         )
                     }

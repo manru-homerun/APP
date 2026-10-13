@@ -58,6 +58,7 @@ import com.manruhomerun.yadanbeopseok.model.NICKNAME_MAX_LENGTH
 import com.manruhomerun.yadanbeopseok.model.UserProfile
 import com.manruhomerun.yadanbeopseok.mypage.viewmodel.ProfileEditUiState
 import com.manruhomerun.yadanbeopseok.mypage.viewmodel.ProfileNicknameState
+import com.manruhomerun.yadanbeopseok.ui.component.YadanScrollableStateContent
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTeamSelectionItem
 import com.manruhomerun.yadanbeopseok.ui.component.YadanTeamSelectionItemStyle
 import com.manruhomerun.yadanbeopseok.ui.component.YadanUserAvatar
@@ -142,12 +143,8 @@ private fun ProfileEditErrorContent(
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    YadanScrollableStateContent(
+        modifier = modifier.navigationBarsPadding().padding(horizontal = 24.dp),
     ) {
         Text(
             text = "프로필 정보를 확인할 수 없습니다",
@@ -620,13 +617,16 @@ private fun ProfileEditLoadingPreview() {
 }
 
 @Preview(name = "H02 불러오기 실패", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "프로필 조회 실패 - 작은 화면", showBackground = true, widthDp = 320, heightDp = 480)
+@Preview(name = "프로필 조회 실패 - 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Preview(name = "프로필 조회 실패 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
 @Composable
 private fun ProfileEditErrorPreview() {
     YadanbeopseokTheme {
         ProfileEditScreen(
             uiState = ProfileEditUiState(
                 isLoading = false,
-                errorMessage = "인터넷 연결을 확인한 후 다시 시도해주세요.",
+                errorMessage = "프로필을 불러오지 못했습니다. 인터넷 연결을 확인한 후 다시 시도해주세요. ".repeat(5),
             ),
             onBackClick = {},
             onRetryClick = {},

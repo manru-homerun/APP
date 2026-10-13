@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,6 +23,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Phone
@@ -34,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -49,7 +50,6 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanButton
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanCategoryBadge
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanCategoryBadgeStyle
+import com.manruhomerun.yadanbeopseok.designsystem.component.YadanIconButton
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanIconButtonSize
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanIconToggleButton
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanTopAppBar
@@ -81,6 +82,7 @@ import com.manruhomerun.yadanbeopseok.model.TravelSpotDetail
 import com.manruhomerun.yadanbeopseok.travel.spot.viewmodel.TravelSpotDetailUiState
 import com.manruhomerun.yadanbeopseok.ui.component.YadanAsyncImage
 import com.manruhomerun.yadanbeopseok.ui.component.YadanImageLoadState
+import com.manruhomerun.yadanbeopseok.ui.component.YadanScrollableStateContent
 
 /** 관광지 상세 정보와 고정된 뒤로가기·찜 버튼을 표시합니다. */
 @Composable
@@ -91,6 +93,7 @@ fun TravelSpotDetailScreen(
     onRetryClick: () -> Unit,
     onImagesRetryClick: () -> Unit,
     onHomepageClick: (String) -> Unit,
+    onAddressCopyClick: (String) -> Unit,
     onTelephoneClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
@@ -126,6 +129,7 @@ fun TravelSpotDetailScreen(
                     imageErrorMessage = uiState.imageErrorMessage,
                     onImagesRetryClick = onImagesRetryClick,
                     onHomepageClick = onHomepageClick,
+                    onAddressCopyClick = onAddressCopyClick,
                     onTelephoneClick = onTelephoneClick,
                     modifier = Modifier.fillMaxWidth().weight(1f),
                 )
@@ -150,11 +154,13 @@ private fun TravelSpotDetailContent(
     imageErrorMessage: String?,
     onImagesRetryClick: () -> Unit,
     onHomepageClick: (String) -> Unit,
+    onAddressCopyClick: (String) -> Unit,
     onTelephoneClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val spot = detail.spot
-    val locationText = spot.address?.trim()?.takeIf { it.isNotEmpty() } ?: spot.region?.displayName
+    val address = spot.address?.trim()?.takeIf { it.isNotEmpty() }
+    val locationText = address ?: spot.region?.displayName
 
     LazyColumn(
         modifier = modifier,
@@ -186,7 +192,12 @@ private fun TravelSpotDetailContent(
                     color = YadanTextPrimary,
                 )
 
-                locationText?.let { location -> TravelSpotAddress(address = location) }
+                locationText?.let { location ->
+                    TravelSpotAddress(
+                        address = location,
+                        onCopyClick = address?.let { copiedAddress -> { onAddressCopyClick(copiedAddress) } },
+                    )
+                }
             }
         }
 
@@ -271,12 +282,6 @@ private fun TravelSpotImageGallery(
                 }
 
                 if (imageUrls.size > 1) {
-                    TravelSpotGalleryIndicator(
-                        pageCount = imageUrls.size,
-                        currentPage = pagerState.currentPage,
-                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 13.dp),
-                    )
-
                     TravelSpotGalleryCount(
                         pageCount = imageUrls.size,
                         currentPage = pagerState.currentPage,
@@ -368,44 +373,25 @@ private fun TravelSpotImageStatus(
     }
 }
 
-/** 이미지 위에서 갤러리의 현재 위치를 표시하는 화면 전용 페이지 표시기입니다. */
-@Composable
-private fun TravelSpotGalleryIndicator(pageCount: Int, currentPage: Int, modifier: Modifier = Modifier) {
-    val selectedPage = currentPage.coerceIn(0, pageCount - 1)
-
-    Row(
-        modifier = modifier.semantics(mergeDescendants = true) {
-            contentDescription = "관광지 이미지"
-            stateDescription = "${selectedPage + 1} / $pageCount"
-        },
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        repeat(pageCount) { page ->
-            Box(
-                modifier = Modifier
-                    .width(if (page == selectedPage) 14.dp else 5.dp)
-                    .height(5.dp)
-                    .background(
-                        color = if (page == selectedPage) YadanOnPrimary else YadanOnPrimary.copy(alpha = 0.55f),
-                        shape = YadanPillShape,
-                    ),
-            )
-        }
-    }
-}
-
-/** 갤러리 오른쪽 아래에 현재 이미지 번호를 표시합니다. */
+/** 갤러리 오른쪽 아래에 현재 이미지 번호와 접근성 위치 안내를 제공합니다. */
 @Composable
 private fun TravelSpotGalleryCount(pageCount: Int, currentPage: Int, modifier: Modifier = Modifier) {
+    if (pageCount <= 1) return
+
+    val selectedPage = currentPage.coerceIn(0, pageCount - 1)
+    val pageText = "${selectedPage + 1} / $pageCount"
+
     Surface(
-        modifier = modifier.clearAndSetSemantics {},
+        modifier = modifier.clearAndSetSemantics {
+            contentDescription = "관광지 이미지"
+            stateDescription = pageText
+        },
         color = Color.Black.copy(alpha = 0.38f),
         contentColor = YadanOnPrimary,
         shape = YadanPillShape,
     ) {
         Text(
-            text = "${currentPage + 1} / $pageCount",
+            text = pageText,
             modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
             style = YadanTypography.labelSmall.copy(fontWeight = FontWeight.ExtraBold),
         )
@@ -434,10 +420,11 @@ private fun TravelSpotDibsButton(spot: TravelSpot, isUpdatingDibs: Boolean, onDi
     }
 }
 
-/** 관광지 주소를 이름 아래에 한 번만 표시합니다. */
+/** 위치를 한 번만 표시하며, 실제 주소가 있을 때만 복사 버튼을 제공합니다. */
 @Composable
-private fun TravelSpotAddress(address: String) {
+private fun TravelSpotAddress(address: String, onCopyClick: (() -> Unit)?) {
     Row(
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -454,6 +441,16 @@ private fun TravelSpotAddress(address: String) {
             style = YadanTypography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
             color = YadanTextMuted,
         )
+
+        onCopyClick?.let { copyAddress ->
+            YadanIconButton(
+                onClick = copyAddress,
+                modifier = Modifier.minimumInteractiveComponentSize(),
+                size = YadanIconButtonSize.SMALL,
+            ) {
+                Icon(imageVector = Icons.Outlined.ContentCopy, contentDescription = "주소 복사")
+            }
+        }
     }
 }
 
@@ -566,10 +563,8 @@ private fun TravelSpotDetailLoadingContent(modifier: Modifier = Modifier) {
 /** 상세 조회 실패 시 오류와 재시도 버튼을 표시합니다. */
 @Composable
 private fun TravelSpotDetailErrorContent(message: String, onRetryClick: () -> Unit, modifier: Modifier = Modifier) {
-    Column(
+    YadanScrollableStateContent(
         modifier = modifier.padding(horizontal = 28.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = "관광지 정보를 확인할 수 없습니다",
@@ -613,6 +608,7 @@ private fun TravelSpotDetailLongContentPreview() {
 }
 
 @Preview(name = "관광지 상세 - 좁은 화면과 큰 글꼴", showBackground = true, widthDp = 320, heightDp = 740, fontScale = 1.5f)
+@Preview(name = "관광지 상세 - 긴 주소와 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 740, fontScale = 2f)
 @Composable
 private fun TravelSpotDetailLargeFontPreview() {
     val detail = previewTravelSpotDetail()
@@ -625,6 +621,27 @@ private fun TravelSpotDetailLargeFontPreview() {
             overview = "주변 산책로와 공연 시설을 함께 둘러볼 수 있는 관광지입니다. ".repeat(8),
         ),
     )
+}
+
+@Preview(name = "관광지 상세 - 주소 없이 지역만 표시", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelSpotDetailRegionOnlyPreview() {
+    val detail = previewTravelSpotDetail()
+    TravelSpotDetailPreviewContent(detail = detail.copy(spot = detail.spot.copy(address = null)))
+}
+
+@Preview(name = "관광지 상세 - 공백 주소", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelSpotDetailBlankAddressPreview() {
+    val detail = previewTravelSpotDetail()
+    TravelSpotDetailPreviewContent(detail = detail.copy(spot = detail.spot.copy(address = " \n ")))
+}
+
+@Preview(name = "관광지 상세 - 주소와 지역 없음", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelSpotDetailWithoutLocationPreview() {
+    val detail = previewTravelSpotDetail()
+    TravelSpotDetailPreviewContent(detail = detail.copy(spot = detail.spot.copy(address = null, region = null)))
 }
 
 @Preview(name = "관광지 상세 - 연락처 없음", showBackground = true, widthDp = 390, heightDp = 844)
@@ -672,6 +689,21 @@ private fun TravelSpotDetailImagesErrorPreview() {
 private fun TravelSpotDetailSingleImagePreview() {
     val detail = previewTravelSpotDetail()
     TravelSpotDetailPreviewContent(detail = detail.copy(imageUrls = detail.imageUrls.take(1)))
+}
+
+@Preview(name = "관광지 상세 - 사진 두 장과 숫자 표시", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TravelSpotDetailTwoImagesPreview() {
+    val detail = previewTravelSpotDetail()
+    TravelSpotDetailPreviewContent(detail = detail.copy(imageUrls = detail.imageUrls.take(2)))
+}
+
+@Preview(name = "관광지 상세 - 사진 30장과 숫자 표시", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "관광지 상세 - 많은 사진과 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 740, fontScale = 2f)
+@Composable
+private fun TravelSpotDetailManyImagesPreview() {
+    val detail = previewTravelSpotDetail()
+    TravelSpotDetailPreviewContent(detail = detail.copy(imageUrls = List(30) { index -> "preview-image-${index + 1}" }))
 }
 
 @Preview(name = "관광지 사진 - 로딩", showBackground = true, widthDp = 390, heightDp = 230)
@@ -731,22 +763,30 @@ private fun TravelSpotDetailLoadingPreview() {
             onRetryClick = {},
             onImagesRetryClick = {},
             onHomepageClick = {},
+            onAddressCopyClick = {},
             onTelephoneClick = null,
         )
     }
 }
 
 @Preview(name = "관광지 상세 - 오류", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "관광지 상세 조회 실패 - 작은 화면", showBackground = true, widthDp = 320, heightDp = 480)
+@Preview(name = "관광지 상세 조회 실패 - 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
+@Preview(name = "관광지 상세 조회 실패 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
 @Composable
 private fun TravelSpotDetailErrorPreview() {
     YadanbeopseokTheme {
         TravelSpotDetailScreen(
-            uiState = TravelSpotDetailUiState(isLoading = false, errorMessage = "인터넷 연결을 확인한 후 다시 시도해주세요."),
+            uiState = TravelSpotDetailUiState(
+                isLoading = false,
+                errorMessage = "관광지 정보를 불러오지 못했습니다. 인터넷 연결을 확인한 후 다시 시도해주세요. ".repeat(5),
+            ),
             onBackClick = {},
             onDibsClick = {},
             onRetryClick = {},
             onImagesRetryClick = {},
             onHomepageClick = {},
+            onAddressCopyClick = {},
             onTelephoneClick = null,
         )
     }
@@ -775,6 +815,7 @@ private fun TravelSpotDetailPreviewContent(
             onRetryClick = {},
             onImagesRetryClick = {},
             onHomepageClick = {},
+            onAddressCopyClick = {},
             onTelephoneClick = onTelephoneClick,
         )
     }

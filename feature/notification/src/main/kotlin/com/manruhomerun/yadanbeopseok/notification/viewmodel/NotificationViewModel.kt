@@ -9,6 +9,7 @@ import com.manruhomerun.yadanbeopseok.data.repository.NotificationRepository
 import com.manruhomerun.yadanbeopseok.notifications.NotificationRefreshNotifier
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlin.time.Clock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,6 +50,21 @@ class NotificationViewModel @Inject constructor(
         if (loadNotificationsJob?.isActive == true) return
 
         loadNotifications()
+    }
+
+    /** 서버 재조회 없이 현재 목록의 상대 시각만 갱신합니다. */
+    fun refreshTimeTexts() {
+        val now = Clock.System.now()
+
+        _uiState.update { currentState ->
+            if (currentState.notifications.isEmpty()) return@update currentState
+
+            currentState.copy(
+                notifications = currentState.notifications.map { item ->
+                    item.notification.toNotificationListItem(now)
+                },
+            )
+        }
     }
 
     /** Snackbar로 오류를 표시한 뒤 저장된 오류 문구를 제거합니다. */

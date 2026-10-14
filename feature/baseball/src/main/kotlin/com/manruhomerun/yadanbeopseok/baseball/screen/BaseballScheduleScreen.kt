@@ -57,7 +57,7 @@ import kotlinx.datetime.toJavaLocalDate
 /**
  * A·05 구단별 경기 일정 화면입니다.
  *
- * 구단은 서버 ID 순서로 표시하며, 선택한 구단의 요청일 기준
+ * 지정한 구단을 먼저 표시하며, 선택한 구단의 요청일 기준
  * 최대 2주 경기 일정을 날짜별로 구분하여 보여줍니다.
  */
 @Composable
@@ -310,20 +310,7 @@ private fun LocalDate.toScheduleDateText(): String =
 )
 @Composable
 private fun BaseballScheduleScreenPreview() {
-    YadanbeopseokTheme {
-        BaseballScheduleScreen(
-            uiState = BaseballScheduleUiState(
-                selectedTeam = KboTeam.KIA,
-                games = previewBaseballGames,
-                isLoading = false,
-                hasLoadedSchedule = true,
-            ),
-            onTeamSelected = {},
-            onPlanClick = {},
-            onRetryClick = {},
-            onRefreshClick = {},
-        )
-    }
+    BaseballScheduleTeamFilterPreviewContent(team = KboTeam.DOOSAN)
 }
 
 @Preview(name = "경기 일정 - 중간 구단 선택", showBackground = true, widthDp = 390, heightDp = 844)

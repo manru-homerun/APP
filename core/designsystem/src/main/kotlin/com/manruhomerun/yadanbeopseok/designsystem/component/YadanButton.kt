@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOnPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOutline
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryDark
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryInk
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryTint
@@ -50,7 +51,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
  * 야단법석 공통 버튼의 시각적 유형입니다.
  */
 enum class YadanButtonStyle {
-    /** 흰색 콘텐츠의 가독성을 높인 파란색 주요 작업 버튼입니다. */
+    /** 주요 작업에 사용하는 하늘색 버튼입니다. */
     PRIMARY,
 
     /** 흰색 배경과 테두리가 있는 보조 버튼입니다. */
@@ -94,7 +95,7 @@ fun YadanButton(
     val (containerColor, contentColor) =
         when (style) {
             YadanButtonStyle.PRIMARY ->
-                YadanPrimaryInk to YadanOnPrimary
+                YadanPrimary to YadanOnPrimary
 
             YadanButtonStyle.GHOST ->
                 YadanSurface to YadanTextPrimary

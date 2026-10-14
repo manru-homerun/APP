@@ -53,6 +53,7 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanDivider
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanDibs
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOnPrimary
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryInk
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryTintStrong
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanShapes
@@ -274,7 +275,7 @@ private fun YadanTravelSpotAction.actionVisuals(): TravelSpotActionVisuals? =
             TravelSpotActionVisuals(
                 text = "담기",
                 icon = Icons.Default.Add,
-                containerColor = YadanPrimaryInk,
+                containerColor = YadanPrimary,
                 contentColor = YadanOnPrimary,
             )
 

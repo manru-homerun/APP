@@ -5,6 +5,9 @@ plugins {
 
 android {
     namespace = "com.manruhomerun.yadanbeopseok.travel"
+    buildFeatures {
+        buildConfig = true
+    }
 }
 
 dependencies {

@@ -26,8 +26,8 @@ import kotlinx.coroutines.flow.first
 /**
  * 경기 일정 조회에 사용할 KBO 구단 필터입니다.
  *
- * 서버 구단 ID 순서로 구단을 표시하며, 전체 경기 일정 API가 없으므로
- * 전체 필터는 제공하지 않습니다.
+ * 두산, LG, KIA, 삼성, KT를 먼저 표시하고 나머지는 서버 구단 ID 순서를 유지합니다.
+ * 전체 경기 일정 API가 없으므로 전체 필터는 제공하지 않습니다.
  * 최초 선택과 구단 변경 때만 필요한 만큼 위치를 보정하며,
  * 동일한 선택값에서는 사용자가 스크롤하거나 복원한 위치를 유지합니다.
  *
@@ -43,7 +43,7 @@ fun YadanBaseballTeamFilter(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    val teams = KboTeam.entries.sortedBy { team -> team.serverId }
+    val teams = orderedTeams
     val selectedTeamIndex = teams.indexOf(selectedTeam)
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedTeamIndex.coerceAtLeast(0))
     var lastHandledTeamId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -90,6 +90,16 @@ fun YadanBaseballTeamFilter(
     }
 }
 
+/** 경기 일정과 여행 생성에서 동일하게 사용하는 구단 표시 순서입니다. */
+private val orderedTeams = buildList {
+    add(KboTeam.DOOSAN)
+    add(KboTeam.LG)
+    add(KboTeam.KIA)
+    add(KboTeam.SAMSUNG)
+    add(KboTeam.KT)
+    addAll(KboTeam.entries.sortedBy { it.serverId }.filterNot { it in this })
+}
+
 /** 현재 보이는 구단을 드러내는 최소 이동량이며, 화면 밖의 구단은 null을 반환합니다. */
 private fun LazyListLayoutInfo.teamVisibilityScrollOffset(teamId: Long): Float? {
     val item = visibleItemsInfo.firstOrNull { it.key == teamId } ?: return null
@@ -109,7 +119,7 @@ private fun LazyListLayoutInfo.teamVisibilityScrollOffset(teamId: Long): Float? 
 @Composable
 private fun YadanBaseballTeamFilterPreview() {
     var selectedTeam by remember {
-        mutableStateOf<KboTeam?>(KboTeam.KIA)
+        mutableStateOf<KboTeam?>(KboTeam.DOOSAN)
     }
 
     YadanbeopseokTheme {

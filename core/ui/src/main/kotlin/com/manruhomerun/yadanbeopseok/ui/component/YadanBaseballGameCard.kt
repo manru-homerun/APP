@@ -38,7 +38,6 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanDivider
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOnPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
-import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryInk
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextMuted
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
@@ -269,9 +268,9 @@ private fun YadanGamePlanButton(
         enabled = enabled,
         shape = androidx.compose.foundation.shape.RoundedCornerShape(9.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = YadanPrimaryInk,
+            containerColor = YadanPrimary,
             contentColor = YadanOnPrimary,
-            disabledContainerColor = YadanPrimaryInk.copy(alpha = 0.42f),
+            disabledContainerColor = YadanPrimary.copy(alpha = 0.42f),
             disabledContentColor = YadanOnPrimary.copy(alpha = 0.72f),
         ),
         elevation = null,

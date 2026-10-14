@@ -5,6 +5,9 @@ plugins {
 
 android {
     namespace = "com.manruhomerun.yadanbeopseok.ui"
+    buildFeatures {
+        buildConfig = true
+    }
 }
 
 dependencies {

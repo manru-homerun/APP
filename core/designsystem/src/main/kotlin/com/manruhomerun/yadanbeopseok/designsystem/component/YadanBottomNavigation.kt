@@ -44,7 +44,6 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOnPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOutline
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
-import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryInk
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanSurface
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextMuted
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
@@ -285,7 +284,7 @@ fun YadanBottomNavigationCenterAction(
                 ),
         enabled = enabled,
         shape = CircleShape,
-        color = YadanPrimaryInk,
+        color = YadanPrimary,
         contentColor = YadanOnPrimary,
         border =
             BorderStroke(

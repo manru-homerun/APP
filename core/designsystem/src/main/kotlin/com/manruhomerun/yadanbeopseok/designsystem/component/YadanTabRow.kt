@@ -36,7 +36,6 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryTintStrong
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanShapes
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextMuted
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
-import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextSecondary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
 
@@ -231,7 +230,7 @@ private fun YadanTabCountBadge(
         modifier = modifier,
         shape = YadanShapes.extraSmall,
         color = YadanPrimaryTintStrong,
-        contentColor = YadanTextSecondary,
+        contentColor = YadanPrimary,
     ) {
         Text(
             text = count.toString(),

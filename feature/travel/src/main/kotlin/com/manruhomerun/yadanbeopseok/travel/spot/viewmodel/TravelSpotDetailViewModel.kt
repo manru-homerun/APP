@@ -1,11 +1,13 @@
 package com.manruhomerun.yadanbeopseok.travel.spot.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.manruhomerun.yadanbeopseok.common.NetworkConnectionException
 import com.manruhomerun.yadanbeopseok.common.NetworkTimeoutException
 import com.manruhomerun.yadanbeopseok.common.SessionExpiredException
 import com.manruhomerun.yadanbeopseok.data.repository.TravelSpotRepository
+import com.manruhomerun.yadanbeopseok.travel.BuildConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -191,9 +193,15 @@ class TravelSpotDetailViewModel @Inject constructor(
 
         imagesJob = viewModelScope.launch {
             try {
+                if (BuildConfig.DEBUG) {
+                    Log.d(IMAGE_LIST_LOG_TAG, "Loading image list: spotId=$spotId")
+                }
                 val imageUrls = travelSpotRepository.getTravelSpotImages(spotId)
 
                 if (isCurrentImagesRequest(spotId, loadRequest, imagesRequest)) {
+                    if (BuildConfig.DEBUG) {
+                        Log.d(IMAGE_LIST_LOG_TAG, "Image list loaded: spotId=$spotId count=${imageUrls.size} empty=${imageUrls.isEmpty()}")
+                    }
                     _uiState.update { state ->
                         val detail = state.detail ?: return@update state
                         state.copy(
@@ -210,6 +218,9 @@ class TravelSpotDetailViewModel @Inject constructor(
                 // 세션 만료는 이미지 오류로 표시하지 않고 공통 로그인 이동에 맡깁니다.
             } catch (exception: Exception) {
                 if (isCurrentImagesRequest(spotId, loadRequest, imagesRequest)) {
+                    if (BuildConfig.DEBUG) {
+                        Log.e(IMAGE_LIST_LOG_TAG, "Image list failed: spotId=$spotId", exception)
+                    }
                     _uiState.update {
                         it.copy(
                             imageErrorMessage = exception.toTravelSpotErrorMessage(
@@ -242,6 +253,8 @@ class TravelSpotDetailViewModel @Inject constructor(
         dibsJob?.cancel()
     }
 }
+
+private const val IMAGE_LIST_LOG_TAG = "TravelSpotImages"
 
 /** 내부 예외를 사용자에게 표시할 안전한 문구로 변환합니다. */
 private fun Throwable.toTravelSpotErrorMessage(fallbackMessage: String): String =

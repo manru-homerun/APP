@@ -1,5 +1,6 @@
 package com.manruhomerun.yadanbeopseok.ui.component
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,6 +48,9 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextSecondary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTypography
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
+import com.manruhomerun.yadanbeopseok.ui.BuildConfig
+import java.net.URI
+import java.net.URISyntaxException
 
 /**
  * 네트워크 이미지를 불러오는 야단법석 공통 이미지 컴포넌트입니다.
@@ -131,6 +135,11 @@ fun YadanAsyncImage(
                 .build()
         }
 
+    val imageLogSource = remember(imageUrl) {
+        if (BuildConfig.DEBUG) imageUrl.toImageLogSource() else ""
+    }
+    val requestLogId = System.identityHashCode(imageRequest)
+
     val currentOnLoadStateChange by rememberUpdatedState(onLoadStateChange)
     if (onLoadStateChange != null) {
         LaunchedEffect(imageRequest, loadState) {
@@ -179,15 +188,24 @@ fun YadanAsyncImage(
                     } else {
                         YadanImageLoadState.FALLBACK
                     }
+                    if (BuildConfig.DEBUG && hasImageUrl) {
+                        Log.d(IMAGE_LOG_TAG, "Loading request=$requestLogId url=$imageLogSource")
+                    }
                 },
-                onSuccess = {
+                onSuccess = { state ->
                     loadState = YadanImageLoadState.SUCCESS
+                    if (BuildConfig.DEBUG) {
+                        Log.d(IMAGE_LOG_TAG, "Success request=$requestLogId source=${state.result.dataSource} url=$imageLogSource")
+                    }
                 },
-                onError = {
+                onError = { state ->
                     loadState = if (hasImageUrl) {
                         YadanImageLoadState.ERROR
                     } else {
                         YadanImageLoadState.FALLBACK
+                    }
+                    if (BuildConfig.DEBUG && hasImageUrl) {
+                        Log.e(IMAGE_LOG_TAG, "Failed request=$requestLogId url=$imageLogSource", state.result.throwable)
                     }
                 },
             )
@@ -282,6 +300,28 @@ enum class YadanImageLoadState {
     SUCCESS,
     ERROR,
     FALLBACK,
+}
+
+private const val IMAGE_LOG_TAG = "YadanImage"
+
+/** 진단용 웹 주소에서 사용자 정보, 쿼리와 프래그먼트를 제외하고 로컬 경로는 숨깁니다. */
+private fun String?.toImageLogSource(): String {
+    if (isNullOrBlank()) return "<none>"
+
+    return try {
+        val uri = URI(this)
+        if (uri.scheme.equals("http", ignoreCase = true) || uri.scheme.equals("https", ignoreCase = true)) {
+            if (uri.host.isNullOrBlank()) {
+                "<invalid HTTP URL>"
+            } else {
+                URI(uri.scheme, null, uri.host, uri.port, uri.path, null, null).toASCIIString()
+            }
+        } else {
+            "${uri.scheme ?: "unknown"}://<redacted>"
+        }
+    } catch (_: URISyntaxException) {
+        "<invalid URI>"
+    }
 }
 
 @Preview(

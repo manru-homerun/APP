@@ -9,8 +9,8 @@ import com.manruhomerun.yadanbeopseok.model.KboTeam
  * 선택한 구단과 해당 구단의 요청일 기준 최대 2주 경기 일정을 관리합니다.
  */
 data class BaseballScheduleUiState(
-    /** 현재 일정 필터에서 선택한 구단입니다. */
-    val selectedTeam: KboTeam = KboTeam.entries.minBy { it.serverId },
+    /** 현재 선택한 구단이며, 기본 진입에서는 맨 앞의 두산을 선택합니다. */
+    val selectedTeam: KboTeam = KboTeam.DOOSAN,
 
     /** 선택한 구단의 요청일 기준 최대 2주 경기 일정입니다. */
     val games: List<BaseballGameSummary> = emptyList(),

@@ -716,7 +716,7 @@ private fun YadanTravelVerifyButton(
                 )
                 .height(40.dp)
                 .clip(RoundedCornerShape(11.dp))
-                .background(YadanPrimaryInk)
+                .background(YadanPrimary)
                 .clickable(
                     enabled = enabled,
                     role = Role.Button,

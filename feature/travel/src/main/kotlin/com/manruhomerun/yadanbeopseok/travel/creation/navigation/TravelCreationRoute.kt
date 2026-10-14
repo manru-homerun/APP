@@ -257,8 +257,7 @@ private fun TravelCreationContent(
 
     LaunchedEffect(directGameId, viewModel) {
         if (directGameId == null) {
-            val initialTeam = KboTeam.entries.minBy { team -> team.serverId }
-            viewModel.initializeGameSelection(initialTeam)
+            viewModel.initializeGameSelection(KboTeam.DOOSAN)
         } else {
             viewModel.initializeSelectedGame(directGameId)
         }

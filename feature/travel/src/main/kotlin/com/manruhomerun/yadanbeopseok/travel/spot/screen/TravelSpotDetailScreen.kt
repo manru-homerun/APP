@@ -84,7 +84,7 @@ import com.manruhomerun.yadanbeopseok.ui.component.YadanAsyncImage
 import com.manruhomerun.yadanbeopseok.ui.component.YadanImageLoadState
 import com.manruhomerun.yadanbeopseok.ui.component.YadanScrollableStateContent
 
-/** 관광지 상세 정보와 고정된 뒤로가기·찜 버튼을 표시합니다. */
+/** 고정된 뒤로가기와 관광지 이름 옆 찜 버튼을 표시합니다. */
 @Composable
 fun TravelSpotDetailScreen(
     uiState: TravelSpotDetailUiState,
@@ -106,15 +106,6 @@ fun TravelSpotDetailScreen(
         YadanTopAppBar(
             title = "관광지 상세",
             onNavigationClick = onBackClick,
-            trailingContent = {
-                uiState.detail?.let { detail ->
-                    TravelSpotDibsButton(
-                        spot = detail.spot,
-                        isUpdatingDibs = uiState.isUpdatingDibs,
-                        onDibsClick = onDibsClick,
-                    )
-                }
-            },
         )
 
         when {
@@ -125,8 +116,10 @@ fun TravelSpotDetailScreen(
             uiState.detail != null -> {
                 TravelSpotDetailContent(
                     detail = uiState.detail,
+                    isUpdatingDibs = uiState.isUpdatingDibs,
                     isLoadingImages = uiState.isLoadingImages,
                     imageErrorMessage = uiState.imageErrorMessage,
+                    onDibsClick = onDibsClick,
                     onImagesRetryClick = onImagesRetryClick,
                     onHomepageClick = onHomepageClick,
                     onAddressCopyClick = onAddressCopyClick,
@@ -150,8 +143,10 @@ fun TravelSpotDetailScreen(
 @Composable
 private fun TravelSpotDetailContent(
     detail: TravelSpotDetail,
+    isUpdatingDibs: Boolean,
     isLoadingImages: Boolean,
     imageErrorMessage: String?,
+    onDibsClick: () -> Unit,
     onImagesRetryClick: () -> Unit,
     onHomepageClick: (String) -> Unit,
     onAddressCopyClick: (String) -> Unit,
@@ -185,12 +180,24 @@ private fun TravelSpotDetailContent(
                     style = YadanCategoryBadgeStyle.SELECTED,
                 )
 
-                Text(
-                    text = spot.name,
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    style = YadanTypography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                    color = YadanTextPrimary,
-                )
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = spot.name,
+                        modifier = Modifier.weight(1f),
+                        style = YadanTypography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                        color = YadanTextPrimary,
+                    )
+
+                    TravelSpotDibsButton(
+                        spot = spot,
+                        isUpdatingDibs = isUpdatingDibs,
+                        onDibsClick = onDibsClick,
+                    )
+                }
 
                 locationText?.let { location ->
                     TravelSpotAddress(
@@ -398,7 +405,7 @@ private fun TravelSpotGalleryCount(pageCount: Int, currentPage: Int, modifier: M
     }
 }
 
-/** 고정 헤더에 찜 상태를 표시하고 요청 중에는 중복 클릭을 막습니다. */
+/** 관광지 이름 옆에 찜 상태를 표시하고 요청 중에는 중복 클릭을 막습니다. */
 @Composable
 private fun TravelSpotDibsButton(spot: TravelSpot, isUpdatingDibs: Boolean, onDibsClick: () -> Unit) {
     YadanIconToggleButton(

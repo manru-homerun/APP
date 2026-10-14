@@ -59,7 +59,6 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanDivider
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOnPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanOutline
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
-import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryInk
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextMuted
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextSecondary
@@ -523,7 +522,7 @@ internal fun FriendActionButton(
                 shape = shape,
                 contentPadding = contentPadding,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = YadanPrimaryInk,
+                    containerColor = YadanPrimary,
                     contentColor = YadanOnPrimary,
                 ),
             ) {

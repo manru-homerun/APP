@@ -45,7 +45,7 @@ android {
 
     defaultConfig {
         applicationId = "com.manruhomerun.yadanbeopseok"
-        versionCode = 2
+        versionCode = 3
         versionName = "1.0"
 
         manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] =

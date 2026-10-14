@@ -190,8 +190,9 @@ private fun TravelCreationContent(
         shouldShowSavedScreenAfterSave = false
         viewModel.resetCreation()
 
-        // 현재 화면을 제거하고 홈 탭의 시작 화면으로 이동합니다.
-        navigator.replaceCurrent(HomeNavKey)
+        // 기존 홈 상세를 복원하지 않고 홈 첫 화면으로 이동합니다.
+        navigator.navigateBack()
+        navigator.navigateToTopLevelRoot(HomeNavKey)
     }
 
     fun closeCreation() {

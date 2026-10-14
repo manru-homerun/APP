@@ -2,6 +2,7 @@ package com.manruhomerun.yadanbeopseok.notification.navigation
 
 import android.Manifest
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -48,6 +49,15 @@ fun NotificationSettingRoute(
     val coroutineScope = rememberCoroutineScope()
     var systemStateRevision by remember { mutableIntStateOf(0) }
     var pendingTarget by rememberSaveable { mutableStateOf<NotificationSettingTarget?>(null) }
+
+    // 저장 요청이 끝나기 전에는 사용자 뒤로가기로 화면을 닫지 않습니다.
+    val onUserBackClick: () -> Unit = {
+        if (!viewModel.uiState.value.isUpdating) {
+            onBackClick()
+        }
+    }
+
+    BackHandler(enabled = uiState.isUpdating, onBack = onUserBackClick)
 
     val updateServerSetting: (NotificationSettingTarget, Boolean) -> Unit = { target, enabled ->
         when (target) {
@@ -139,7 +149,7 @@ fun NotificationSettingRoute(
         NotificationSettingScreen(
             uiState = uiState,
             interactionEnabled = pendingTarget == null,
-            onBackClick = onBackClick,
+            onBackClick = onUserBackClick,
             onFriendNotificationChange = { enabled ->
                 updateNotificationSetting(
                     NotificationSettingTarget.FRIEND,

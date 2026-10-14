@@ -47,7 +47,8 @@ data class BaseballTeamResponseDto(
 /**
  * 경기 상세 응답에 포함된 전체 구장 정보입니다.
  *
- * regionCode는 SEOUL, BUSAN과 같은 서버 지역 enum 문자열입니다.
+ * 현재 Mapper는 regionCode를 Region.legalDongCode와 대응하는
+ * 5자리 법정동 코드 문자열로 해석합니다. 예: 서울은 "11000"입니다.
  */
 @Serializable
 data class BaseballStadiumResponseDto(

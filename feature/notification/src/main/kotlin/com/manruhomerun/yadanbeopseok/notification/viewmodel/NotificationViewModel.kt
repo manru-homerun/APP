@@ -67,20 +67,13 @@ class NotificationViewModel @Inject constructor(
         }
     }
 
-    /** Snackbar로 오류를 표시한 뒤 저장된 오류 문구를 제거합니다. */
-    fun clearErrorMessage() {
-        _uiState.update { currentState ->
-            currentState.copy(errorMessage = null)
-        }
-    }
-
     private fun loadNotifications() {
         loadNotificationsJob?.cancel()
         val requestId = ++loadRequestId
 
         _uiState.update { currentState ->
             currentState.copy(
-                isLoading = currentState.notifications.isEmpty(),
+                isLoading = true,
                 errorMessage = null,
             )
         }

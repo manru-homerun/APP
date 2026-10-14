@@ -91,7 +91,8 @@ data class TravelVerificationResult(val totalVerifiedSpotsCount: Int)
 /**
  * 앱 화면에서 사용하는 여행 진행 상태입니다.
  *
- * 서버의 PLANNED 목록과 여행 상세 응답은 시작일, 종료일을 기준으로
+ * 목록 조회에는 서버의 PLANNING, IN_PROGRESS, COMPLETED 상태를 사용합니다.
+ * 조회한 여행은 시작일과 종료일을 기준으로
  * [UPCOMING], [ACTIVE], [COMPLETED] 상태로 변환합니다.
  */
 enum class TravelStatus {

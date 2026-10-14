@@ -5,20 +5,26 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.NotificationsNone
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,7 +38,9 @@ import com.manruhomerun.yadanbeopseok.designsystem.component.YadanIconButtonSize
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanIconButtonStyle
 import com.manruhomerun.yadanbeopseok.designsystem.component.YadanTopAppBar
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanBackground
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanDivider
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimary
+import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanPrimaryInk
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextMuted
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextPrimary
 import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanTextSecondary
@@ -93,6 +101,40 @@ fun NotificationScreen(
             }
 
             uiState.notifications.isNotEmpty() -> {
+                // 기존 목록은 유지하고 최신 조회 상태만 헤더 아래에 표시합니다.
+                when {
+                    uiState.isLoading -> {
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                            color = YadanPrimary,
+                            trackColor = YadanDivider,
+                        )
+                    }
+
+                    uiState.errorMessage != null -> {
+                        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+                            Text(
+                                text = uiState.errorMessage,
+                                style = YadanTypography.bodySmall,
+                                color = YadanTextSecondary,
+                            )
+
+                            TextButton(
+                                onClick = onRetryClick,
+                                colors = ButtonDefaults.textButtonColors(contentColor = YadanPrimaryInk),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(ButtonDefaults.IconSize),
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(text = "다시 시도", style = YadanTypography.labelMedium)
+                            }
+                        }
+                    }
+                }
+
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -240,6 +282,56 @@ private fun NotificationScreenLongListPreview() {
             uiState = NotificationUiState(
                 notifications = notifications,
                 isLoading = false,
+            ),
+            onBackClick = {},
+            onSettingClick = {},
+            onNotificationClick = {},
+            onRetryClick = {},
+        )
+    }
+}
+
+@Preview(
+    name = "알림 목록 재조회 중",
+    showBackground = true,
+    showSystemUi = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 390,
+    heightDp = 844,
+)
+@Composable
+private fun NotificationScreenRefreshingPreview() {
+    YadanbeopseokTheme {
+        NotificationScreen(
+            uiState = NotificationUiState(
+                notifications = notificationPreviewItems(),
+                isLoading = true,
+            ),
+            onBackClick = {},
+            onSettingClick = {},
+            onNotificationClick = {},
+            onRetryClick = {},
+        )
+    }
+}
+
+@Preview(
+    name = "알림 목록 재조회 실패",
+    showBackground = true,
+    showSystemUi = true,
+    backgroundColor = 0xFFFAFAFA,
+    widthDp = 390,
+    heightDp = 844,
+)
+@Preview(name = "알림 목록 재조회 실패 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 480, fontScale = 2f)
+@Composable
+private fun NotificationScreenRefreshErrorPreview() {
+    YadanbeopseokTheme {
+        NotificationScreen(
+            uiState = NotificationUiState(
+                notifications = notificationPreviewItems(),
+                isLoading = false,
+                errorMessage = "인터넷 연결을 확인한 후 다시 시도해주세요.",
             ),
             onBackClick = {},
             onSettingClick = {},

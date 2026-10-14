@@ -71,7 +71,7 @@ fun LoginRoute(
                     )
                 }
             },
-            loginEnabled = !uiState.isLoading,
+            isLoading = uiState.isLoading,
             modifier = Modifier.fillMaxSize(),
         )
 

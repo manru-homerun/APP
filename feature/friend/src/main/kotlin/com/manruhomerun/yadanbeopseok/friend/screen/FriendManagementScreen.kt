@@ -384,6 +384,7 @@ private fun FriendRequestContent(
 
                     YadanUserListItem(
                         user = request.user,
+                        supportingText = if (isProcessing) "처리 중..." else null,
                         trailingContent = {
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -812,6 +813,37 @@ private fun FriendManagementRequestsPreview() {
                 receivedRequestCount = 2,
                 sentRequestCount = 1,
                 isFriendsLoading = false,
+            ),
+            onBackClick = {},
+            onSearchClick = {},
+            onTabSelected = {},
+            onAcceptRequest = {},
+            onRejectRequest = {},
+            onCancelRequest = {},
+            onDeleteFriend = {},
+            onRetryFriends = {},
+            onRetryReceivedRequests = {},
+            onRetrySentRequests = {},
+        )
+    }
+}
+
+@Preview(name = "친구 요청 - 받은 요청 처리 중", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "받은 요청 처리 중 - 좁은 화면", showBackground = true, widthDp = 320, heightDp = 640)
+@Preview(name = "받은 요청 처리 중 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 640, fontScale = 2f)
+@Composable
+private fun FriendManagementProcessingReceivedRequestPreview() {
+    YadanbeopseokTheme {
+        FriendManagementScreen(
+            uiState = FriendManagementUiState(
+                selectedTab = FriendManagementTab.REQUESTS,
+                receivedRequests = previewReceivedRequests,
+                sentRequests = previewSentRequests,
+                friendCount = 4,
+                receivedRequestCount = 2,
+                sentRequestCount = 1,
+                isFriendsLoading = false,
+                processingRequestIds = setOf(previewReceivedRequests.first().id),
             ),
             onBackClick = {},
             onSearchClick = {},

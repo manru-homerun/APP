@@ -6,13 +6,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -328,6 +331,7 @@ private fun TravelRecordScheduleCard(
 
 /**
  * 지난 일정의 관광지 인증 상태와 야구 경기 정보를 표시합니다.
+ * 긴 이름은 줄바꿈하고 연결선은 본문 높이에 맞춰 늘립니다.
  */
 @Composable
 private fun TravelRecordTimelineRow(
@@ -340,18 +344,23 @@ private fun TravelRecordTimelineRow(
         false -> "미인증"
         null -> null
     }
+    val markerSize = 22.dp
+    val minimumHeight = if (isLast) markerSize else markerSize + 30.dp
 
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = minimumHeight)
+            .height(IntrinsicSize.Min),
         verticalAlignment = Alignment.Top,
     ) {
         Column(
-            modifier = Modifier.width(24.dp),
+            modifier = Modifier.width(24.dp).fillMaxHeight(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(
                 modifier = Modifier
-                    .size(22.dp)
+                    .size(markerSize)
                     .background(
                         color = when {
                             item.isBaseballGame -> YadanTextPrimary
@@ -380,7 +389,7 @@ private fun TravelRecordTimelineRow(
                 Box(
                     modifier = Modifier
                         .width(2.dp)
-                        .height(30.dp)
+                        .weight(1f)
                         .background(YadanPrimaryTint),
                 )
             }
@@ -396,12 +405,11 @@ private fun TravelRecordTimelineRow(
         ) {
             Text(
                 text = item.name,
+                modifier = Modifier.fillMaxWidth(),
                 style = YadanTypography.bodyMedium.copy(
                     fontWeight = FontWeight.ExtraBold,
                 ),
                 color = YadanTextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
 
             Row(
@@ -728,6 +736,22 @@ private fun TravelRecordDetailUnverifiedPreview() {
     }
 }
 
+@Preview(name = "완료 여행 상세 - 긴 관광지명과 구장명", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "완료 여행 상세 - 긴 이름 좁은 화면", showBackground = true, widthDp = 320, heightDp = 844)
+@Preview(name = "완료 여행 상세 - 긴 이름 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 844, fontScale = 2f)
+@Composable
+private fun TravelRecordDetailLongNamesPreview() {
+    YadanbeopseokTheme {
+        TravelRecordDetailScreen(
+            uiState = travelRecordDetailPreviewState(hasSticker = false, useLongNames = true),
+            onBackClick = {},
+            onRetryClick = {},
+            onStickerRetryClick = {},
+            onDecoratePhotoClick = null,
+        )
+    }
+}
+
 @Preview(
     name = "D01b 지난 여행 상세 - 로딩",
     showBackground = true,
@@ -777,6 +801,7 @@ private fun TravelRecordDetailErrorPreview() {
 private fun travelRecordDetailPreviewState(
     hasSticker: Boolean,
     verifiedPlaceCount: Int = if (hasSticker) STICKER_REQUIRED_VERIFIED_SPOT_COUNT else 2,
+    useLongNames: Boolean = false,
 ): TravelRecordDetailUiState {
     val travel = Travel(
         id = "travel-1",
@@ -793,7 +818,7 @@ private fun travelRecordDetailPreviewState(
         isLeader = true,
         themeId = "2",
         verifiedSpotsCount = verifiedPlaceCount,
-        days = previewTravelDays(verifiedPlaceCount),
+        days = previewTravelDays(verifiedPlaceCount, useLongNames),
         status = TravelStatus.COMPLETED,
     )
 
@@ -801,7 +826,7 @@ private fun travelRecordDetailPreviewState(
         id = "game-1",
         stadium = BaseballStadium(
             id = "stadium-1",
-            name = "사직야구장",
+            name = if (useLongNames) "부산 사직야구장 중앙 관람석 및 야외 응원광장" else "사직야구장",
             region = Region.BUSAN,
             latitude = 35.1940,
             longitude = 129.0615,
@@ -843,11 +868,11 @@ private fun travelRecordDetailPreviewState(
     )
 }
 
-private fun previewTravelDays(verifiedPlaceCount: Int): List<TravelDay> {
+private fun previewTravelDays(verifiedPlaceCount: Int, useLongNames: Boolean = false): List<TravelDay> {
     val places = listOf(
         previewTravelPlace(
             id = "spot-1",
-            name = "돼지국밥 거리",
+            name = if (useLongNames) "부산 돼지국밥 특화거리와 전통음식 문화체험 공간" else "돼지국밥 거리",
             category = TravelSpotCategory.FOOD,
             order = 1,
             isVerified = verifiedPlaceCount >= 1,
@@ -875,7 +900,7 @@ private fun previewTravelDays(verifiedPlaceCount: Int): List<TravelDay> {
         ),
         previewTravelPlace(
             id = "spot-5",
-            name = "부평깡통시장",
+            name = if (useLongNames) "부평깡통시장과 국제시장 전통문화 관광특구" else "부평깡통시장",
             category = TravelSpotCategory.SHOPPING,
             order = 3,
             isVerified = verifiedPlaceCount >= 5,

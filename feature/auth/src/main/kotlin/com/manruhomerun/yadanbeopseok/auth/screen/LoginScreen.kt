@@ -23,14 +23,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SportsBaseball
 import androidx.compose.material.icons.filled.Stadium
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -52,13 +58,13 @@ import com.manruhomerun.yadanbeopseok.designsystem.theme.YadanbeopseokTheme
  *
  * @param onKakaoLoginClick 카카오 로그인 버튼을 눌렀을 때 실행할 작업입니다.
  * @param modifier 화면 크기와 배치를 지정할 Modifier입니다.
- * @param loginEnabled 중복 로그인 요청을 방지하기 위한 버튼 활성화 상태입니다.
+ * @param isLoading 카카오 인증 또는 백엔드 로그인이 진행 중인지 나타냅니다.
  */
 @Composable
 fun LoginScreen(
     onKakaoLoginClick: () -> Unit,
     modifier: Modifier = Modifier,
-    loginEnabled: Boolean = true,
+    isLoading: Boolean = false,
 ) {
     Box(
         modifier = modifier
@@ -152,25 +158,62 @@ fun LoginScreen(
                         )
                     }
 
-                    YadanKakaoLoginButton(
-                        onClick = onKakaoLoginClick,
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = loginEnabled,
-                    )
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        // 안내 공간을 유지해 진행 상태가 바뀌어도 배치가 움직이지 않게 합니다.
+                        Box(modifier = Modifier.widthIn(max = 160.dp).fillMaxWidth().height(4.dp)) {
+                            if (isLoading) {
+                                LinearProgressIndicator(
+                                    modifier = Modifier.fillMaxSize().clearAndSetSemantics {},
+                                    color = YadanOnPrimary,
+                                    trackColor = YadanOnPrimary.copy(alpha = 0.24f),
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = "로그인 중...",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .alpha(if (isLoading) 1f else 0f)
+                                .then(
+                                    if (isLoading) {
+                                        Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                                    } else {
+                                        Modifier.clearAndSetSemantics {}
+                                    },
+                                ),
+                            style = YadanTypography.labelMedium,
+                            color = YadanOnPrimary,
+                            textAlign = TextAlign.Center,
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        YadanKakaoLoginButton(
+                            onClick = onKakaoLoginClick,
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !isLoading,
+                        )
+                    }
                 },
             ) { measurables, constraints ->
                 val childConstraints = constraints.copy(minHeight = 0)
                 val brand = measurables[0].measure(childConstraints)
-                val button = measurables[1].measure(childConstraints)
+                val loginControls = measurables[1].measure(childConstraints)
                 val minimumGap = 24.dp.roundToPx()
-                val height = maxOf(viewportHeight, brand.height + button.height + minimumGap)
-                val remainingHeight = height - brand.height - button.height
+                val height = maxOf(viewportHeight, brand.height + loginControls.height + minimumGap)
+                val remainingHeight = height - brand.height - loginControls.height
                 // 여유 공간을 나누되, 짧은 화면에서도 버튼과 본문 사이를 확보합니다.
                 val brandTop = minOf(remainingHeight / 2, remainingHeight - minimumGap)
 
                 layout(constraints.maxWidth, height) {
                     brand.placeRelative(0, brandTop)
-                    button.placeRelative(0, height - button.height)
+                    loginControls.placeRelative(0, height - loginControls.height)
                 }
             }
         }
@@ -188,15 +231,15 @@ fun LoginScreen(
 @Preview(name = "로그인 - 최대 글꼴", showBackground = true, widthDp = 320, heightDp = 640, fontScale = 2f)
 @Preview(name = "로그인 - 낮은 가로 화면", showBackground = true, widthDp = 640, heightDp = 360)
 @Composable
-private fun LoginScreenPreview(@PreviewParameter(LoginEnabledPreviewProvider::class) enabled: Boolean) {
+private fun LoginScreenPreview(@PreviewParameter(LoginLoadingPreviewProvider::class) isLoading: Boolean) {
     YadanbeopseokTheme {
         LoginScreen(
             onKakaoLoginClick = {},
-            loginEnabled = enabled,
+            isLoading = isLoading,
         )
     }
 }
 
-private class LoginEnabledPreviewProvider : PreviewParameterProvider<Boolean> {
-    override val values = sequenceOf(true, false)
+private class LoginLoadingPreviewProvider : PreviewParameterProvider<Boolean> {
+    override val values = sequenceOf(false, true)
 }

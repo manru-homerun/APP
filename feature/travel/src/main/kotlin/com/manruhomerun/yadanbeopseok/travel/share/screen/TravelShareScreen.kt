@@ -149,7 +149,7 @@ fun TravelShareScreen(
             shadowElevation = 8.dp,
         ) {
             YadanButton(
-                text = "이미지 저장",
+                text = "저장하고 공유",
                 onClick = onSaveImageClick,
                 modifier = Modifier.padding(
                     start = 20.dp,

@@ -102,6 +102,7 @@ enum class YadanTravelPlaceItemMode {
  * @param isFixed 편집 중 순서를 변경하거나 삭제할 수 없는 장소인지 나타냅니다.
  * 기본적으로 야구장은 고정 장소로 처리합니다.
  * @param onVerifyClick 방문 인증 버튼을 눌렀을 때 실행할 작업입니다.
+ * null이면 미인증 장소의 인증 버튼을 표시하지 않습니다.
  * @param onRemoveClick 편집 모드의 삭제 버튼을 눌렀을 때 실행할 작업입니다.
  * @param dragHandleModifier 드래그 정렬 라이브러리의 핸들 Modifier를 연결합니다.
  * @param enabled 장소 항목과 작업 버튼의 활성화 여부입니다.
@@ -494,27 +495,17 @@ private fun YadanTravelPlaceCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Text(
-                        text = place.spot.name,
-                        modifier = Modifier.weight(1f, fill = false),
-                        style =
-                            YadanTypography.labelMedium.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                            ),
-                        color = YadanTextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                Text(
+                    text = place.spot.name,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = YadanTypography.labelMedium.copy(fontWeight = FontWeight.ExtraBold),
+                    color = YadanTextPrimary,
+                )
 
-                    YadanCategoryBadge(
-                        text = place.spot.category.displayName,
-                        style = place.spot.category.badgeStyle(),
-                    )
-                }
+                YadanCategoryBadge(
+                    text = place.spot.category.displayName,
+                    style = place.spot.category.badgeStyle(),
+                )
 
                 supportingText
                     ?.takeIf { it.isNotBlank() }
@@ -647,10 +638,10 @@ private fun YadanTravelPlaceTrailingContent(
                     }
                 }
 
-                else -> {
+                onVerifyClick != null -> {
                     YadanTravelVerifyButton(
-                        onClick = onVerifyClick ?: {},
-                        enabled = enabled && onVerifyClick != null,
+                        onClick = onVerifyClick,
+                        enabled = enabled,
                     )
                 }
             }
@@ -871,6 +862,36 @@ private fun YadanTravelPlaceItemPreview() {
                 onClick = {},
                 mode = YadanTravelPlaceItemMode.COMPLETED,
                 supportingText = "17:00 · 직관",
+            )
+        }
+    }
+}
+
+@Preview(name = "관광지 긴 이름 - 보기·인증·편집", showBackground = true, widthDp = 320)
+@Preview(name = "관광지 긴 이름 - 큰 글꼴", showBackground = true, widthDp = 320, fontScale = 2f)
+@Composable
+private fun YadanTravelPlaceLongNamePreview() {
+    val place = previewTravelPlace(
+        id = "long-name",
+        name = "부산 해운대 블루라인파크 미포정거장 해변열차 탑승장",
+        category = TravelSpotCategory.TOURIST_ATTRACTION,
+        order = 1,
+    )
+
+    YadanbeopseokTheme {
+        Column(modifier = Modifier.fillMaxWidth().background(YadanBackground).padding(20.dp)) {
+            YadanTravelPlaceItem(place = place, isLast = true)
+            YadanTravelPlaceItem(
+                place = place,
+                isLast = true,
+                mode = YadanTravelPlaceItemMode.ACTIVE,
+                onVerifyClick = {},
+            )
+            YadanTravelPlaceItem(
+                place = place,
+                isLast = true,
+                mode = YadanTravelPlaceItemMode.EDIT,
+                onRemoveClick = {},
             )
         }
     }

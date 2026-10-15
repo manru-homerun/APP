@@ -262,7 +262,10 @@ private fun TravelDetailContent(
         },
 
         placeItemMode = travel.status.toPlaceItemMode(),
-        onVerifyClick = if (travel.status == TravelStatus.ACTIVE) {
+        onVerifyClick = if (
+            travel.status == TravelStatus.ACTIVE &&
+            travel.verifiedSpotsCount < STICKER_REQUIRED_VERIFIED_SPOT_COUNT
+        ) {
             onVerifyClick
         } else {
             null
@@ -485,6 +488,42 @@ private fun TravelDetailUpcomingCompanionPreview() {
 private fun TravelDetailActivePreview() {
     TravelDetailStatePreviewContent(
         status = TravelStatus.ACTIVE,
+    )
+}
+
+@Preview(name = "여행 일정 - 4곳 인증", showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun TravelDetailBeforeVerificationLimitPreview() {
+    TravelDetailVerificationLimitPreviewContent(STICKER_REQUIRED_VERIFIED_SPOT_COUNT - 1)
+}
+
+@Preview(name = "여행 일정 - 5곳 인증 완료", showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun TravelDetailVerificationLimitPreview() {
+    TravelDetailVerificationLimitPreviewContent(STICKER_REQUIRED_VERIFIED_SPOT_COUNT)
+}
+
+@Preview(name = "여행 일정 - 기존 6곳 인증", showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun TravelDetailPastVerificationLimitPreview() {
+    TravelDetailVerificationLimitPreviewContent(STICKER_REQUIRED_VERIFIED_SPOT_COUNT + 1)
+}
+
+@Composable
+private fun TravelDetailVerificationLimitPreviewContent(verifiedCount: Int) {
+    val travel = previewTravel(TravelStatus.ACTIVE, isLeader = true)
+    val places = List(6) { index ->
+        previewPlace(
+            id = "verification-limit-$index",
+            name = "부산 관광지 ${index + 1}",
+            category = TravelSpotCategory.CULTURE,
+            order = index,
+            isVerified = index < verifiedCount,
+        )
+    }
+    TravelDetailStatePreviewContent(
+        status = TravelStatus.ACTIVE,
+        travel = travel.copy(verifiedSpotsCount = verifiedCount, days = listOf(TravelDay(1, places))),
     )
 }
 

@@ -104,6 +104,7 @@ fun TravelVerificationScreen(
 
     val canVerify = phase == TravelVerificationPhase.READY &&
         travel != null && targetSpot != null &&
+        travel.verifiedSpotsCount < STICKER_REQUIRED_VERIFIED_SPOT_COUNT &&
         location != null && uiState.verificationResult == null
 
     val canRetry = phase == TravelVerificationPhase.ERROR && uiState.retryAction != null
@@ -386,7 +387,7 @@ private fun TravelVerificationContentErrorPreview() {
     }
 }
 
-/** 초기 조회, 위치 조회, 인증 준비, 요청 중, 권한 및 오류 상태의 Preview입니다. */
+/** 조회·권한·인증 상한과 상한 달성 후 스티커 재시도 상태의 Preview입니다. */
 class TravelVerificationPreviewProvider : PreviewParameterProvider<TravelVerificationUiState> {
     override val values: Sequence<TravelVerificationUiState>
         get() {
@@ -399,6 +400,18 @@ class TravelVerificationPreviewProvider : PreviewParameterProvider<TravelVerific
                     locationResult = null,
                 ),
                 ready,
+                ready.copy(
+                    travel = ready.travel?.copy(verifiedSpotsCount = STICKER_REQUIRED_VERIFIED_SPOT_COUNT),
+                    phase = TravelVerificationPhase.ERROR,
+                    retryAction = null,
+                    errorMessage = "이 여행은 ${STICKER_REQUIRED_VERIFIED_SPOT_COUNT}곳의 방문 인증을 완료해 추가로 인증할 수 없습니다.",
+                ),
+                ready.copy(
+                    travel = ready.travel?.copy(verifiedSpotsCount = STICKER_REQUIRED_VERIFIED_SPOT_COUNT),
+                    phase = TravelVerificationPhase.ERROR,
+                    retryAction = TravelVerificationRetryAction.LOAD_STICKERS,
+                    errorMessage = "획득한 스티커를 확인하지 못했습니다. 다시 시도해주세요.",
+                ),
                 ready.copy(phase = TravelVerificationPhase.SUBMITTING),
                 ready.copy(
                     phase = TravelVerificationPhase.ERROR,

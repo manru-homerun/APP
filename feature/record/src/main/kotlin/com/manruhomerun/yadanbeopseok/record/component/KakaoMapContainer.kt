@@ -1,5 +1,6 @@
 package com.manruhomerun.yadanbeopseok.record.component
 
+import android.view.MotionEvent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
@@ -8,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.motionEventSpy
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.viewinterop.AndroidView
@@ -24,6 +26,7 @@ import com.kakao.vectormap.MapView
  * 카카오맵의 생성, 생명주기 연결과 오류 처리를 공통으로 담당합니다.
  *
  * 지도별 카메라 설정과 마커 추가는 [onMapReady]에서 처리합니다.
+ * [prioritizeMapGestures]가 true이면 지도에서 시작한 터치를 상위 스크롤보다 우선합니다.
  */
 @Composable
 internal fun KakaoMapContainer(
@@ -32,6 +35,7 @@ internal fun KakaoMapContainer(
     onMapReady: (KakaoMap) -> Unit,
     onError: () -> Unit,
     modifier: Modifier = Modifier,
+    prioritizeMapGestures: Boolean = false,
     onMapReleased: () -> Unit = {},
     previewContent: @Composable BoxScope.() -> Unit = {},
 ) {
@@ -55,10 +59,27 @@ internal fun KakaoMapContainer(
     val mapView = remember(context, lifecycle) {
         MapView(context)
     }
+    val onMapMotionEvent: (MotionEvent) -> Unit = remember(mapView) {
+        { event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> mapView.parent?.requestDisallowInterceptTouchEvent(true)
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> mapView.allowParentTouchInterception()
+            }
+        }
+    }
+
+    if (prioritizeMapGestures) {
+        DisposableEffect(mapView) {
+            onDispose {
+                mapView.allowParentTouchInterception()
+            }
+        }
+    }
 
     AndroidView(
         factory = { mapView },
-        modifier = modifier,
+        // 바깥 여백은 제외하고 이벤트는 기존 AndroidView 경로로 한 번만 전달합니다.
+        modifier = if (prioritizeMapGestures) modifier.motionEventSpy(onMapMotionEvent) else modifier,
     )
 
     DisposableEffect(mapView, lifecycle) {
@@ -66,6 +87,7 @@ internal fun KakaoMapContainer(
         var hasFailed = false
 
         fun releaseMap() {
+            mapView.allowParentTouchInterception()
             latestOnMapReleased()
         }
 
@@ -91,7 +113,10 @@ internal fun KakaoMapContainer(
 
             when (event) {
                 Lifecycle.Event.ON_RESUME -> mapView.resume()
-                Lifecycle.Event.ON_PAUSE -> mapView.pause()
+                Lifecycle.Event.ON_PAUSE -> {
+                    mapView.allowParentTouchInterception()
+                    mapView.pause()
+                }
                 Lifecycle.Event.ON_DESTROY -> closeMap()
                 else -> Unit
             }
@@ -129,6 +154,7 @@ internal fun KakaoMapContainer(
                         }
 
                         if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                            mapView.allowParentTouchInterception()
                             mapView.pause()
                         }
                     }
@@ -152,4 +178,9 @@ internal fun KakaoMapContainer(
             closeMap()
         }
     }
+}
+
+/** 터치 종료와 생명주기 정리에서 반복 호출해도 상위 스크롤 제한이 남지 않게 합니다. */
+private fun MapView.allowParentTouchInterception() {
+    parent?.requestDisallowInterceptTouchEvent(false)
 }

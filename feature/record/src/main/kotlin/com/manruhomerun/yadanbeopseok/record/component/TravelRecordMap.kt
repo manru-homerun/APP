@@ -156,6 +156,7 @@ fun TravelRecordMap(
             showMetropolitanCluster = false
         },
         modifier = modifier.background(YadanPrimaryTint),
+        prioritizeMapGestures = true,
         previewContent = {
             TravelRecordMapPreviewContent(
                 regionVisitCounts = regionVisitCounts,
@@ -261,10 +262,10 @@ private fun KakaoMap.configureRecordMapGestures() {
     setGestureEnable(GestureType.Zoom, true)
     setGestureEnable(GestureType.OneFingerDoubleTap, true)
     setGestureEnable(GestureType.TwoFingerSingleTap, true)
-    setGestureEnable(GestureType.Rotate, false)
-    setGestureEnable(GestureType.Tilt, false)
-    setGestureEnable(GestureType.RotateZoom, false)
-    setGestureEnable(GestureType.OneFingerZoom, false)
+    setGestureEnable(GestureType.Rotate, true)
+    setGestureEnable(GestureType.Tilt, true)
+    setGestureEnable(GestureType.RotateZoom, true)
+    setGestureEnable(GestureType.OneFingerZoom, true)
     setGestureEnable(GestureType.LongTapAndDrag, false)
 }
 

@@ -54,10 +54,8 @@ class TravelStickerPhotoViewModel @Inject constructor(
             return
         }
 
-        val isAlreadyLoaded = currentTravelId == normalizedTravelId &&
-            _uiState.value.stickerPack != null
-
-        if (isAlreadyLoaded) return
+        // 조회 실패 후 화면이 재생성되어도 사진 편집은 유지하고 재조회는 retry에서 처리합니다.
+        if (currentTravelId == normalizedTravelId) return
 
         currentTravelId = normalizedTravelId
         nextPlacedStickerId = 0L
@@ -89,16 +87,30 @@ class TravelStickerPhotoViewModel @Inject constructor(
             it.copy(
                 photoUri = normalizedPhotoUri,
                 photoAspectRatio = aspectRatio,
+                photoGeometry = null,
                 placedStickers = emptyList(),
                 selectedStickerId = null,
             )
         }
     }
 
+    /** 현재 사진의 최초 유효 측정만 반영하며 회전과 재측정으로 기준을 바꾸지 않습니다. */
+    fun initializePhotoGeometry(photoUri: String, geometry: StickerPhotoGeometry) {
+        if (!geometry.isValid) return
+
+        _uiState.update { state ->
+            if (state.hasSelectedPhoto && state.photoUri == photoUri && state.photoGeometry == null && !state.isExporting) {
+                state.copy(photoGeometry = geometry)
+            } else {
+                state
+            }
+        }
+    }
+
     /** 하단 목록에서 선택한 스티커를 사진 중앙에 추가합니다. */
     fun addSticker(sticker: Sticker) {
         val state = _uiState.value
-        if (!state.hasSelectedPhoto || state.isExporting) return
+        if (!state.hasSelectedPhoto || state.photoGeometry?.isValid != true || state.isExporting) return
 
         val availableSticker = state.availableStickers.firstOrNull {
             it.id == sticker.id
@@ -148,6 +160,7 @@ class TravelStickerPhotoViewModel @Inject constructor(
             it.copy(
                 photoUri = null,
                 photoAspectRatio = null,
+                photoGeometry = null,
                 placedStickers = emptyList(),
                 selectedStickerId = null,
             )

@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -54,6 +55,7 @@ import com.manruhomerun.yadanbeopseok.model.StickerPack
 import com.manruhomerun.yadanbeopseok.record.component.TravelStickerPhotoCanvas
 import com.manruhomerun.yadanbeopseok.record.component.TravelStickerPhotoImageState
 import com.manruhomerun.yadanbeopseok.record.viewmodel.PlacedSticker
+import com.manruhomerun.yadanbeopseok.record.viewmodel.StickerPhotoGeometry
 import com.manruhomerun.yadanbeopseok.record.viewmodel.TravelStickerPhotoUiState
 import com.manruhomerun.yadanbeopseok.ui.component.YadanImageLoadState
 import com.manruhomerun.yadanbeopseok.ui.component.YadanStickerSize
@@ -99,7 +101,8 @@ fun TravelStickerPhotoScreen(
     val hasPhoto = uiState.hasSelectedPhoto
     val isEditingEnabled = !uiState.isExporting && !isReadingPhoto && !isExitConfirmationVisible
     val currentImageState = imageState?.takeIf {
-        it.matchesContent(photoRequestId, uiState.photoUri, uiState.placedStickers)
+        it.matchesContent(photoRequestId, uiState.photoUri, uiState.placedStickers) &&
+            it.photoGeometry == uiState.photoGeometry
     }
     val canSave = uiState.canExport && !isReadingPhoto && !isExitConfirmationVisible && currentImageState?.isReady == true
     val imageStatusMessage = when {
@@ -190,20 +193,24 @@ fun TravelStickerPhotoScreen(
                             )
                         }
                     } else {
-                        TravelStickerPhotoCanvas(
-                            photoUri = uiState.photoUri,
-                            placedStickers = uiState.placedStickers,
-                            selectedStickerId = uiState.selectedStickerId,
-                            onPhotoSelectClick = onPhotoSelectClick,
-                            onClearStickerSelection = onClearStickerSelection,
-                            onStickerSelect = onStickerSelect,
-                            onStickerTransform = onStickerTransform,
-                            onDeleteSelectedSticker = onDeleteSelectedSticker,
-                            isEditingEnabled = isEditingEnabled,
-                            photoRequestId = photoRequestId,
-                            onImageStateChange = onCanvasImageStateChange,
-                            modifier = photoCanvasModifier,
-                        )
+                        // 같은 URI를 다시 선택해도 이전 사진 영역의 측정값을 사용하지 않습니다.
+                        key(photoRequestId, uiState.photoUri) {
+                            TravelStickerPhotoCanvas(
+                                photoUri = uiState.photoUri,
+                                placedStickers = uiState.placedStickers,
+                                selectedStickerId = uiState.selectedStickerId,
+                                onPhotoSelectClick = onPhotoSelectClick,
+                                onClearStickerSelection = onClearStickerSelection,
+                                onStickerSelect = onStickerSelect,
+                                onStickerTransform = onStickerTransform,
+                                onDeleteSelectedSticker = onDeleteSelectedSticker,
+                                isEditingEnabled = isEditingEnabled,
+                                photoRequestId = photoRequestId,
+                                photoGeometry = uiState.photoGeometry,
+                                onImageStateChange = onCanvasImageStateChange,
+                                modifier = photoCanvasModifier,
+                            )
+                        }
                     }
                 }
 
@@ -219,7 +226,7 @@ fun TravelStickerPhotoScreen(
                         stickers = uiState.availableStickers,
                         isLoading = uiState.isLoading,
                         errorMessage = uiState.errorMessage,
-                        canAddStickers = hasPhoto && isEditingEnabled,
+                        canAddStickers = hasPhoto && uiState.photoGeometry?.isValid == true && isEditingEnabled,
                         isRetryEnabled = isEditingEnabled,
                         onStickerClick = onStickerClick,
                         onRetryClick = onRetryClick,
@@ -593,6 +600,7 @@ private fun TravelStickerPhotoScreenSavingPreview() {
 }
 
 @Preview(name = "D04 전체 화면 · 여러 스티커 중 두 번째 선택", widthDp = 360, heightDp = 800)
+@Preview(name = "같은 스티커 배치 · 가로 화면", widthDp = 800, heightDp = 360)
 @Preview(name = "여러 스티커 편집 · 작은 화면 · 글꼴 2", widthDp = 320, heightDp = 480, fontScale = 2f)
 @Preview(name = "여러 스티커 편집 · 가로 화면 · 글꼴 2", widthDp = 640, heightDp = 360, fontScale = 2f)
 @Composable
@@ -770,6 +778,12 @@ private fun stickerPhotoPreviewState(photoAspectRatio: Float?, hasMultipleSticke
             null
         },
         photoAspectRatio = photoAspectRatio,
+        // 세로·가로 Preview 모두 짧은 변 320dp에서 정한 동일한 기준을 사용합니다.
+        photoGeometry = if (photoAspectRatio != null) {
+            StickerPhotoGeometry(stickerSizeFraction = 0.275f, cornerRadiusFraction = 0.05625f)
+        } else {
+            null
+        },
         placedStickers = placedStickers,
         selectedStickerId = placedStickers.firstOrNull()?.id,
         isLoading = false,

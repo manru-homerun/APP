@@ -16,6 +16,9 @@ data class TravelStickerPhotoUiState(
     /** 회전 방향을 반영한 선택 사진의 가로세로 비율입니다. */
     val photoAspectRatio: Float? = null,
 
+    /** 최초 사진 영역의 짧은 변을 기준으로 정하며 화면 회전 후에도 유지합니다. */
+    val photoGeometry: StickerPhotoGeometry? = null,
+
     /** 사진 위에 추가된 스티커 인스턴스 목록입니다. */
     val placedStickers: List<PlacedSticker> = emptyList(),
 
@@ -45,7 +48,17 @@ data class TravelStickerPhotoUiState(
 
     /** 사진을 저장하거나 공유할 수 있는 상태인지 나타냅니다. */
     val canExport: Boolean
-        get() = hasSelectedPhoto && !isLoading && !isExporting
+        get() = hasSelectedPhoto && photoGeometry?.isValid == true && !isLoading && !isExporting
+}
+
+/** 화면과 저장 이미지에서 함께 사용하는 사진 짧은 변 대비 기본 크기 비율입니다. */
+data class StickerPhotoGeometry(
+    val stickerSizeFraction: Float,
+    val cornerRadiusFraction: Float,
+) {
+    val isValid: Boolean
+        get() = stickerSizeFraction.isFinite() && stickerSizeFraction > 0f && stickerSizeFraction <= 1f &&
+            cornerRadiusFraction.isFinite() && cornerRadiusFraction in 0f..0.5f
 }
 
 /**

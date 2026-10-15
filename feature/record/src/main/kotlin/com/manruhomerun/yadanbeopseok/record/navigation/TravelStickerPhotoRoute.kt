@@ -45,6 +45,7 @@ import com.manruhomerun.yadanbeopseok.navigation.Navigator
 import com.manruhomerun.yadanbeopseok.record.component.TravelStickerPhotoImageState
 import com.manruhomerun.yadanbeopseok.record.screen.TravelStickerPhotoScreen
 import com.manruhomerun.yadanbeopseok.record.viewmodel.PlacedSticker
+import com.manruhomerun.yadanbeopseok.record.viewmodel.StickerPhotoGeometry
 import com.manruhomerun.yadanbeopseok.record.viewmodel.TravelStickerPhotoViewModel
 import com.manruhomerun.yadanbeopseok.record.viewmodel.inRenderOrder
 import java.io.IOException
@@ -90,10 +91,11 @@ fun TravelStickerPhotoRoute(
     fun isCanvasReady(): Boolean {
         val state = viewModel.uiState.value
         val imageState = canvasImageState ?: return false
-        return imageState.isReady && imageState.matchesContent(photoRequestId, state.photoUri, state.placedStickers)
+        return imageState.isReady && imageState.photoGeometry == state.photoGeometry &&
+            imageState.matchesContent(photoRequestId, state.photoUri, state.placedStickers)
     }
 
-    /** 저장 버튼을 누른 시점의 내용과 측정 정보를 고정하며 UI Bitmap은 가져오지 않습니다. */
+    /** 저장 시점의 사진 기준 비율과 배치를 고정하며 화면 측정값이나 UI Bitmap은 가져오지 않습니다. */
     fun createExportSnapshot(): StickerPhotoExportSnapshot {
         val state = viewModel.uiState.value
         val imageState = canvasImageState
@@ -104,12 +106,11 @@ fun TravelStickerPhotoRoute(
         return StickerPhotoExportSnapshot(
             photoUri = Uri.parse(checkNotNull(state.photoUri)),
             photoAspectRatio = checkNotNull(state.photoAspectRatio),
+            geometry = checkNotNull(state.photoGeometry),
             placedStickers = state.placedStickers.toList(),
             selectedStickerId = state.selectedStickerId,
-            imageState = imageState.copy(
-                stickerSources = imageState.stickerSources.toMap(),
-                stickerSizes = imageState.stickerSizes.toMap(),
-            ),
+            backgroundColor = imageState.backgroundColor.toArgb(),
+            layoutDirection = imageState.layoutDirection,
         )
     }
 
@@ -317,6 +318,12 @@ fun TravelStickerPhotoRoute(
             if (!isLeavingRoute && pendingPhotoUri == null &&
                 imageState.matchesContent(photoRequestId, state.photoUri, state.placedStickers)
             ) {
+                // 최초 측정은 이미지 로딩 성공이나 기준 등록 완료를 기다리지 않습니다.
+                val geometry = imageState.photoGeometry
+                val photoUri = state.photoUri
+                if (photoUri != null && geometry != null && imageState.canvasSize.width > 0 && imageState.canvasSize.height > 0) {
+                    viewModel.initializePhotoGeometry(photoUri, geometry)
+                }
                 canvasImageState = imageState
             }
         },
@@ -327,9 +334,11 @@ fun TravelStickerPhotoRoute(
 private data class StickerPhotoExportSnapshot(
     val photoUri: Uri,
     val photoAspectRatio: Float,
+    val geometry: StickerPhotoGeometry,
     val placedStickers: List<PlacedSticker>,
     val selectedStickerId: Long?,
-    val imageState: TravelStickerPhotoImageState,
+    val backgroundColor: Int,
+    val layoutDirection: LayoutDirection,
 )
 
 /** 할당부터 갤러리 저장까지 같은 작업이 Bitmap을 소유해 취소 시에도 반드시 해제합니다. */
@@ -350,34 +359,24 @@ private suspend fun exportStickerPhotoToGallery(
         val output = Bitmap.createBitmap(photo.width, photo.height, Bitmap.Config.ARGB_8888)
         exportBitmap = output
         val canvas = Canvas(output)
-        val layout = snapshot.imageState
-        val canvasWidth = layout.canvasSize.width.toFloat()
-        val canvasHeight = layout.canvasSize.height.toFloat()
-        val exportScale = min(output.width / canvasWidth, output.height / canvasHeight)
+        val width = output.width.toFloat()
+        val height = output.height.toFloat()
+        val cornerRadius = min(width, height) * snapshot.geometry.cornerRadiusFraction
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-        val clip = checkNotNull(layout.clipRoundRect)
 
         withContext(Dispatchers.Default) {
-            canvas.translate(
-                (output.width - canvasWidth * exportScale) / 2f,
-                (output.height - canvasHeight * exportScale) / 2f,
-            )
-            canvas.scale(exportScale, exportScale)
+            // 회전 후 화면 크기와 무관하게 출력 사진 좌표에서 바로 합성합니다.
             val clipPath = Path().apply {
                 addRoundRect(
-                    RectF(clip.left, clip.top, clip.right, clip.bottom),
-                    floatArrayOf(
-                        clip.topLeftCornerRadius.x, clip.topLeftCornerRadius.y,
-                        clip.topRightCornerRadius.x, clip.topRightCornerRadius.y,
-                        clip.bottomRightCornerRadius.x, clip.bottomRightCornerRadius.y,
-                        clip.bottomLeftCornerRadius.x, clip.bottomLeftCornerRadius.y,
-                    ),
+                    RectF(0f, 0f, width, height),
+                    cornerRadius,
+                    cornerRadius,
                     Path.Direction.CW,
                 )
             }
             canvas.clipPath(clipPath)
-            canvas.drawColor(layout.backgroundColor.toArgb())
-            val photoRect = fitImageRect(snapshot.photoAspectRatio, 1f, canvasWidth, canvasHeight)
+            canvas.drawColor(snapshot.backgroundColor)
+            val photoRect = fitImageRect(snapshot.photoAspectRatio, 1f, width, height)
             canvas.drawBitmap(photo, null, photoRect, paint)
         }
         photo.recycle()
@@ -387,7 +386,7 @@ private suspend fun exportStickerPhotoToGallery(
         val orderedStickers = snapshot.placedStickers.inRenderOrder(snapshot.selectedStickerId)
         for (sticker in orderedStickers) {
             currentCoroutineContext().ensureActive()
-            drawExportSticker(context, imageLoader, canvas, paint, sticker, layout, exportScale)
+            drawExportSticker(context, imageLoader, canvas, paint, sticker, snapshot.geometry, snapshot.layoutDirection)
         }
 
         currentCoroutineContext().ensureActive()
@@ -424,29 +423,23 @@ private fun decodeExportPhoto(context: Context, snapshot: StickerPhotoExportSnap
     return bitmap
 }
 
-/** 스티커를 하나씩 읽어 실제 측정 영역과 동일한 Fit·중심 회전·확대·이동으로 합성합니다. */
+/** 출력 사진에 대한 상대 크기로 스티커를 읽고 Fit·중심 회전·확대·이동으로 합성합니다. */
 private suspend fun drawExportSticker(
     context: Context,
     imageLoader: ImageLoader,
     canvas: Canvas,
     paint: Paint,
     sticker: PlacedSticker,
-    layout: TravelStickerPhotoImageState,
-    exportScale: Float,
+    geometry: StickerPhotoGeometry,
+    layoutDirection: LayoutDirection,
 ) {
-    val size = checkNotNull(layout.stickerSizes[sticker.id])
-    val width = size.width.toFloat()
-    val height = size.height.toFloat()
-    val neededWidth = width * sticker.scale * exportScale
-    val neededHeight = height * sticker.scale * exportScale
+    val size = min(canvas.width, canvas.height) * geometry.stickerSizeFraction
+    val neededSize = size * sticker.scale
     // 화면 밖으로 크게 확대한 스티커도 이미지 요청 크기는 출력 상한에 맞춥니다.
-    val decodeScale = min(1f, MAX_EXPORT_IMAGE_LENGTH / max(neededWidth, neededHeight))
+    val requestSize = ceil(neededSize.toDouble()).toInt().coerceIn(1, MAX_EXPORT_IMAGE_LENGTH)
     val request = ImageRequest.Builder(context)
         .data(sticker.sticker.imageUrl)
-        .size(
-            ceil((neededWidth * decodeScale).toDouble()).toInt().coerceIn(1, MAX_EXPORT_IMAGE_LENGTH),
-            ceil((neededHeight * decodeScale).toDouble()).toInt().coerceIn(1, MAX_EXPORT_IMAGE_LENGTH),
-        )
+        .size(requestSize, requestSize)
         .scale(Scale.FIT)
         .allowHardware(false)
         .bitmapConfig(Bitmap.Config.ARGB_8888)
@@ -460,21 +453,20 @@ private suspend fun drawExportSticker(
     }
 
     withContext(Dispatchers.Default) {
-        val offsetX = (layout.canvasSize.width * sticker.centerXFraction - layout.stickerSizePx / 2f).roundToInt()
-        val left = if (layout.layoutDirection == LayoutDirection.Ltr) {
-            offsetX.toFloat()
+        val centerX = if (layoutDirection == LayoutDirection.Ltr) {
+            canvas.width * sticker.centerXFraction
         } else {
-            layout.canvasSize.width - width - offsetX
+            canvas.width * (1f - sticker.centerXFraction)
         }
-        val top = (layout.canvasSize.height * sticker.centerYFraction - layout.stickerSizePx / 2f).roundToInt()
+        val centerY = canvas.height * sticker.centerYFraction
         val saveCount = canvas.save()
         try {
-            canvas.translate(left + width / 2f, top + height / 2f)
+            canvas.translate(centerX, centerY)
             canvas.rotate(sticker.rotationDegrees)
             canvas.scale(sticker.scale, sticker.scale)
-            canvas.translate(-width / 2f, -height / 2f)
-            canvas.clipRect(0f, 0f, width, height)
-            val imageRect = fitImageRect(bitmap.width.toFloat(), bitmap.height.toFloat(), width, height)
+            canvas.translate(-size / 2f, -size / 2f)
+            canvas.clipRect(0f, 0f, size, size)
+            val imageRect = fitImageRect(bitmap.width.toFloat(), bitmap.height.toFloat(), size, size)
             canvas.drawBitmap(bitmap, null, imageRect, paint)
         } finally {
             canvas.restoreToCount(saveCount)

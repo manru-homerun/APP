@@ -45,11 +45,10 @@ android {
 
     defaultConfig {
         applicationId = "com.manruhomerun.yadanbeopseok"
-        versionCode = 3
-        versionName = "1.0"
+        versionCode = 4
+        versionName = "1.1"
 
-        manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] =
-            kakaoNativeAppKey.get()
+        manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] = kakaoNativeAppKey.get()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
